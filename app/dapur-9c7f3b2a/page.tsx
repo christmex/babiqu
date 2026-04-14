@@ -342,89 +342,93 @@ export default function DashboardPage() {
                     </p>
                   )}
 
-                  <div className={`bg-white rounded-2xl border p-5 transition-all ${
-                    isCancelled ? "opacity-50 border-red-200" : isDelivered ? "border-green-200 bg-green-50/30" : "border-[#e8ddd0]"
+                  <div className={`bg-white rounded-xl border px-4 py-3 transition-all ${
+                    isCancelled ? "opacity-60 border-red-200" : isDelivered ? "border-green-200 bg-green-50/20" : "border-[#e8ddd0]"
                   }`}>
                     {/* Status banner */}
                     {isCancelled && (
-                      <div className="flex items-center justify-between bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-3">
-                        <p className="text-xs text-red-600 font-medium">
+                      <div className="flex items-center justify-between bg-red-50 rounded-lg px-3 py-1.5 mb-2 -mx-1">
+                        <p className="text-xs text-red-500">
                           Dibatalkan{order.cancel_reason ? `: ${order.cancel_reason}` : ""}
                         </p>
                         <button onClick={() => handleRestore(order.id)}
-                          className="text-xs font-bold text-green-700 bg-white hover:bg-green-50 border border-green-400 px-2.5 py-1 rounded-lg transition shrink-0 ml-2">Pulihkan</button>
+                          className="text-[11px] font-bold text-white bg-green-500 hover:bg-green-600 px-2.5 py-0.5 rounded-md transition shrink-0 ml-2">
+                          Pulihkan
+                        </button>
                       </div>
                     )}
                     {isDelivered && (
-                      <div className="flex items-center justify-between bg-green-50 border border-green-100 rounded-lg px-3 py-2 mb-3">
-                        <p className="text-xs text-green-700 font-semibold">Sudah diantar</p>
+                      <div className="flex items-center justify-between bg-green-50 rounded-lg px-3 py-1.5 mb-2 -mx-1">
+                        <p className="text-xs text-green-700 font-medium">✓ Sudah diantar</p>
                         <button onClick={() => handleRestore(order.id)}
-                          className="text-xs text-[#8a7060] hover:text-[#1c1208] font-medium">Batalkan status</button>
+                          className="text-[11px] text-[#8a7060] hover:text-[#1c1208] transition">Batalkan</button>
                       </div>
                     )}
 
-                    {/* Top row */}
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div>
-                        <p className="font-bold text-[#1c1208] text-base leading-snug">{order.name}</p>
-                        <a href={`https://wa.me/${order.nomor_wa.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer"
-                          className="text-sm text-[#7b1d1d] hover:underline font-medium">{order.nomor_wa}</a>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className={`inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full mb-1 ${
+                    {/* Top row: name · wa · badge + date */}
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="font-bold text-[#1c1208] text-sm leading-tight truncate">{order.name}</p>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                           order.jam_antar.includes("Siang") ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700"
                         }`}>
                           {order.jam_antar.includes("Siang") ? "Siang" : "Malam"}
                         </span>
-                        <p className="text-[11px] text-[#b8a898]">{formatDate(order.created_at)}</p>
                       </div>
+                      <p className="text-[10px] text-[#b8a898] shrink-0">{formatDate(order.created_at)}</p>
                     </div>
 
-                    {/* Address */}
-                    <p className="text-sm text-[#5a3e2b] bg-[#fdf8f2] rounded-lg px-3 py-2 mb-3">{order.alamat}</p>
+                    {/* WA + address inline */}
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <a href={`https://wa.me/${order.nomor_wa.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer"
+                        className="text-xs text-[#7b1d1d] hover:underline font-medium shrink-0">{order.nomor_wa}</a>
+                      <span className="text-[#d9cfc5] text-xs">·</span>
+                      <p className="text-xs text-[#5a3e2b] truncate">{order.alamat}</p>
+                    </div>
 
-                    {/* Items */}
-                    <div className="space-y-2 mb-3">
+                    {/* Items compact */}
+                    <div className="space-y-1 mb-2">
                       {order.items?.map((item, i) => (
-                        <div key={i} className="border-l-2 border-[#e8ddd0] pl-3">
-                          <div className="flex justify-between items-baseline gap-2">
-                            <p className="text-sm font-semibold text-[#1c1208]">{item.qty}× {item.menu_name}</p>
-                            <span className="text-xs text-[#8a7060] shrink-0">{formatRupiah(item.subtotal)}</span>
+                        <div key={i} className="flex gap-2">
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs font-semibold text-[#1c1208]">{item.qty}× {item.menu_name}</span>
+                            {item.portions?.map((p, pi) => (
+                              <span key={pi} className="text-xs text-[#8a7060]">
+                                {" "}
+                                {item.qty > 1 && <span className="font-semibold text-[#a07850]">P{pi+1} </span>}
+                                {Object.values(p.options).filter(Boolean).join("·")}
+                                {p.notes?.trim() && <span className="text-[#a07850] italic"> {p.notes}</span>}
+                              </span>
+                            ))}
                           </div>
-                          {item.portions?.map((p, pi) => (
-                            <p key={pi} className="text-xs text-[#8a7060] mt-0.5">
-                              {item.qty > 1 && <span className="font-semibold text-[#a07850]">P{pi + 1} </span>}
-                              {Object.values(p.options).filter(Boolean).join(" · ")}
-                              {p.notes?.trim() && <span className="text-[#a07850] italic"> · {p.notes}</span>}
-                            </p>
-                          ))}
+                          <span className="text-xs text-[#8a7060] shrink-0">{formatRupiah(item.subtotal)}</span>
                         </div>
                       ))}
                     </div>
 
                     {order.notes?.trim() && (
-                      <p className="text-xs text-[#a07850] italic bg-amber-50 rounded-lg px-3 py-1.5 mb-3">Catatan: {order.notes}</p>
+                      <p className="text-[11px] text-[#a07850] italic mb-2">📝 {order.notes}</p>
                     )}
 
                     {/* Actions + Total */}
-                    <div className="flex items-center justify-between border-t border-[#f0e8de] pt-3 gap-3">
+                    <div className="flex items-center justify-between gap-3 pt-2 border-t border-[#f0e8de]">
                       <div className="flex items-center gap-2">
                         {order.status === "active" && (
                           <>
                             <button onClick={() => handleDeliver(order.id)}
-                              className="text-xs font-semibold text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg px-3 py-1.5 transition">
-                              Tandai Selesai
+                              className="text-[11px] font-semibold text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg px-2.5 py-1 transition">
+                              Selesai
                             </button>
                             {cancelling === order.id ? (
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5">
                                 <input autoFocus value={cancelReason}
                                   onChange={(e) => setCancelReason(e.target.value)}
                                   onKeyDown={(e) => { if (e.key === "Enter") handleCancel(order.id); if (e.key === "Escape") { setCancelling(null); setCancelReason(""); } }}
                                   placeholder="Alasan..."
-                                  className="text-xs border border-red-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-red-400 w-36"
+                                  className="text-xs border border-red-200 rounded-lg px-2 py-1 focus:outline-none focus:border-red-400 w-28"
                                 />
                                 <button onClick={() => handleCancel(order.id)} disabled={cancelLoading || !cancelReason.trim()}
-                                  className="text-xs font-semibold text-white bg-red-500 hover:bg-red-600 px-2.5 py-1.5 rounded-lg transition disabled:opacity-40">
+                                  className="text-[11px] font-semibold text-white bg-red-500 hover:bg-red-600 px-2 py-1 rounded-lg transition disabled:opacity-40">
                                   {cancelLoading ? "..." : "OK"}
                                 </button>
                                 <button onClick={() => { setCancelling(null); setCancelReason(""); }}
@@ -432,12 +436,12 @@ export default function DashboardPage() {
                               </div>
                             ) : (
                               <button onClick={() => setCancelling(order.id)}
-                                className="text-xs text-red-400 hover:text-red-600 font-medium transition">Batal</button>
+                                className="text-[11px] text-red-400 hover:text-red-600 font-medium transition">Batal</button>
                             )}
                           </>
                         )}
                       </div>
-                      <span className="font-bold text-[#7b1d1d] text-base shrink-0">{formatRupiah(order.total)}</span>
+                      <span className="font-bold text-[#7b1d1d] text-sm shrink-0">{formatRupiah(order.total)}</span>
                     </div>
                   </div>
                 </div>
