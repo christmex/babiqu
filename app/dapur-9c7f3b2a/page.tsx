@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { ClipboardList, BarChart2, Receipt, CalendarDays, ExternalLink, RefreshCw } from "lucide-react";
 
@@ -92,35 +92,8 @@ export default function DashboardPage() {
   // Order detail modal
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showSummary, setShowSummary] = useState(true);
-  const touchStartY = useRef(0);
-  const sheetScrollRef = useRef<HTMLDivElement>(null);
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const isDragging = useRef(false);
 
   const closeModal = useCallback(() => { setSelectedOrder(null); setCancelling(null); setCancelReason(""); }, []);
-
-  const handleSheetTouchStart = (e: React.TouchEvent) => {
-    if (sheetScrollRef.current && sheetScrollRef.current.scrollTop > 0) return;
-    touchStartY.current = e.touches[0].clientY;
-    isDragging.current = true;
-  };
-  const handleSheetTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging.current) return;
-    if (sheetScrollRef.current && sheetScrollRef.current.scrollTop > 0) { isDragging.current = false; return; }
-    const dy = Math.max(0, e.touches[0].clientY - touchStartY.current);
-    if (sheetRef.current) { sheetRef.current.style.transform = `translateY(${dy}px)`; sheetRef.current.style.transition = "none"; }
-  };
-  const handleSheetTouchEnd = (e: React.TouchEvent) => {
-    if (!isDragging.current) return;
-    isDragging.current = false;
-    const dy = e.changedTouches[0].clientY - touchStartY.current;
-    if (dy > 90) {
-      if (sheetRef.current) { sheetRef.current.style.transform = "translateY(100%)"; sheetRef.current.style.transition = "transform 0.28s ease"; }
-      setTimeout(closeModal, 280);
-    } else {
-      if (sheetRef.current) { sheetRef.current.style.transform = "translateY(0)"; sheetRef.current.style.transition = "transform 0.2s ease"; }
-    }
-  };
 
   // Expense form
   const [expForm, setExpForm] = useState({
@@ -786,77 +759,79 @@ export default function DashboardPage() {
 
       </div>
 
-      {/* ── Order Detail Modal ──────────────────────────────────────────── */}
+      {/* ── Order Detail — full-page overlay ───────────────────────────── */}
       {selectedOrder && (() => {
         const o = selectedOrder;
         const isCancelled = o.status === "cancelled";
         const isDelivered = o.status === "delivered";
         return (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-            {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeModal} />
-            {/* Sheet */}
-            <div
-              ref={sheetRef}
-              className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-xl max-h-[90vh] flex flex-col"
-              onTouchStart={handleSheetTouchStart}
-              onTouchMove={handleSheetTouchMove}
-              onTouchEnd={handleSheetTouchEnd}
-            >
-              {/* Handle — tap also closes */}
-              <button onClick={closeModal} className="flex justify-center pt-3 pb-1 shrink-0 w-full">
-                <div className="w-10 h-1 bg-[#e8ddd0] rounded-full" />
+          <div className="fixed inset-0 z-50 bg-[#fdf8f2] overflow-y-auto pb-6">
+            {/* Top bar */}
+            <div className="sticky top-0 z-10 bg-white border-b border-[#e8ddd0] px-4 py-3 flex items-center gap-3">
+              <button onClick={closeModal}
+                className="flex items-center gap-1.5 text-sm font-semibold text-[#7b1d1d] hover:text-[#5a1515] transition">
+                ← Kembali
               </button>
+              <span className="text-[#d9cfc5]">|</span>
+              <p className="font-bold text-[#1c1208] truncate">{o.name}</p>
+              <span className={`ml-auto shrink-0 text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                o.jam_antar.includes("Siang") ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700"
+              }`}>{o.jam_antar.includes("Siang") ? "Siang" : "Malam"}</span>
+            </div>
 
-              {/* Scrollable content */}
-              <div ref={sheetScrollRef} className="overflow-y-auto px-5 pb-5 overscroll-contain">
-                {/* Status */}
-                {isCancelled && (
-                  <div className="flex items-center justify-between bg-red-50 rounded-xl px-3 py-2 mb-4">
-                    <p className="text-xs text-red-500 font-medium">Dibatalkan{o.cancel_reason ? `: ${o.cancel_reason}` : ""}</p>
-                    <button onClick={() => handleRestore(o.id)}
-                      className="text-[11px] font-bold text-white bg-green-500 hover:bg-green-600 px-2.5 py-1 rounded-lg transition">Pulihkan</button>
-                  </div>
-                )}
-                {isDelivered && (
-                  <div className="flex items-center justify-between bg-green-50 rounded-xl px-3 py-2 mb-4">
-                    <p className="text-xs text-green-700 font-semibold">✓ Sudah diantar</p>
-                    <button onClick={() => handleRestore(o.id)}
-                      className="text-[11px] text-[#8a7060] hover:text-[#1c1208] transition">Batalkan</button>
-                  </div>
-                )}
+            <div className="max-w-2xl mx-auto px-4 pt-5 space-y-4">
 
-                {/* Header */}
-                <div className="flex items-start justify-between gap-3 mb-4">
+              {/* Status banner */}
+              {isCancelled && (
+                <div className="flex items-center justify-between bg-red-50 border border-red-100 rounded-2xl px-4 py-3">
                   <div>
-                    <p className="font-bold text-[#1c1208] text-lg leading-snug">{o.name}</p>
-                    <a href={`https://wa.me/${o.nomor_wa.replace(/\D/g,"")}`} target="_blank" rel="noopener noreferrer"
-                      className="text-sm text-[#7b1d1d] hover:underline font-medium">{o.nomor_wa}</a>
+                    <p className="text-xs font-bold text-red-500 uppercase tracking-wide mb-0.5">Pesanan Dibatalkan</p>
+                    {o.cancel_reason && <p className="text-sm text-red-400">{o.cancel_reason}</p>}
                   </div>
-                  <div className="text-right shrink-0">
-                    <span className={`inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full mb-1 ${
-                      o.jam_antar.includes("Siang") ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700"
-                    }`}>{o.jam_antar.includes("Siang") ? "Siang" : "Malam"}</span>
-                    <p className="text-[11px] text-[#b8a898]">{formatDate(o.created_at)}</p>
-                  </div>
+                  <button onClick={() => handleRestore(o.id)}
+                    className="shrink-0 text-sm font-bold text-white bg-green-500 hover:bg-green-600 px-4 py-2 rounded-xl transition ml-3">
+                    Pulihkan
+                  </button>
                 </div>
+              )}
+              {isDelivered && (
+                <div className="flex items-center justify-between bg-green-50 border border-green-100 rounded-2xl px-4 py-3">
+                  <p className="text-sm font-bold text-green-700">✓ Pesanan sudah diantar</p>
+                  <button onClick={() => handleRestore(o.id)}
+                    className="shrink-0 text-sm text-[#8a7060] hover:text-[#1c1208] transition ml-3">Batalkan</button>
+                </div>
+              )}
 
-                {/* Address */}
-                <div className="bg-[#fdf8f2] rounded-xl px-4 py-3 mb-4">
+              {/* Customer info */}
+              <div className="bg-white rounded-2xl border border-[#e8ddd0] divide-y divide-[#f0e8de]">
+                <div className="px-4 py-3">
+                  <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold mb-0.5">Pelanggan</p>
+                  <p className="font-bold text-[#1c1208]">{o.name}</p>
+                  <a href={`https://wa.me/${o.nomor_wa.replace(/\D/g,"")}`} target="_blank" rel="noopener noreferrer"
+                    className="text-sm text-[#7b1d1d] hover:underline font-medium">{o.nomor_wa}</a>
+                </div>
+                <div className="px-4 py-3">
                   <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold mb-0.5">Alamat</p>
                   <p className="text-sm text-[#1c1208]">{o.alamat}</p>
                 </div>
+                <div className="px-4 py-3">
+                  <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold mb-0.5">Waktu Antar</p>
+                  <p className="text-sm text-[#1c1208]">{o.jam_antar} · {formatDate(o.created_at)}</p>
+                </div>
+              </div>
 
-                {/* Items */}
-                <div className="space-y-3 mb-4">
+              {/* Items */}
+              <div className="bg-white rounded-2xl border border-[#e8ddd0] overflow-hidden">
+                <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold px-4 pt-3 pb-2">Detail Pesanan</p>
+                <div className="divide-y divide-[#f0e8de]">
                   {o.items?.map((item, i) => (
-                    <div key={i} className="border-l-2 border-[#e8ddd0] pl-3">
+                    <div key={i} className="px-4 py-3">
                       <div className="flex justify-between items-baseline gap-2 mb-1">
-                        <p className="text-sm font-semibold text-[#1c1208]">{item.qty}× {item.menu_name}</p>
-                        <span className="text-xs text-[#8a7060] shrink-0">{formatRupiah(item.subtotal)}</span>
+                        <p className="text-sm font-bold text-[#1c1208]">{item.qty}× {item.menu_name}</p>
+                        <span className="text-sm font-semibold text-[#5a3e2b] shrink-0">{formatRupiah(item.subtotal)}</span>
                       </div>
                       {item.portions?.map((p, pi) => (
-                        <p key={pi} className="text-xs text-[#8a7060]">
+                        <p key={pi} className="text-xs text-[#8a7060] mt-0.5">
                           {item.qty > 1 && <span className="font-semibold text-[#a07850]">P{pi+1} </span>}
                           {Object.values(p.options).filter(Boolean).join(" · ")}
                           {p.notes?.trim() && <span className="text-[#a07850] italic"> · {p.notes}</span>}
@@ -865,59 +840,52 @@ export default function DashboardPage() {
                     </div>
                   ))}
                 </div>
-
                 {o.notes?.trim() && (
-                  <p className="text-xs text-[#a07850] italic bg-amber-50 rounded-lg px-3 py-2 mb-4">📝 {o.notes}</p>
+                  <div className="px-4 py-3 bg-amber-50 border-t border-amber-100">
+                    <p className="text-xs text-[#a07850] italic">📝 {o.notes}</p>
+                  </div>
                 )}
-
-                {/* Total */}
-                <div className="flex justify-between items-center border-t border-[#f0e8de] pt-3 mb-4">
+                <div className="flex justify-between items-center px-4 py-3 bg-[#fdf8f2] border-t border-[#f0e8de]">
                   <p className="text-sm font-semibold text-[#5a3e2b]">Total</p>
                   <p className="text-xl font-bold text-[#7b1d1d]">{formatRupiah(o.total)}</p>
                 </div>
-
-                {/* Actions */}
-                {o.status === "active" && (
-                  <div className="space-y-2">
-                    {cancelling === o.id ? (
-                      <>
-                        <input autoFocus value={cancelReason}
-                          onChange={(e) => setCancelReason(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter") handleCancel(o.id); if (e.key === "Escape") { setCancelling(null); setCancelReason(""); } }}
-                          placeholder="Tulis alasan pembatalan..."
-                          className="w-full text-sm border border-red-200 rounded-xl px-4 py-3 focus:outline-none focus:border-red-400"
-                        />
-                        <div className="flex gap-2">
-                          <button onClick={() => handleCancel(o.id)} disabled={cancelLoading || !cancelReason.trim()}
-                            className="flex-1 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 py-3 rounded-xl transition disabled:opacity-40">
-                            {cancelLoading ? "Menyimpan..." : "Konfirmasi Batal"}
-                          </button>
-                          <button onClick={() => { setCancelling(null); setCancelReason(""); }}
-                            className="px-4 py-3 text-sm text-[#8a7060] bg-[#f0e8de] rounded-xl">Tutup</button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2">
-                        <button onClick={() => handleDeliver(o.id)}
-                          className="flex flex-col items-center gap-0.5 py-3.5 rounded-2xl bg-green-500 hover:bg-green-600 transition active:scale-95">
-                          <span className="text-white text-lg">✓</span>
-                          <span className="text-white text-xs font-bold">Selesai</span>
-                        </button>
-                        <button onClick={() => setCancelling(o.id)}
-                          className="flex flex-col items-center gap-0.5 py-3.5 rounded-2xl bg-[#fdf0f0] hover:bg-red-100 border border-red-100 transition active:scale-95">
-                          <span className="text-red-400 text-lg">✕</span>
-                          <span className="text-red-400 text-xs font-bold">Batalkan</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <button onClick={closeModal}
-                  className="w-full mt-3 py-3 text-sm text-[#8a7060] bg-[#f0e8de] hover:bg-[#e8ddd0] rounded-xl transition">
-                  Tutup
-                </button>
               </div>
+
+              {/* Actions */}
+              {o.status === "active" && (
+                <div className="space-y-2">
+                  {cancelling === o.id ? (
+                    <>
+                      <input autoFocus value={cancelReason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleCancel(o.id); if (e.key === "Escape") { setCancelling(null); setCancelReason(""); } }}
+                        placeholder="Tulis alasan pembatalan..."
+                        className="w-full border border-red-200 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-red-400 bg-white"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => handleCancel(o.id)} disabled={cancelLoading || !cancelReason.trim()}
+                          className="flex-1 text-sm font-bold text-white bg-red-500 hover:bg-red-600 py-3.5 rounded-2xl transition disabled:opacity-40">
+                          {cancelLoading ? "Menyimpan..." : "Konfirmasi Batalkan"}
+                        </button>
+                        <button onClick={() => { setCancelling(null); setCancelReason(""); }}
+                          className="px-5 py-3.5 text-sm font-semibold text-[#8a7060] bg-white border border-[#e8ddd0] rounded-2xl">Batal</button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="space-y-2">
+                      <button onClick={() => handleDeliver(o.id)}
+                        className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-green-500 hover:bg-green-600 active:scale-[0.99] transition font-bold text-white text-base">
+                        <span className="text-xl leading-none">✓</span> Selesaikan Pesanan
+                      </button>
+                      <button onClick={() => setCancelling(o.id)}
+                        className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-white border-2 border-red-200 hover:border-red-300 hover:bg-red-50 active:scale-[0.99] transition font-bold text-red-500 text-base">
+                        <span className="text-xl leading-none">✕</span> Batalkan Pesanan
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
             </div>
           </div>
         );
