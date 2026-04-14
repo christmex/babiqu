@@ -914,7 +914,7 @@ export default function DashboardPage() {
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-[#e8ddd0] safe-area-pb">
         <div className="max-w-2xl mx-auto flex">
           {NAV.map(({ key, label, Icon }) => (
-            <button key={key} onClick={() => setTab(key as typeof tab)}
+            <button key={key} onClick={() => { setTab(key as typeof tab); closeModal(); }}
               className={`relative flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors ${
                 tab === key ? "text-[#7b1d1d]" : "text-[#a09080] hover:text-[#5a3e2b]"
               }`}>
