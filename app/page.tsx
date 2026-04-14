@@ -665,10 +665,11 @@ export default function OrderPage() {
                                       onClick={() => {
                                         if (addingNote.text.trim() && addingNote.selected.length > 0) {
                                           addingNote.selected.forEach((idx) => setPortionNotes(menu.id, idx, addingNote.text.trim()));
+                                          setAddingNote(null);
                                         }
-                                        setAddingNote(null);
                                       }}
-                                      className="flex-1 bg-[#7b1d1d] text-white text-xs font-semibold py-1.5 rounded-lg hover:bg-[#6a1717] transition"
+                                      disabled={!addingNote.text.trim() || addingNote.selected.length === 0}
+                                      className="flex-1 text-white text-xs font-semibold py-1.5 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed bg-[#7b1d1d] hover:bg-[#6a1717] disabled:hover:bg-[#7b1d1d]"
                                     >Tambah Catatan</button>
                                     <button
                                       onClick={() => setAddingNote(null)}
@@ -678,10 +679,7 @@ export default function OrderPage() {
                                 </div>
                               ) : (
                                 <button
-                                  onClick={() => {
-                                    const empty = ord.portions.map((_, i) => i).filter((i) => !ord.portions[i].notes.trim());
-                                    setAddingNote({ menuId: menu.id, text: "", selected: empty.length > 0 ? empty : ord.portions.map((_, i) => i) });
-                                  }}
+                                  onClick={() => setAddingNote({ menuId: menu.id, text: "", selected: [] })}
                                   className="text-xs text-[#7b1d1d] hover:underline font-medium"
                                 >
                                   + Tambah catatan per porsi
