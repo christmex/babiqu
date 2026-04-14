@@ -212,12 +212,12 @@ export default function OrderPage() {
     <div className="min-h-screen bg-[#fdf8f2]">
       {/* Header */}
       <header className="relative text-white text-center overflow-hidden">
-        <div className="relative h-72 sm:h-80 w-full">
+        <div className="relative h-[420px] sm:h-[500px] w-full">
           <Image
             src="/hero.jpg"
             alt="Babiqu Signature Roast Pork"
             fill
-            className="object-cover object-center"
+            className="object-cover object-[center_60%]"
             priority
           />
           {/* Dark gradient overlay */}
