@@ -105,8 +105,8 @@ export default function DashboardPage() {
 
   // Filters
   const [orderFilter, setOrderFilter] = useState<"today" | "all">("today");
+  const [jamFilter, setJamFilter] = useState<"all" | "siang" | "malam">("all");
   const [period, setPeriod] = useState<Period>("today");
-  const [showDelivery, setShowDelivery] = useState(true);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -203,15 +203,6 @@ export default function DashboardPage() {
   const todayOrders = orders.filter((o) => isToday(o.created_at));
   const todayActive = todayOrders.filter((o) => o.status === "active");
   const todayDelivered = todayOrders.filter((o) => o.status === "delivered");
-  const activeOrders = orders.filter((o) => o.status !== "cancelled");
-
-  // Today's delivery list = active (not yet delivered, not cancelled)
-  const deliveryList = todayActive.sort((a, b) => {
-    // Siang first, then Malam
-    const sA = a.jam_antar.includes("Siang") ? 0 : 1;
-    const sB = b.jam_antar.includes("Siang") ? 0 : 1;
-    return sA - sB;
-  });
 
   const periodOrders = orders.filter((o) => isInPeriod(o.created_at, period) && o.status !== "cancelled");
   const periodExpenses = expenses.filter((e) => isInPeriod(e.date, period));
@@ -219,7 +210,16 @@ export default function DashboardPage() {
   const periodExpTotal = periodExpenses.reduce((s, e) => s + e.amount, 0);
   const periodProfit = periodRevenue - periodExpTotal;
 
-  const displayedOrders = orderFilter === "today" ? todayOrders : orders;
+  // Hari Ini: sort Siang → Malam; Semua: keep reverse-chron from server
+  const baseOrders = orderFilter === "today"
+    ? [...todayOrders].sort((a, b) => {
+        const sa = a.jam_antar.includes("Siang") ? 0 : 1;
+        const sb = b.jam_antar.includes("Siang") ? 0 : 1;
+        return sa - sb || new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      })
+    : orders;
+  const displayedOrders = jamFilter === "all" ? baseOrders
+    : baseOrders.filter((o) => jamFilter === "siang" ? o.jam_antar.includes("Siang") : !o.jam_antar.includes("Siang"));
 
   const expByCategory = EXPENSE_CATEGORIES.map((cat) => ({
     cat, total: periodExpenses.filter((e) => e.category === cat).reduce((s, e) => s + e.amount, 0),
@@ -288,54 +288,8 @@ export default function DashboardPage() {
         {tab === "pesanan" && (
           <div className="space-y-4">
 
-            {/* Delivery list */}
-            {deliveryList.length > 0 && (
-              <div className="bg-white rounded-2xl border border-[#e8ddd0] overflow-hidden">
-                <button onClick={() => setShowDelivery((v) => !v)}
-                  className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-[#fdf8f2] transition">
-                  <div>
-                    <p className="text-xs font-bold text-[#7b1d1d] uppercase tracking-wider">
-                      Rute Antar Hari Ini ({deliveryList.length})
-                    </p>
-                    <p className="text-[10px] text-[#a07850] mt-0.5">Pesanan aktif hari ini — klik Selesai saat sudah diantar</p>
-                  </div>
-                  <span className="text-[#a07850]">{showDelivery ? "−" : "+"}</span>
-                </button>
-                {showDelivery && (
-                  <div className="divide-y divide-[#f0e8de]">
-                    {deliveryList.map((o, i) => (
-                      <div key={o.id} className="flex items-start gap-3 px-5 py-3">
-                        <span className="text-[11px] font-bold text-[#a07850] w-5 shrink-0 mt-0.5">{i + 1}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-semibold text-[#1c1208]">{o.name}</p>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              o.jam_antar.includes("Siang") ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700"
-                            }`}>
-                              {o.jam_antar.includes("Siang") ? "Siang" : "Malam"}
-                            </span>
-                          </div>
-                          <p className="text-xs text-[#5a3e2b] mt-0.5">{o.alamat}</p>
-                          <p className="text-[11px] text-[#8a7060] mt-0.5">
-                            {o.items?.map((it) => `${it.qty}× ${it.menu_name.split(" ").slice(0, 2).join(" ")}`).join(", ")}
-                          </p>
-                        </div>
-                        <button onClick={() => handleDeliver(o.id)}
-                          className="text-[11px] font-semibold text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg px-2.5 py-1 transition shrink-0">
-                          Selesai
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
 
-            {/* Filter — semua pesanan di bawah ini */}
-            <p className="text-xs font-bold text-[#5a3e2b] uppercase tracking-wider px-1 mt-2">
-              Daftar Pesanan
-            </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {(["today", "all"] as const).map((f) => (
                 <button key={f} onClick={() => setOrderFilter(f)}
                   className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition ${
@@ -344,12 +298,31 @@ export default function DashboardPage() {
                   {f === "today" ? `Hari Ini (${todayOrders.length})` : `Semua (${orders.length})`}
                 </button>
               ))}
+              <div className="w-px bg-[#e8ddd0] self-stretch mx-1" />
+              {([
+                ["all", "Semua Waktu"],
+                ["siang", "Siang"],
+                ["malam", "Malam"],
+              ] as const).map(([f, label]) => (
+                <button key={f} onClick={() => setJamFilter(f)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition ${
+                    jamFilter === f
+                      ? f === "siang" ? "bg-amber-500 text-white border-amber-500"
+                        : f === "malam" ? "bg-indigo-600 text-white border-indigo-600"
+                        : "bg-[#7b1d1d] text-white border-[#7b1d1d]"
+                      : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"
+                  }`}>
+                  {label}
+                </button>
+              ))}
             </div>
 
             {loading && <p className="text-center text-[#8a7060] py-12">Memuat...</p>}
             {!loading && displayedOrders.length === 0 && (
               <p className="text-center text-[#b8a898] py-12">
-                {orderFilter === "today" ? "Belum ada pesanan hari ini." : "Belum ada pesanan."}
+                {jamFilter !== "all"
+                  ? `Tidak ada pesanan ${jamFilter === "siang" ? "Siang" : "Malam"} untuk filter ini.`
+                  : orderFilter === "today" ? "Belum ada pesanan hari ini." : "Belum ada pesanan."}
               </p>
             )}
 
@@ -685,6 +658,8 @@ export default function DashboardPage() {
                 const batchOrders = orders.filter((o) => o.batch_id === batch.id && o.status !== "cancelled");
                 const batchCancelled = orders.filter((o) => o.batch_id === batch.id && o.status === "cancelled");
                 const batchDelivered = orders.filter((o) => o.batch_id === batch.id && o.status === "delivered");
+                const batchTotalOrders = orders.filter((o) => o.batch_id === batch.id).length;
+                const canDelete = batchTotalOrders === 0;
                 const batchRevenue = batchOrders.reduce((s, o) => s + o.total, 0);
                 const batchExp = expenses.filter((e) => e.batch_id === batch.id);
                 const batchExpTotal = batchExp.reduce((s, e) => s + e.amount, 0);
@@ -728,12 +703,15 @@ export default function DashboardPage() {
                             {batch.is_closed ? "Buka PO" : "Tutup PO"}
                           </button>
                         )}
-                        <button onClick={() => setDeletingBatch(deletingBatch === batch.id ? null : batch.id)}
-                          className="text-[#b8a898] hover:text-red-500 transition text-lg leading-none">×</button>
+                        <button
+                          onClick={() => canDelete && setDeletingBatch(deletingBatch === batch.id ? null : batch.id)}
+                          disabled={!canDelete}
+                          title={!canDelete ? `Tidak bisa dihapus — ada ${batchTotalOrders} pesanan` : "Hapus batch"}
+                          className={`text-lg leading-none transition ${canDelete ? "text-[#b8a898] hover:text-red-500 cursor-pointer" : "text-[#d9cfc5] cursor-not-allowed"}`}>×</button>
                       </div>
                     </div>
 
-                    {deletingBatch === batch.id && (
+                    {deletingBatch === batch.id && canDelete && (
                       <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-3">
                         <p className="text-xs text-red-600 flex-1">Hapus batch ini?</p>
                         <button onClick={() => handleDeleteBatch(batch.id)}
