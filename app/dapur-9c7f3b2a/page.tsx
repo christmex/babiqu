@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { ClipboardList, BarChart2, Receipt, CalendarDays, ExternalLink, RefreshCw } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -227,60 +228,51 @@ export default function DashboardPage() {
 
   // ─────────────────────────────────────────────────────────────────────────
 
+  const NAV = [
+    { key: "pesanan",     label: "Pesanan",     Icon: ClipboardList },
+    { key: "keuangan",    label: "Keuangan",    Icon: BarChart2 },
+    { key: "pengeluaran", label: "Pengeluaran", Icon: Receipt },
+    { key: "batch",       label: "Batch PO",    Icon: CalendarDays },
+  ] as const;
+
   return (
-    <div className="min-h-screen bg-[#fdf8f2]">
-      <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-[#fdf8f2] pb-20">
+      <div className="max-w-2xl mx-auto px-4 pt-5 pb-4">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-xs tracking-[0.25em] uppercase text-[#7b1d1d] font-semibold mb-0.5">Babiqu</p>
-            <h1 className="text-2xl font-bold text-[#1c1208]">Dapur Dashboard</h1>
+            <p className="text-[10px] tracking-[0.25em] uppercase text-[#7b1d1d] font-semibold">Babiqu</p>
+            <h1 className="text-xl font-bold text-[#1c1208] leading-tight">Dapur Dashboard</h1>
             {lastUpdated && (
-              <p className="text-xs text-[#b8a898] mt-0.5">Update: {lastUpdated.toLocaleTimeString("id-ID")}</p>
+              <p className="text-[10px] text-[#b8a898]">Update: {lastUpdated.toLocaleTimeString("id-ID")}</p>
             )}
           </div>
           <div className="flex items-center gap-2">
             <a href="/" target="_blank" rel="noopener noreferrer"
-              className="px-4 py-2 bg-white border border-[#d9cfc5] text-[#7b1d1d] text-sm font-semibold rounded-xl hover:border-[#7b1d1d] transition">
-              Form Pesan
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-[#d9cfc5] text-[#7b1d1d] text-xs font-semibold rounded-xl hover:border-[#7b1d1d] transition">
+              <ExternalLink size={13} /> Form
             </a>
             <button onClick={fetchAll} disabled={loading}
-              className="px-4 py-2 bg-[#7b1d1d] text-white text-sm font-semibold rounded-xl hover:bg-[#6a1717] transition disabled:opacity-50">
+              className="flex items-center gap-1.5 px-3 py-2 bg-[#7b1d1d] text-white text-xs font-semibold rounded-xl hover:bg-[#6a1717] transition disabled:opacity-50">
+              <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
               {loading ? "..." : "Refresh"}
             </button>
           </div>
         </div>
 
-        {/* Quick stats */}
-        <div className="grid grid-cols-4 gap-2 mb-6">
+        {/* Quick stats — 2×2 on mobile, 4 col on wider */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
           {[
-            { label: "Aktif", value: todayActive.length, color: "text-[#1c1208]" },
-            { label: "Selesai", value: todayDelivered.length, color: "text-green-700" },
-            { label: "Batal", value: todayOrders.filter((o) => o.status === "cancelled").length, color: "text-red-500" },
-            { label: "Omzet Hari Ini", value: formatRupiah(todayDelivered.reduce((s,o) => s+o.total,0) + todayActive.reduce((s,o) => s+o.total,0)), color: "text-[#7b1d1d]", small: true },
+            { label: "Aktif",        value: todayActive.length, color: "text-[#1c1208]" },
+            { label: "Selesai",      value: todayDelivered.length, color: "text-green-700" },
+            { label: "Batal",        value: todayOrders.filter((o) => o.status === "cancelled").length, color: "text-red-500" },
+            { label: "Omzet Hari Ini", value: formatRupiah(todayDelivered.reduce((s,o)=>s+o.total,0)+todayActive.reduce((s,o)=>s+o.total,0)), color: "text-[#7b1d1d]", small: true },
           ].map((s) => (
-            <div key={s.label} className="bg-white rounded-2xl border border-[#e8ddd0] p-3">
-              <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold leading-tight">{s.label}</p>
-              <p className={`font-bold mt-1 ${s.color} ${s.small ? "text-sm" : "text-2xl"}`}>{s.value}</p>
+            <div key={s.label} className="bg-white rounded-2xl border border-[#e8ddd0] px-3 py-2.5">
+              <p className="text-[9px] text-[#8a7060] uppercase tracking-widest font-semibold leading-tight">{s.label}</p>
+              <p className={`font-bold mt-0.5 ${s.color} ${s.small ? "text-sm" : "text-2xl"}`}>{s.value}</p>
             </div>
-          ))}
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 flex-wrap">
-          {([
-            ["pesanan", "Pesanan"],
-            ["keuangan", "Keuangan"],
-            ["pengeluaran", "Pengeluaran"],
-            ["batch", "Batch PO"],
-          ] as const).map(([t, label]) => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition ${
-                tab === t ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"
-              }`}>
-              {label}
-            </button>
           ))}
         </div>
 
@@ -762,6 +754,24 @@ export default function DashboardPage() {
         )}
 
       </div>
+
+      {/* ── Bottom Nav Dock ─────────────────────────────────────────────── */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-[#e8ddd0] safe-area-pb">
+        <div className="max-w-2xl mx-auto flex">
+          {NAV.map(({ key, label, Icon }) => (
+            <button key={key} onClick={() => setTab(key as typeof tab)}
+              className={`relative flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors ${
+                tab === key ? "text-[#7b1d1d]" : "text-[#a09080] hover:text-[#5a3e2b]"
+              }`}>
+              <Icon size={20} strokeWidth={tab === key ? 2.2 : 1.6} />
+              <span className={`text-[10px] font-semibold tracking-wide ${tab === key ? "text-[#7b1d1d]" : "text-[#a09080]"}`}>
+                {label}
+              </span>
+              {tab === key && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#7b1d1d] rounded-full" />}
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
 }
