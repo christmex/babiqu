@@ -352,7 +352,7 @@ export default function DashboardPage() {
                           Dibatalkan{order.cancel_reason ? `: ${order.cancel_reason}` : ""}
                         </p>
                         <button onClick={() => handleRestore(order.id)}
-                          className="text-xs font-bold text-white bg-[#7b1d1d] hover:bg-[#6a1717] px-2.5 py-1 rounded-lg transition shrink-0 ml-2">Pulihkan</button>
+                          className="text-xs font-bold text-green-700 bg-white hover:bg-green-50 border border-green-400 px-2.5 py-1 rounded-lg transition shrink-0 ml-2">Pulihkan</button>
                       </div>
                     )}
                     {isDelivered && (
