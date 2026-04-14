@@ -99,8 +99,21 @@ export default function OrderPage() {
 
   const touch = (key: string) => setTouched((prev) => ({ ...prev, [key]: true }));
 
-  const fieldError = (key: keyof FormData) =>
-    (submitted || touched[key]) && !form[key].trim() ? "Wajib diisi" : "";
+  const fieldError = (key: keyof FormData) => {
+    if (!(submitted || touched[key])) return "";
+    if (!form[key].trim()) return "Wajib diisi";
+    if (key === "nomor_wa") {
+      const digits = form.nomor_wa.replace(/\D/g, "");
+      if (digits.length < 9 || digits.length > 15) return "Nomor HP tidak valid";
+    }
+    return "";
+  };
+
+  const handleWaInput = (raw: string) => {
+    // only allow digits, +, -, spaces — strip everything else
+    const cleaned = raw.replace(/[^\d+\-\s]/g, "");
+    setForm((prev) => ({ ...prev, nomor_wa: cleaned }));
+  };
 
   const scrollToFirstError = () => {
     const formFields: (keyof FormData)[] = ["name", "nomor_wa", "alamat", "jam_antar"];
@@ -154,9 +167,10 @@ export default function OrderPage() {
 
   const activeOrders = MENUS.filter((m) => orders[m.id].qty > 0);
 
+  const waDigits = form.nomor_wa.replace(/\D/g, "");
   const isFormComplete =
     form.name.trim() !== "" &&
-    form.nomor_wa.trim() !== "" &&
+    waDigits.length >= 9 && waDigits.length <= 15 &&
     form.alamat.trim() !== "" &&
     form.jam_antar.trim() !== "" &&
     activeOrders.length > 0 &&
@@ -307,9 +321,12 @@ export default function OrderPage() {
                 <input
                   data-field={key}
                   type={type}
+                  inputMode={key === "nomor_wa" ? "tel" : undefined}
                   value={form[key as keyof FormData]}
                   onChange={(e) =>
-                    setForm((prev) => ({ ...prev, [key]: e.target.value }))
+                    key === "nomor_wa"
+                      ? handleWaInput(e.target.value)
+                      : setForm((prev) => ({ ...prev, [key]: e.target.value }))
                   }
                   onBlur={() => touch(key)}
                   placeholder={placeholder}
