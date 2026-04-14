@@ -103,6 +103,7 @@ export default function OrderPage() {
   const [qtyEditing, setQtyEditing] = useState<string | null>(null);
   const [expandedPortions, setExpandedPortions] = useState<Record<string, number | null>>({});
   const [addingNote, setAddingNote] = useState<{ menuId: string; text: string; selected: number[] } | null>(null);
+  const [editingNote, setEditingNote] = useState<{ menuId: string; portionIndex: number; text: string } | null>(null);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -591,7 +592,29 @@ export default function OrderPage() {
                                     p.notes.trim() ? (
                                       <div key={idx} className="flex items-center gap-2 bg-[#f5ede4] rounded-lg px-3 py-1.5">
                                         <span className="text-[11px] font-bold text-[#a07850] shrink-0">P{idx + 1}</span>
-                                        <span className="text-xs text-[#1c1208] flex-1">{p.notes}</span>
+                                        {editingNote?.menuId === menu.id && editingNote.portionIndex === idx ? (
+                                          <input
+                                            autoFocus
+                                            type="text"
+                                            value={editingNote.text}
+                                            onChange={(e) => setEditingNote((prev) => prev ? { ...prev, text: e.target.value } : null)}
+                                            onBlur={() => {
+                                              if (editingNote.text.trim()) setPortionNotes(menu.id, idx, editingNote.text.trim());
+                                              else setPortionNotes(menu.id, idx, "");
+                                              setEditingNote(null);
+                                            }}
+                                            onKeyDown={(e) => {
+                                              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                                              if (e.key === "Escape") { setPortionNotes(menu.id, idx, p.notes); setEditingNote(null); }
+                                            }}
+                                            className="flex-1 text-xs text-[#1c1208] bg-transparent border-b border-[#a07850] focus:outline-none focus:border-[#7b1d1d] min-w-0"
+                                          />
+                                        ) : (
+                                          <span
+                                            onClick={() => setEditingNote({ menuId: menu.id, portionIndex: idx, text: p.notes })}
+                                            className="text-xs text-[#1c1208] flex-1 cursor-text hover:text-[#7b1d1d] transition"
+                                          >{p.notes}</span>
+                                        )}
                                         <button onClick={() => setPortionNotes(menu.id, idx, "")} className="text-[#a07850] hover:text-red-500 transition text-sm leading-none">×</button>
                                       </div>
                                     ) : null
