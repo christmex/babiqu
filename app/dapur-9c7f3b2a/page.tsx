@@ -89,6 +89,9 @@ export default function DashboardPage() {
   const [cancelReason, setCancelReason] = useState("");
   const [cancelLoading, setCancelLoading] = useState(false);
 
+  // Order detail modal
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
   // Expense form
   const [expForm, setExpForm] = useState({
     description: "", amount: "", category: "Bahan Baku",
@@ -130,6 +133,7 @@ export default function DashboardPage() {
   async function updateStatus(orderId: string, status: OrderStatus, extra?: { cancel_reason?: string }) {
     await supabase.from("orders").update({ status, ...extra }).eq("id", orderId);
     setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status, ...(extra || {}) } : o));
+    setSelectedOrder((prev) => prev?.id === orderId ? { ...prev, status, ...(extra || {}) } : prev);
   }
 
   async function handleCancel(orderId: string) {
@@ -278,35 +282,33 @@ export default function DashboardPage() {
 
         {/* ── TAB: PESANAN ────────────────────────────────────────────────── */}
         {tab === "pesanan" && (
-          <div className="space-y-4">
+          <div className="space-y-3">
 
-
-            <div className="flex flex-wrap gap-2">
-              {(["today", "all"] as const).map((f) => (
-                <button key={f} onClick={() => setOrderFilter(f)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition ${
-                    orderFilter === f ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"
-                  }`}>
-                  {f === "today" ? `Hari Ini (${todayOrders.length})` : `Semua (${orders.length})`}
-                </button>
-              ))}
-              <div className="w-px bg-[#e8ddd0] self-stretch mx-1" />
-              {([
-                ["all", "Semua Waktu"],
-                ["siang", "Siang"],
-                ["malam", "Malam"],
-              ] as const).map(([f, label]) => (
-                <button key={f} onClick={() => setJamFilter(f)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition ${
-                    jamFilter === f
-                      ? f === "siang" ? "bg-amber-500 text-white border-amber-500"
-                        : f === "malam" ? "bg-indigo-600 text-white border-indigo-600"
-                        : "bg-[#7b1d1d] text-white border-[#7b1d1d]"
-                      : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"
-                  }`}>
-                  {label}
-                </button>
-              ))}
+            {/* Filters: two segmented controls */}
+            <div className="flex gap-2">
+              {/* Date range */}
+              <div className="flex bg-[#f0e8de] rounded-xl p-0.5 gap-0.5 flex-1">
+                {(["today", "all"] as const).map((f) => (
+                  <button key={f} onClick={() => setOrderFilter(f)}
+                    className={`flex-1 py-1.5 rounded-[10px] text-xs font-semibold transition ${
+                      orderFilter === f ? "bg-white text-[#7b1d1d] shadow-sm" : "text-[#8a7060]"
+                    }`}>
+                    {f === "today" ? `Hari Ini (${todayOrders.length})` : `Semua (${orders.length})`}
+                  </button>
+                ))}
+              </div>
+              {/* Time of day */}
+              <div className="flex bg-[#f0e8de] rounded-xl p-0.5 gap-0.5">
+                {([["all", "🕐"], ["siang", "☀️"], ["malam", "🌙"]] as const).map(([f, icon]) => (
+                  <button key={f} onClick={() => setJamFilter(f)}
+                    title={f === "all" ? "Semua waktu" : f === "siang" ? "Siang" : "Malam"}
+                    className={`w-9 py-1.5 rounded-[10px] text-sm transition ${
+                      jamFilter === f ? "bg-white shadow-sm" : "opacity-50"
+                    }`}>
+                    {icon}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {loading && <p className="text-center text-[#8a7060] py-12">Memuat...</p>}
@@ -334,118 +336,42 @@ export default function DashboardPage() {
                     </p>
                   )}
 
-                  <div className={`bg-white rounded-xl border px-4 py-3 transition-all ${
-                    isCancelled ? "border-red-200" : isDelivered ? "border-green-200 bg-green-50/20" : "border-[#e8ddd0]"
-                  }`}>
-                    {/* Status banner — full opacity always */}
+                  <button onClick={() => setSelectedOrder(order)}
+                    className={`w-full text-left bg-white rounded-xl border px-4 py-3 transition-all active:scale-[0.99] ${
+                      isCancelled ? "border-red-200" : isDelivered ? "border-green-200 bg-green-50/20" : "border-[#e8ddd0] hover:border-[#c8b8a8]"
+                    }`}>
+                    {/* Status banner */}
                     {isCancelled && (
-                      <div className="flex items-center justify-between bg-red-50 rounded-lg px-3 py-1.5 mb-2 -mx-1">
-                        <p className="text-xs text-red-500">
-                          Dibatalkan{order.cancel_reason ? `: ${order.cancel_reason}` : ""}
-                        </p>
-                        <button onClick={() => handleRestore(order.id)}
-                          className="text-[11px] font-bold text-white bg-green-500 hover:bg-green-600 px-2.5 py-1 rounded-md transition shrink-0 ml-2">
-                          Pulihkan
-                        </button>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] font-bold bg-red-100 text-red-500 px-2 py-0.5 rounded-full">BATAL</span>
+                        {order.cancel_reason && <span className="text-xs text-red-400 truncate">{order.cancel_reason}</span>}
                       </div>
                     )}
                     {isDelivered && (
-                      <div className="flex items-center justify-between bg-green-50 rounded-lg px-3 py-1.5 mb-2 -mx-1">
-                        <p className="text-xs text-green-700 font-medium">✓ Sudah diantar</p>
-                        <button onClick={() => handleRestore(order.id)}
-                          className="text-[11px] text-[#8a7060] hover:text-[#1c1208] transition">Batalkan</button>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] font-bold bg-green-100 text-green-600 px-2 py-0.5 rounded-full">SELESAI</span>
                       </div>
                     )}
 
-                    {/* Card body — muted when cancelled */}
-                    <div className={isCancelled ? "opacity-50" : ""}>
-
-                    {/* Top row: name · wa · badge + date */}
-                    <div className="flex items-center justify-between gap-2 mb-1">
+                    {/* Top: name + badge + time */}
+                    <div className={`flex items-center justify-between gap-2 ${isCancelled ? "opacity-50" : ""}`}>
                       <div className="flex items-center gap-2 min-w-0">
-                        <p className="font-bold text-[#1c1208] text-sm leading-tight truncate">{order.name}</p>
+                        <p className="font-bold text-[#1c1208] text-sm truncate">{order.name}</p>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                           order.jam_antar.includes("Siang") ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700"
-                        }`}>
-                          {order.jam_antar.includes("Siang") ? "Siang" : "Malam"}
-                        </span>
+                        }`}>{order.jam_antar.includes("Siang") ? "Siang" : "Malam"}</span>
                       </div>
                       <p className="text-[10px] text-[#b8a898] shrink-0">{formatDate(order.created_at)}</p>
                     </div>
 
-                    {/* WA + address inline */}
-                    <div className="flex items-baseline gap-2 mb-2">
-                      <a href={`https://wa.me/${order.nomor_wa.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer"
-                        className="text-xs text-[#7b1d1d] hover:underline font-medium shrink-0">{order.nomor_wa}</a>
-                      <span className="text-[#d9cfc5] text-xs">·</span>
-                      <p className="text-xs text-[#5a3e2b] truncate">{order.alamat}</p>
+                    {/* Summary row */}
+                    <div className={`flex items-center justify-between mt-1 ${isCancelled ? "opacity-50" : ""}`}>
+                      <p className="text-xs text-[#8a7060] truncate">
+                        {order.items?.map((it) => `${it.qty}× ${it.menu_name.split(" ").slice(0,2).join(" ")}`).join(", ")}
+                      </p>
+                      <span className="font-bold text-[#7b1d1d] text-sm shrink-0 ml-2">{formatRupiah(order.total)}</span>
                     </div>
-
-                    {/* Items compact */}
-                    <div className="space-y-1 mb-2">
-                      {order.items?.map((item, i) => (
-                        <div key={i} className="flex gap-2">
-                          <div className="flex-1 min-w-0">
-                            <span className="text-xs font-semibold text-[#1c1208]">{item.qty}× {item.menu_name}</span>
-                            {item.portions?.map((p, pi) => (
-                              <span key={pi} className="text-xs text-[#8a7060]">
-                                {" "}
-                                {item.qty > 1 && <span className="font-semibold text-[#a07850]">P{pi+1} </span>}
-                                {Object.values(p.options).filter(Boolean).join("·")}
-                                {p.notes?.trim() && <span className="text-[#a07850] italic"> {p.notes}</span>}
-                              </span>
-                            ))}
-                          </div>
-                          <span className="text-xs text-[#8a7060] shrink-0">{formatRupiah(item.subtotal)}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {order.notes?.trim() && (
-                      <p className="text-[11px] text-[#a07850] italic mb-2">📝 {order.notes}</p>
-                    )}
-
-                    {/* Actions + Total */}
-                    <div className="flex items-center justify-between gap-3 pt-2 border-t border-[#f0e8de]">
-                      <div className="flex items-center gap-2">
-                        {order.status === "active" && (
-                          <>
-                            <button onClick={() => handleDeliver(order.id)}
-                              className="text-[11px] font-semibold text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg px-2.5 py-1 transition">
-                              Selesai
-                            </button>
-                            {cancelling !== order.id && (
-                              <button onClick={() => setCancelling(order.id)}
-                                className="text-[11px] text-red-400 hover:text-red-600 font-medium transition">Batal</button>
-                            )}
-                          </>
-                        )}
-                      </div>
-                      <span className="font-bold text-[#7b1d1d] text-sm shrink-0">{formatRupiah(order.total)}</span>
-                    </div>
-
-                    {/* Cancel form — full width below actions */}
-                    {cancelling === order.id && (
-                      <div className="mt-2 pt-2 border-t border-red-100">
-                        <input autoFocus value={cancelReason}
-                          onChange={(e) => setCancelReason(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter") handleCancel(order.id); if (e.key === "Escape") { setCancelling(null); setCancelReason(""); } }}
-                          placeholder="Tulis alasan pembatalan..."
-                          className="w-full text-sm border border-red-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-red-400 mb-2"
-                        />
-                        <div className="flex gap-2">
-                          <button onClick={() => handleCancel(order.id)} disabled={cancelLoading || !cancelReason.trim()}
-                            className="flex-1 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 py-2 rounded-xl transition disabled:opacity-40">
-                            {cancelLoading ? "Menyimpan..." : "Konfirmasi Batal"}
-                          </button>
-                          <button onClick={() => { setCancelling(null); setCancelReason(""); }}
-                            className="px-4 py-2 text-sm text-[#8a7060] bg-[#f0e8de] hover:bg-[#e8ddd0] rounded-xl transition">Tutup</button>
-                        </div>
-                      </div>
-                    )}
-
-                    </div>{/* end muted wrapper */}
-                  </div>
+                  </button>
                 </div>
               );
             })}
@@ -454,36 +380,44 @@ export default function DashboardPage() {
 
         {/* ── TAB: KEUANGAN ───────────────────────────────────────────────── */}
         {tab === "keuangan" && (
-          <div className="space-y-5">
-            <div className="flex gap-2 flex-wrap">
+          <div className="space-y-4">
+            {/* Period segmented control */}
+            <div className="flex bg-[#f0e8de] rounded-xl p-0.5 gap-0.5">
               {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
                 <button key={p} onClick={() => setPeriod(p)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition ${
-                    period === p ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"
+                  className={`flex-1 py-1.5 rounded-[10px] text-xs font-semibold transition ${
+                    period === p ? "bg-white text-[#7b1d1d] shadow-sm" : "text-[#8a7060]"
                   }`}>
                   {PERIOD_LABELS[p]}
                 </button>
               ))}
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white rounded-2xl border border-[#e8ddd0] p-4">
-                <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold">Pemasukan</p>
-                <p className="text-xl font-bold text-[#1c1208] mt-1">{formatRupiah(periodRevenue)}</p>
-                <p className="text-[11px] text-[#8a7060] mt-0.5">{periodOrders.length} pesanan</p>
+            {/* P&L summary card */}
+            <div className="bg-white rounded-2xl border border-[#e8ddd0] divide-y divide-[#f0e8de]">
+              <div className="flex items-center justify-between px-4 py-3">
+                <div>
+                  <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold">Pemasukan</p>
+                  <p className="text-lg font-bold text-[#1c1208] mt-0.5">{formatRupiah(periodRevenue)}</p>
+                </div>
+                <p className="text-xs text-[#8a7060]">{periodOrders.length} pesanan</p>
               </div>
-              <div className="bg-white rounded-2xl border border-[#e8ddd0] p-4">
-                <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold">Pengeluaran</p>
-                <p className="text-xl font-bold text-[#1c1208] mt-1">{formatRupiah(periodExpTotal)}</p>
-                <p className="text-[11px] text-[#8a7060] mt-0.5">{periodExpenses.length} item</p>
+              <div className="flex items-center justify-between px-4 py-3">
+                <div>
+                  <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold">Pengeluaran</p>
+                  <p className="text-lg font-bold text-[#1c1208] mt-0.5">{formatRupiah(periodExpTotal)}</p>
+                </div>
+                <p className="text-xs text-[#8a7060]">{periodExpenses.length} item</p>
               </div>
-              <div className={`rounded-2xl border p-4 ${periodProfit >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
-                <p className="text-[10px] uppercase tracking-widest font-semibold text-[#8a7060]">Keuntungan</p>
-                <p className={`text-xl font-bold mt-1 ${periodProfit >= 0 ? "text-green-700" : "text-red-600"}`}>
-                  {formatRupiah(periodProfit)}
-                </p>
-                <p className={`text-[11px] mt-0.5 font-semibold ${periodProfit >= 0 ? "text-green-600" : "text-red-500"}`}>
-                  {periodRevenue > 0 ? `${Math.round((periodProfit / periodRevenue) * 100)}% margin` : "—"}
+              <div className={`flex items-center justify-between px-4 py-3 rounded-b-2xl ${periodProfit >= 0 ? "bg-green-50" : "bg-red-50"}`}>
+                <div>
+                  <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold">Keuntungan</p>
+                  <p className={`text-lg font-bold mt-0.5 ${periodProfit >= 0 ? "text-green-700" : "text-red-600"}`}>
+                    {formatRupiah(periodProfit)}
+                  </p>
+                </div>
+                <p className={`text-xs font-bold ${periodProfit >= 0 ? "text-green-600" : "text-red-500"}`}>
+                  {periodRevenue > 0 ? `${Math.round((periodProfit / periodRevenue) * 100)}%` : "—"}
                 </p>
               </div>
             </div>
@@ -620,32 +554,33 @@ export default function DashboardPage() {
                     placeholder="e.g. Batch #1 — April 2026" required
                     className="w-full border border-[#d9cfc5] rounded-lg px-4 py-2.5 text-sm text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition" />
                 </div>
-                <div className="grid grid-cols-3 gap-3">
-                  {([
-                    ["open_date", "PO Buka"],
-                    ["close_date", "PO Tutup"],
-                    ["delivery_date", "Tanggal Antar"],
-                  ] as const).map(([field, label]) => (
+                <div className="grid grid-cols-2 gap-3">
+                  {([["open_date", "PO Buka"], ["close_date", "PO Tutup"]] as const).map(([field, label]) => (
                     <div key={field}>
-                      <label className="block text-xs font-semibold text-[#5a3e2b] mb-1 uppercase tracking-wide">{label}</label>
+                      <label className="block text-xs text-[#8a7060] mb-1">{label}</label>
                       <input type="date" value={batchForm[field]} onChange={(e) => setBatchForm((p) => ({ ...p, [field]: e.target.value }))} required
-                        className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2.5 text-sm text-[#1c1208] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
+                        className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-sm text-[#1c1208] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
                     </div>
                   ))}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-[#5a3e2b] mb-1 uppercase tracking-wide">Maks. Pesanan (opsional)</label>
-                    <input value={batchForm.max_orders} onChange={(e) => setBatchForm((p) => ({ ...p, max_orders: e.target.value.replace(/\D/g, "") }))}
-                      placeholder="Kosong = tak terbatas" inputMode="numeric"
-                      className="w-full border border-[#d9cfc5] rounded-lg px-4 py-2.5 text-sm text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
+                    <label className="block text-xs text-[#8a7060] mb-1">Tanggal Antar</label>
+                    <input type="date" value={batchForm.delivery_date} onChange={(e) => setBatchForm((p) => ({ ...p, delivery_date: e.target.value }))} required
+                      className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-sm text-[#1c1208] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[#5a3e2b] mb-1 uppercase tracking-wide">Catatan (opsional)</label>
-                    <input value={batchForm.notes} onChange={(e) => setBatchForm((p) => ({ ...p, notes: e.target.value }))}
-                      placeholder="e.g. Minimal order 1 porsi"
-                      className="w-full border border-[#d9cfc5] rounded-lg px-4 py-2.5 text-sm text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
+                    <label className="block text-xs text-[#8a7060] mb-1">Maks. Pesanan</label>
+                    <input value={batchForm.max_orders} onChange={(e) => setBatchForm((p) => ({ ...p, max_orders: e.target.value.replace(/\D/g, "") }))}
+                      placeholder="Tak terbatas" inputMode="numeric"
+                      className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-sm text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-[#8a7060] mb-1">Catatan (opsional)</label>
+                  <input value={batchForm.notes} onChange={(e) => setBatchForm((p) => ({ ...p, notes: e.target.value }))}
+                    placeholder="e.g. Minimal order 1 porsi"
+                    className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-sm text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
                 </div>
                 <button type="submit" disabled={batchLoading || !batchForm.label.trim()}
                   className="w-full bg-[#7b1d1d] text-white font-bold py-3 rounded-xl hover:bg-[#6a1717] transition disabled:opacity-40 text-sm">
@@ -764,6 +699,135 @@ export default function DashboardPage() {
         )}
 
       </div>
+
+      {/* ── Order Detail Modal ──────────────────────────────────────────── */}
+      {selectedOrder && (() => {
+        const o = selectedOrder;
+        const isCancelled = o.status === "cancelled";
+        const isDelivered = o.status === "delivered";
+        return (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedOrder(null)} />
+            {/* Sheet */}
+            <div className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-xl max-h-[90vh] flex flex-col">
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-1 shrink-0">
+                <div className="w-10 h-1 bg-[#e8ddd0] rounded-full" />
+              </div>
+
+              {/* Scrollable content */}
+              <div className="overflow-y-auto px-5 pb-5">
+                {/* Status */}
+                {isCancelled && (
+                  <div className="flex items-center justify-between bg-red-50 rounded-xl px-3 py-2 mb-4">
+                    <p className="text-xs text-red-500 font-medium">Dibatalkan{o.cancel_reason ? `: ${o.cancel_reason}` : ""}</p>
+                    <button onClick={() => handleRestore(o.id)}
+                      className="text-[11px] font-bold text-white bg-green-500 hover:bg-green-600 px-2.5 py-1 rounded-lg transition">Pulihkan</button>
+                  </div>
+                )}
+                {isDelivered && (
+                  <div className="flex items-center justify-between bg-green-50 rounded-xl px-3 py-2 mb-4">
+                    <p className="text-xs text-green-700 font-semibold">✓ Sudah diantar</p>
+                    <button onClick={() => handleRestore(o.id)}
+                      className="text-[11px] text-[#8a7060] hover:text-[#1c1208] transition">Batalkan</button>
+                  </div>
+                )}
+
+                {/* Header */}
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div>
+                    <p className="font-bold text-[#1c1208] text-lg leading-snug">{o.name}</p>
+                    <a href={`https://wa.me/${o.nomor_wa.replace(/\D/g,"")}`} target="_blank" rel="noopener noreferrer"
+                      className="text-sm text-[#7b1d1d] hover:underline font-medium">{o.nomor_wa}</a>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className={`inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full mb-1 ${
+                      o.jam_antar.includes("Siang") ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700"
+                    }`}>{o.jam_antar.includes("Siang") ? "Siang" : "Malam"}</span>
+                    <p className="text-[11px] text-[#b8a898]">{formatDate(o.created_at)}</p>
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div className="bg-[#fdf8f2] rounded-xl px-4 py-3 mb-4">
+                  <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold mb-0.5">Alamat</p>
+                  <p className="text-sm text-[#1c1208]">{o.alamat}</p>
+                </div>
+
+                {/* Items */}
+                <div className="space-y-3 mb-4">
+                  {o.items?.map((item, i) => (
+                    <div key={i} className="border-l-2 border-[#e8ddd0] pl-3">
+                      <div className="flex justify-between items-baseline gap-2 mb-1">
+                        <p className="text-sm font-semibold text-[#1c1208]">{item.qty}× {item.menu_name}</p>
+                        <span className="text-xs text-[#8a7060] shrink-0">{formatRupiah(item.subtotal)}</span>
+                      </div>
+                      {item.portions?.map((p, pi) => (
+                        <p key={pi} className="text-xs text-[#8a7060]">
+                          {item.qty > 1 && <span className="font-semibold text-[#a07850]">P{pi+1} </span>}
+                          {Object.values(p.options).filter(Boolean).join(" · ")}
+                          {p.notes?.trim() && <span className="text-[#a07850] italic"> · {p.notes}</span>}
+                        </p>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+
+                {o.notes?.trim() && (
+                  <p className="text-xs text-[#a07850] italic bg-amber-50 rounded-lg px-3 py-2 mb-4">📝 {o.notes}</p>
+                )}
+
+                {/* Total */}
+                <div className="flex justify-between items-center border-t border-[#f0e8de] pt-3 mb-4">
+                  <p className="text-sm font-semibold text-[#5a3e2b]">Total</p>
+                  <p className="text-xl font-bold text-[#7b1d1d]">{formatRupiah(o.total)}</p>
+                </div>
+
+                {/* Actions */}
+                {o.status === "active" && (
+                  <div className="space-y-2">
+                    {cancelling === o.id ? (
+                      <>
+                        <input autoFocus value={cancelReason}
+                          onChange={(e) => setCancelReason(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") handleCancel(o.id); if (e.key === "Escape") { setCancelling(null); setCancelReason(""); } }}
+                          placeholder="Tulis alasan pembatalan..."
+                          className="w-full text-sm border border-red-200 rounded-xl px-4 py-3 focus:outline-none focus:border-red-400"
+                        />
+                        <div className="flex gap-2">
+                          <button onClick={() => handleCancel(o.id)} disabled={cancelLoading || !cancelReason.trim()}
+                            className="flex-1 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 py-3 rounded-xl transition disabled:opacity-40">
+                            {cancelLoading ? "Menyimpan..." : "Konfirmasi Batal"}
+                          </button>
+                          <button onClick={() => { setCancelling(null); setCancelReason(""); }}
+                            className="px-4 py-3 text-sm text-[#8a7060] bg-[#f0e8de] rounded-xl">Tutup</button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button onClick={() => handleDeliver(o.id)}
+                          className="flex-1 text-sm font-semibold text-white bg-green-500 hover:bg-green-600 py-3 rounded-xl transition">
+                          Tandai Selesai
+                        </button>
+                        <button onClick={() => setCancelling(o.id)}
+                          className="px-4 py-3 text-sm font-medium text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition">
+                          Batal
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <button onClick={() => { setSelectedOrder(null); setCancelling(null); setCancelReason(""); }}
+                  className="w-full mt-3 py-3 text-sm text-[#8a7060] bg-[#f0e8de] hover:bg-[#e8ddd0] rounded-xl transition">
+                  Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Bottom Nav Dock ─────────────────────────────────────────────── */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-[#e8ddd0] safe-area-pb">
