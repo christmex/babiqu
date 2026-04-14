@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { AlertCircle, MessageCircle, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -73,6 +73,21 @@ type FormData = {
 
 const WA_NUMBER = "6285280221998";
 
+type Batch = {
+  id: string;
+  label: string;
+  open_date: string;
+  close_date: string;
+  delivery_date: string;
+  notes: string;
+};
+
+function formatBatchDate(dateStr: string) {
+  return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(
+    new Date(dateStr + "T00:00:00")
+  );
+}
+
 function formatRupiah(amount: number) {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -99,6 +114,8 @@ export default function OrderPage() {
     Object.fromEntries(MENUS.map((m) => [m.id, { qty: 0, portions: [], sameForAll: true }]))
   );
 
+  const [activeBatch, setActiveBatch] = useState<Batch | null | undefined>(undefined);
+  const [nextBatch, setNextBatch] = useState<Batch | null>(null);
   const [loading, setLoading] = useState(false);
   const [qtyEditing, setQtyEditing] = useState<string | null>(null);
   const [expandedPortions, setExpandedPortions] = useState<Record<string, number | null>>({});
@@ -107,6 +124,25 @@ export default function OrderPage() {
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    async function fetchBatch() {
+      const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+      const { data: active } = await supabase
+        .from("batches").select("*")
+        .lte("open_date", today).gte("close_date", today)
+        .order("open_date", { ascending: false }).limit(1).maybeSingle();
+      setActiveBatch(active ?? null);
+      if (!active) {
+        const { data: next } = await supabase
+          .from("batches").select("*")
+          .gt("open_date", today)
+          .order("open_date", { ascending: true }).limit(1).maybeSingle();
+        setNextBatch(next ?? null);
+      }
+    }
+    fetchBatch();
+  }, []);
 
   const touch = (key: string) => setTouched((prev) => ({ ...prev, [key]: true }));
 
@@ -332,6 +368,7 @@ export default function OrderPage() {
       items,
       notes: form.notes,
       total,
+      batch_id: activeBatch?.id ?? null,
     });
 
     if (dbError) {
@@ -344,34 +381,90 @@ export default function OrderPage() {
     setLoading(false);
   };
 
+  // ── Hero (shared) ──────────────────────────────────────────────────────────
+  const hero = (
+    <header className="relative text-white text-center overflow-hidden">
+      <div className="relative h-[400px] sm:h-[480px] w-full">
+        <Image src="/hero.jpg" alt="Babiqu Signature Roast Pork" fill className="object-cover object-[center_65%]" priority />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#1a0a05]/85 via-[#1a0a05]/30 to-transparent" />
+      </div>
+      <div className="absolute inset-0 flex flex-col items-center justify-end pb-8 px-4">
+        <p className="text-[11px] tracking-[0.35em] uppercase text-red-200 mb-2">Signature Roast Pork</p>
+        <h1 className="text-4xl font-bold tracking-wide drop-shadow-lg">BABIQU</h1>
+        <p className="text-white/80 text-sm mt-2 tracking-wide drop-shadow">Pesan langsung · Antar ke rumah</p>
+      </div>
+    </header>
+  );
+
+  // ── Batch loading ───────────────────────────────────────────────────────────
+  if (activeBatch === undefined) {
+    return (
+      <div className="min-h-screen bg-[#fdf8f2]">
+        {hero}
+        <div className="flex items-center justify-center py-20">
+          <div className="w-6 h-6 border-2 border-[#7b1d1d] border-t-transparent rounded-full animate-spin" />
+        </div>
+        <footer className="text-center py-8 text-xs text-[#b8a898]">© 2026 Babiqu · Signature Roast Pork</footer>
+      </div>
+    );
+  }
+
+  // ── PO Closed ───────────────────────────────────────────────────────────────
+  if (activeBatch === null) {
+    return (
+      <div className="min-h-screen bg-[#fdf8f2]">
+        {hero}
+        <main className="max-w-xl mx-auto px-4 py-10">
+          <div className="bg-white rounded-2xl border border-[#e8ddd0] shadow-sm p-8 text-center">
+            <p className="text-3xl mb-3">🔒</p>
+            <h2 className="text-xl font-bold text-[#1c1208] mb-2">PO Sedang Tutup</h2>
+            <p className="text-sm text-[#8a7060] leading-relaxed mb-5">
+              Pemesanan untuk batch ini sudah ditutup.<br />
+              Pantau terus untuk batch berikutnya!
+            </p>
+            {nextBatch ? (
+              <div className="bg-[#fdf8f2] rounded-xl border border-[#e8ddd0] p-4 text-left">
+                <p className="text-xs font-bold text-[#7b1d1d] uppercase tracking-wider mb-2">Batch Berikutnya</p>
+                <p className="font-semibold text-[#1c1208]">{nextBatch.label}</p>
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs text-[#5a3e2b]">
+                    <span className="font-semibold">PO Buka:</span> {formatBatchDate(nextBatch.open_date)}
+                  </p>
+                  <p className="text-xs text-[#5a3e2b]">
+                    <span className="font-semibold">PO Tutup:</span> {formatBatchDate(nextBatch.close_date)}
+                  </p>
+                  <p className="text-xs text-[#5a3e2b]">
+                    <span className="font-semibold">Pengiriman:</span> {formatBatchDate(nextBatch.delivery_date)}
+                  </p>
+                </div>
+                {nextBatch.notes && <p className="text-xs text-[#8a7060] italic mt-2">{nextBatch.notes}</p>}
+              </div>
+            ) : (
+              <p className="text-xs text-[#b8a898]">Info batch berikutnya akan segera diumumkan.</p>
+            )}
+          </div>
+        </main>
+        <footer className="text-center py-8 text-xs text-[#b8a898]">© 2026 Babiqu · Signature Roast Pork</footer>
+      </div>
+    );
+  }
+
+  // ── PO Open ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#fdf8f2]">
-      {/* Hero image */}
-      <header className="relative text-white text-center overflow-hidden">
-        <div className="relative h-[400px] sm:h-[480px] w-full">
-          <Image
-            src="/hero.jpg"
-            alt="Babiqu Signature Roast Pork"
-            fill
-            className="object-cover object-[center_65%]"
-            priority
-          />
-          {/* Dark gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#1a0a05]/85 via-[#1a0a05]/30 to-transparent" />
-        </div>
-        {/* Text on top of image */}
-        <div className="absolute inset-0 flex flex-col items-center justify-end pb-8 px-4">
-          <p className="text-[11px] tracking-[0.35em] uppercase text-red-200 mb-2">
-            Signature Roast Pork
-          </p>
-          <h1 className="text-4xl font-bold tracking-wide drop-shadow-lg">BABIQU</h1>
-          <p className="text-white/80 text-sm mt-2 tracking-wide drop-shadow">
-            Pesan langsung · Antar ke rumah
-          </p>
-        </div>
-      </header>
+      {hero}
 
       <main className="max-w-xl mx-auto px-4 py-8 space-y-6">
+
+        {/* PO Info Banner */}
+        <div className="bg-[#7b1d1d] text-white rounded-2xl px-5 py-4">
+          <p className="text-[11px] tracking-[0.2em] uppercase font-bold text-red-200 mb-1">{activeBatch.label}</p>
+          <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-white/90">
+            <span>PO tutup: <span className="font-semibold text-white">{formatBatchDate(activeBatch.close_date)}</span></span>
+            <span>Antar: <span className="font-semibold text-white">{formatBatchDate(activeBatch.delivery_date)}</span></span>
+          </div>
+          {activeBatch.notes && <p className="text-xs text-red-200 mt-1.5 italic">{activeBatch.notes}</p>}
+        </div>
 
         {/* Customer Info */}
         <section className="bg-white rounded-2xl shadow-sm border border-[#e8ddd0] p-6 space-y-4">

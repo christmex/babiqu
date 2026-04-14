@@ -12,15 +12,33 @@ type Order = {
   id: string; created_at: string; name: string; nomor_wa: string;
   alamat: string; jam_antar: string; items: OrderItem[];
   notes: string; total: number; status: OrderStatus; cancel_reason: string;
+  batch_id: string | null;
 };
 type Expense = {
   id: string; created_at: string; date: string;
   amount: number; description: string; category: string;
+  batch_id: string | null;
+};
+type Batch = {
+  id: string; created_at: string; label: string;
+  open_date: string; close_date: string; delivery_date: string; notes: string;
 };
 
 const EXPENSE_CATEGORIES = ["Bahan Baku", "Operasional", "Kemasan", "Transportasi", "Lainnya"];
 const PERIOD_LABELS = { today: "Hari Ini", week: "7 Hari", month: "30 Hari", all: "Semua" } as const;
 type Period = keyof typeof PERIOD_LABELS;
+
+function formatBatchDate(d: string) {
+  return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(new Date(d + "T00:00:00"));
+}
+function isBatchActive(b: Batch) {
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+  return b.open_date <= today && b.close_date >= today;
+}
+function isBatchUpcoming(b: Batch) {
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+  return b.open_date > today;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -51,9 +69,10 @@ function isToday(iso: string) { return new Date(iso).toDateString() === new Date
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const [tab, setTab] = useState<"pesanan" | "keuangan" | "pengeluaran">("pesanan");
+  const [tab, setTab] = useState<"pesanan" | "keuangan" | "pengeluaran" | "batch">("pesanan");
   const [orders, setOrders] = useState<Order[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -65,9 +84,17 @@ export default function DashboardPage() {
   // Expense form
   const [expForm, setExpForm] = useState({
     description: "", amount: "", category: "Bahan Baku",
-    date: new Date().toISOString().slice(0, 10),
+    date: new Date().toISOString().slice(0, 10), batch_id: "",
   });
   const [expLoading, setExpLoading] = useState(false);
+
+  // Batch form
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const [batchForm, setBatchForm] = useState({
+    label: "", open_date: todayIso, close_date: todayIso, delivery_date: todayIso, notes: "",
+  });
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [deletingBatch, setDeletingBatch] = useState<string | null>(null);
 
   // Filters
   const [orderFilter, setOrderFilter] = useState<"today" | "all">("today");
@@ -76,12 +103,14 @@ export default function DashboardPage() {
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const [{ data: ord }, { data: exp }] = await Promise.all([
+    const [{ data: ord }, { data: exp }, { data: bat }] = await Promise.all([
       supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(500),
       supabase.from("expenses").select("*").order("date", { ascending: false }).limit(500),
+      supabase.from("batches").select("*").order("open_date", { ascending: false }).limit(100),
     ]);
     setOrders((ord as Order[]) || []);
     setExpenses(exp || []);
+    setBatches(bat || []);
     setLastUpdated(new Date());
     setLoading(false);
   }, []);
@@ -120,10 +149,33 @@ export default function DashboardPage() {
     const { data } = await supabase.from("expenses").insert({
       description: expForm.description.trim(), amount,
       category: expForm.category, date: expForm.date,
+      batch_id: expForm.batch_id || null,
     }).select().single();
     if (data) setExpenses((prev) => [data, ...prev]);
-    setExpForm({ description: "", amount: "", category: "Bahan Baku", date: new Date().toISOString().slice(0, 10) });
+    setExpForm({ description: "", amount: "", category: "Bahan Baku", date: new Date().toISOString().slice(0, 10), batch_id: "" });
     setExpLoading(false);
+  }
+
+  async function handleAddBatch(e: React.FormEvent) {
+    e.preventDefault();
+    if (!batchForm.label.trim()) return;
+    setBatchLoading(true);
+    const { data } = await supabase.from("batches").insert({
+      label: batchForm.label.trim(),
+      open_date: batchForm.open_date,
+      close_date: batchForm.close_date,
+      delivery_date: batchForm.delivery_date,
+      notes: batchForm.notes.trim(),
+    }).select().single();
+    if (data) setBatches((prev) => [data, ...prev]);
+    setBatchForm({ label: "", open_date: todayIso, close_date: todayIso, delivery_date: todayIso, notes: "" });
+    setBatchLoading(false);
+  }
+
+  async function handleDeleteBatch(id: string) {
+    await supabase.from("batches").delete().eq("id", id);
+    setBatches((prev) => prev.filter((b) => b.id !== id));
+    setDeletingBatch(null);
   }
 
   async function handleDeleteExpense(id: string) {
@@ -195,13 +247,18 @@ export default function DashboardPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
-          {(["pesanan", "keuangan", "pengeluaran"] as const).map((t) => (
+        <div className="flex gap-2 mb-6 flex-wrap">
+          {([
+            ["pesanan", "Pesanan"],
+            ["keuangan", "Keuangan"],
+            ["pengeluaran", "Pengeluaran"],
+            ["batch", "Batch PO"],
+          ] as const).map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)}
               className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition ${
                 tab === t ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"
               }`}>
-              {t === "pesanan" ? "Pesanan" : t === "keuangan" ? "Keuangan" : "Pengeluaran"}
+              {label}
             </button>
           ))}
         </div>
@@ -505,6 +562,16 @@ export default function DashboardPage() {
                     ))}
                   </div>
                 </div>
+                {batches.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-semibold text-[#5a3e2b] mb-1 uppercase tracking-wide">Batch (opsional)</label>
+                    <select value={expForm.batch_id} onChange={(e) => setExpForm((p) => ({ ...p, batch_id: e.target.value }))}
+                      className="w-full border border-[#d9cfc5] rounded-lg px-4 py-2.5 text-sm text-[#1c1208] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition">
+                      <option value="">— Tidak terikat batch —</option>
+                      {batches.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
+                    </select>
+                  </div>
+                )}
                 <button type="submit" disabled={expLoading || !expForm.description.trim() || !expForm.amount}
                   className="w-full bg-[#7b1d1d] text-white font-bold py-3 rounded-xl hover:bg-[#6a1717] transition disabled:opacity-40 text-sm">
                   {expLoading ? "Menyimpan..." : "Tambah Pengeluaran"}
@@ -530,6 +597,128 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB: BATCH PO ───────────────────────────────────────────────── */}
+        {tab === "batch" && (
+          <div className="space-y-5">
+            {/* Create batch form */}
+            <div className="bg-white rounded-2xl border border-[#e8ddd0] p-5">
+              <p className="text-xs font-bold text-[#7b1d1d] uppercase tracking-wider mb-4">Buka Batch Baru</p>
+              <form onSubmit={handleAddBatch} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#5a3e2b] mb-1 uppercase tracking-wide">Nama Batch</label>
+                  <input value={batchForm.label} onChange={(e) => setBatchForm((p) => ({ ...p, label: e.target.value }))}
+                    placeholder="e.g. Batch #1 — April 2026" required
+                    className="w-full border border-[#d9cfc5] rounded-lg px-4 py-2.5 text-sm text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition" />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {([
+                    ["open_date", "PO Buka"],
+                    ["close_date", "PO Tutup"],
+                    ["delivery_date", "Tanggal Antar"],
+                  ] as const).map(([field, label]) => (
+                    <div key={field}>
+                      <label className="block text-xs font-semibold text-[#5a3e2b] mb-1 uppercase tracking-wide">{label}</label>
+                      <input type="date" value={batchForm[field]} onChange={(e) => setBatchForm((p) => ({ ...p, [field]: e.target.value }))} required
+                        className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2.5 text-sm text-[#1c1208] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#5a3e2b] mb-1 uppercase tracking-wide">Catatan (opsional)</label>
+                  <input value={batchForm.notes} onChange={(e) => setBatchForm((p) => ({ ...p, notes: e.target.value }))}
+                    placeholder="e.g. Minimal order 1 porsi"
+                    className="w-full border border-[#d9cfc5] rounded-lg px-4 py-2.5 text-sm text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
+                </div>
+                <button type="submit" disabled={batchLoading || !batchForm.label.trim()}
+                  className="w-full bg-[#7b1d1d] text-white font-bold py-3 rounded-xl hover:bg-[#6a1717] transition disabled:opacity-40 text-sm">
+                  {batchLoading ? "Menyimpan..." : "Buat Batch"}
+                </button>
+              </form>
+            </div>
+
+            {/* Batch history */}
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-[#8a7060] uppercase tracking-wider px-1">History Batch</p>
+              {batches.length === 0 && !loading && (
+                <p className="text-center text-[#b8a898] py-8">Belum ada batch.</p>
+              )}
+              {batches.map((batch) => {
+                const batchOrders = orders.filter((o) => o.batch_id === batch.id && o.status !== "cancelled");
+                const batchCancelled = orders.filter((o) => o.batch_id === batch.id && o.status === "cancelled");
+                const batchDelivered = orders.filter((o) => o.batch_id === batch.id && o.status === "delivered");
+                const batchRevenue = batchOrders.reduce((s, o) => s + o.total, 0);
+                const batchExp = expenses.filter((e) => e.batch_id === batch.id);
+                const batchExpTotal = batchExp.reduce((s, e) => s + e.amount, 0);
+                const batchProfit = batchRevenue - batchExpTotal;
+                const isActive = isBatchActive(batch);
+                const isUpcoming = isBatchUpcoming(batch);
+
+                return (
+                  <div key={batch.id} className={`bg-white rounded-2xl border p-5 ${isActive ? "border-[#7b1d1d] shadow-sm" : "border-[#e8ddd0]"}`}>
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-bold text-[#1c1208]">{batch.label}</p>
+                          {isActive && <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">AKTIF</span>}
+                          {isUpcoming && <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">AKAN DATANG</span>}
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-[#8a7060]">
+                          <span>PO: {formatBatchDate(batch.open_date)} – {formatBatchDate(batch.close_date)}</span>
+                          <span>Antar: {formatBatchDate(batch.delivery_date)}</span>
+                        </div>
+                        {batch.notes && <p className="text-xs text-[#a07850] italic mt-1">{batch.notes}</p>}
+                      </div>
+                      <button onClick={() => setDeletingBatch(deletingBatch === batch.id ? null : batch.id)}
+                        className="text-[#b8a898] hover:text-red-500 transition text-lg leading-none shrink-0">×</button>
+                    </div>
+
+                    {deletingBatch === batch.id && (
+                      <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-3">
+                        <p className="text-xs text-red-600 flex-1">Hapus batch ini?</p>
+                        <button onClick={() => handleDeleteBatch(batch.id)}
+                          className="text-xs font-bold text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-lg">Hapus</button>
+                        <button onClick={() => setDeletingBatch(null)} className="text-xs text-[#8a7060]">Batal</button>
+                      </div>
+                    )}
+
+                    {/* Stats grid */}
+                    <div className="grid grid-cols-4 gap-2 mb-3">
+                      {[
+                        { label: "Pesanan", value: batchOrders.length },
+                        { label: "Selesai", value: batchDelivered.length },
+                        { label: "Batal", value: batchCancelled.length },
+                        { label: "Pemasukan", value: formatRupiah(batchRevenue), small: true },
+                      ].map((s) => (
+                        <div key={s.label} className="bg-[#fdf8f2] rounded-xl p-2.5 text-center">
+                          <p className="text-[9px] text-[#8a7060] uppercase tracking-wider font-semibold">{s.label}</p>
+                          <p className={`font-bold text-[#1c1208] mt-0.5 ${s.small ? "text-xs" : "text-lg"}`}>{s.value}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* P&L */}
+                    <div className="flex items-center justify-between border-t border-[#f0e8de] pt-3">
+                      <div className="text-xs text-[#8a7060]">
+                        Pengeluaran: <span className="font-semibold text-[#1c1208]">{formatRupiah(batchExpTotal)}</span>
+                        {batchExp.length > 0 && <span className="ml-1">({batchExp.length} item)</span>}
+                      </div>
+                      <div className={`text-sm font-bold ${batchProfit >= 0 ? "text-green-700" : "text-red-600"}`}>
+                        {batchProfit >= 0 ? "+" : ""}{formatRupiah(batchProfit)}
+                        {batchRevenue > 0 && (
+                          <span className="text-xs font-normal ml-1 opacity-70">
+                            ({Math.round((batchProfit / batchRevenue) * 100)}%)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
