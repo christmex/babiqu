@@ -102,6 +102,7 @@ export default function OrderPage() {
   const [loading, setLoading] = useState(false);
   const [qtyEditing, setQtyEditing] = useState<string | null>(null);
   const [expandedPortions, setExpandedPortions] = useState<Record<string, number | null>>({});
+  const [addingNote, setAddingNote] = useState<{ menuId: string; text: string; selected: number[] } | null>(null);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -581,23 +582,85 @@ export default function OrderPage() {
                                 </div>
                               );
                             })}
-                            {/* Per-portion notes in same-for-all mode */}
+                            {/* Per-portion notes — inline add panel */}
                             <div className="border-t border-dashed border-[#e8ddd0] pt-2 space-y-2">
-                              <p className="text-[11px] font-semibold text-[#a07850] uppercase tracking-wide">
-                                Catatan per porsi (opsional)
-                              </p>
-                              {ord.portions.map((p, idx) => (
-                                <div key={idx} className="flex items-start gap-2">
-                                  <span className="text-[11px] text-[#a07850] font-bold mt-2 shrink-0 w-12">P{idx + 1}</span>
+                              {/* Existing notes chips */}
+                              {ord.portions.some((p) => p.notes.trim()) && (
+                                <div className="space-y-1">
+                                  {ord.portions.map((p, idx) =>
+                                    p.notes.trim() ? (
+                                      <div key={idx} className="flex items-center gap-2 bg-[#f5ede4] rounded-lg px-3 py-1.5">
+                                        <span className="text-[11px] font-bold text-[#a07850] shrink-0">P{idx + 1}</span>
+                                        <span className="text-xs text-[#1c1208] flex-1">{p.notes}</span>
+                                        <button onClick={() => setPortionNotes(menu.id, idx, "")} className="text-[#a07850] hover:text-red-500 transition text-sm leading-none">×</button>
+                                      </div>
+                                    ) : null
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Add note button / inline form */}
+                              {addingNote?.menuId === menu.id ? (
+                                <div className="bg-[#fdf8f2] border border-[#d9cfc5] rounded-xl p-3 space-y-2">
+                                  <p className="text-[11px] font-semibold text-[#5a3e2b] uppercase tracking-wide">Pilih porsi:</p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {ord.portions.map((_, idx) => {
+                                      const sel = addingNote.selected.includes(idx);
+                                      return (
+                                        <button
+                                          key={idx}
+                                          onClick={() => setAddingNote((prev) => prev ? ({
+                                            ...prev,
+                                            selected: sel ? prev.selected.filter((i) => i !== idx) : [...prev.selected, idx]
+                                          }) : null)}
+                                          className={`px-2.5 py-1 rounded-full text-xs font-bold border transition ${sel ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"}`}
+                                        >P{idx + 1}</button>
+                                      );
+                                    })}
+                                    <button
+                                      onClick={() => setAddingNote((prev) => prev ? ({ ...prev, selected: ord.portions.map((_, i) => i) }) : null)}
+                                      className="px-2.5 py-1 rounded-full text-xs font-medium border border-[#d9cfc5] text-[#5a3e2b] hover:border-[#7b1d1d] transition"
+                                    >Semua</button>
+                                  </div>
                                   <input
                                     type="text"
-                                    value={p.notes}
-                                    onChange={(e) => setPortionNotes(menu.id, idx, e.target.value)}
-                                    placeholder={`Catatan porsi ${idx + 1}...`}
-                                    className="flex-1 border border-[#d9cfc5] rounded-lg px-3 py-1.5 text-xs text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition"
+                                    autoFocus
+                                    value={addingNote.text}
+                                    onChange={(e) => setAddingNote((prev) => prev ? ({ ...prev, text: e.target.value }) : null)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" && addingNote.text.trim() && addingNote.selected.length > 0) {
+                                        addingNote.selected.forEach((idx) => setPortionNotes(menu.id, idx, addingNote.text.trim()));
+                                        setAddingNote(null);
+                                      }
+                                      if (e.key === "Escape") setAddingNote(null);
+                                    }}
+                                    placeholder="Tulis catatan..."
+                                    className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-xs text-[#1c1208] placeholder-[#b8a898] bg-white focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition"
                                   />
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => {
+                                        if (addingNote.text.trim() && addingNote.selected.length > 0) {
+                                          addingNote.selected.forEach((idx) => setPortionNotes(menu.id, idx, addingNote.text.trim()));
+                                        }
+                                        setAddingNote(null);
+                                      }}
+                                      className="flex-1 bg-[#7b1d1d] text-white text-xs font-semibold py-1.5 rounded-lg hover:bg-[#6a1717] transition"
+                                    >Tambah</button>
+                                    <button
+                                      onClick={() => setAddingNote(null)}
+                                      className="px-4 text-xs text-[#8a7060] hover:text-[#1c1208] transition"
+                                    >Batal</button>
+                                  </div>
                                 </div>
-                              ))}
+                              ) : (
+                                <button
+                                  onClick={() => setAddingNote({ menuId: menu.id, text: "", selected: [] })}
+                                  className="text-xs text-[#7b1d1d] hover:underline font-medium"
+                                >
+                                  + Tambah catatan per porsi
+                                </button>
+                              )}
                             </div>
                           </div>
                         );
