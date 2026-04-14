@@ -99,6 +99,7 @@ export default function OrderPage() {
   );
 
   const [loading, setLoading] = useState(false);
+  const [qtyEditing, setQtyEditing] = useState<string | null>(null); // menuId being edited
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -155,6 +156,34 @@ export default function OrderPage() {
           ? [...current.portions, emptyPortion(menuId)]
           : current.portions.slice(0, next);
       return { ...prev, [menuId]: { qty: next, portions } };
+    });
+  };
+
+  const setQtyDirect = (menuId: string, value: number) => {
+    const next = Math.max(0, Math.min(99, value));
+    setOrders((prev) => {
+      const current = prev[menuId];
+      let portions = [...current.portions];
+      if (next > current.qty) {
+        // add new empty portions
+        for (let i = current.qty; i < next; i++) {
+          portions.push(emptyPortion(menuId));
+        }
+      } else {
+        portions = portions.slice(0, next);
+      }
+      return { ...prev, [menuId]: { qty: next, portions } };
+    });
+  };
+
+  const applyToAll = (menuId: string, sourceIndex: number) => {
+    setOrders((prev) => {
+      const source = prev[menuId].portions[sourceIndex];
+      const portions = prev[menuId].portions.map(() => ({
+        options: { ...source.options },
+        notes: source.notes,
+      }));
+      return { ...prev, [menuId]: { ...prev[menuId], portions } };
     });
   };
 
@@ -447,9 +476,33 @@ export default function OrderPage() {
                       >
                         −
                       </button>
-                      <span className="w-6 text-center font-bold text-[#1c1208]">
-                        {ord.qty}
-                      </span>
+                      {qtyEditing === menu.id ? (
+                        <input
+                          type="number"
+                          min={0}
+                          max={99}
+                          autoFocus
+                          defaultValue={ord.qty}
+                          onBlur={(e) => {
+                            const val = parseInt(e.target.value) || 0;
+                            setQtyDirect(menu.id, val);
+                            setQtyEditing(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                            if (e.key === "Escape") setQtyEditing(null);
+                          }}
+                          className="w-10 text-center font-bold text-[#1c1208] border border-[#7b1d1d] rounded-lg text-sm focus:outline-none py-0.5"
+                        />
+                      ) : (
+                        <button
+                          onClick={() => setQtyEditing(menu.id)}
+                          title="Ketuk untuk ubah jumlah"
+                          className="w-8 text-center font-bold text-[#1c1208] hover:text-[#7b1d1d] hover:underline transition"
+                        >
+                          {ord.qty}
+                        </button>
+                      )}
                       <button
                         onClick={() => setQty(menu.id, 1)}
                         className="w-8 h-8 rounded-full bg-[#7b1d1d] text-white font-bold text-lg flex items-center justify-center hover:bg-[#6a1717] transition"
@@ -464,19 +517,29 @@ export default function OrderPage() {
                     <div className="mt-4 pt-4 border-t border-[#f0e8de] space-y-4">
                       {ord.portions.map((portion, portionIdx) => (
                         <div key={portionIdx} className="space-y-2">
-                          {/* Portion header with delete button */}
+                          {/* Portion header with apply-all + delete */}
                           {ord.qty > 1 && (
                             <div className="flex items-center justify-between">
                               <p className="text-[11px] font-bold tracking-[0.15em] uppercase text-[#a07850]">
                                 Porsi {portionIdx + 1}
                               </p>
-                              <button
-                                onClick={() => deletePortion(menu.id, portionIdx)}
-                                className="flex items-center gap-1 text-[11px] text-red-400 hover:text-red-600 transition"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                                Hapus
-                              </button>
+                              <div className="flex items-center gap-3">
+                                {portionIdx === 0 && (
+                                  <button
+                                    onClick={() => applyToAll(menu.id, 0)}
+                                    className="text-[11px] text-[#7b1d1d] hover:underline font-medium transition"
+                                  >
+                                    Terapkan ke semua porsi
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => deletePortion(menu.id, portionIdx)}
+                                  className="flex items-center gap-1 text-[11px] text-red-400 hover:text-red-600 transition"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  Hapus
+                                </button>
+                              </div>
                             </div>
                           )}
 
