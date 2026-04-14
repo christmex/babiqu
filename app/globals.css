@@ -11,3 +11,26 @@ body {
 input, select, textarea {
   font-size: 16px !important;
 }
+
+/*
+  Fix input[type="date"] on real iOS Safari.
+  Safari renders date inputs as inline-flex (not inline-block like other browsers),
+  which causes w-full to be ignored and the input to overflow its grid cell.
+  -webkit-appearance: none switches it to a normal block-level box.
+  Targeting the shadow DOM parts normalises internal spacing.
+*/
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+}
+input[type="date"]::-webkit-datetime-edit {
+  padding: 0;
+  line-height: 1.4;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  margin: 0;
+  padding: 0;
+}
