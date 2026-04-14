@@ -196,7 +196,7 @@ export default function OrderPage() {
       if (value && current.portions.length > 0) {
         // switching to same-for-all: sync all portions to match portion[0]
         const source = current.portions[0];
-        const portions = current.portions.map(() => ({ options: { ...source.options }, notes: "" }));
+        const portions = current.portions.map(() => ({ options: { ...source.options }, notes: source.notes }));
         return { ...prev, [menuId]: { ...current, sameForAll: true, portions } };
       }
       return { ...prev, [menuId]: { ...current, sameForAll: value } };
