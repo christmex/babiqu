@@ -306,30 +306,30 @@ export default function OrderPage() {
           <h2 className="text-sm font-bold tracking-[0.2em] uppercase text-[#7b1d1d]">
             Informasi Pemesan
           </h2>
-          {[
-            { key: "name", label: "Nama Lengkap", placeholder: "e.g. Budi Santoso", type: "text" },
-            { key: "nomor_wa", label: "Nomor WhatsApp", placeholder: "e.g. 08123456789", type: "tel" },
-            { key: "alamat", label: "Alamat Pengiriman", placeholder: "Jl. Sudirman No. 12, Jakarta", type: "text" },
-            { key: "jam_antar", label: "Jam Antar", placeholder: "e.g. 12:00 WIB", type: "text" },
-          ].map(({ key, label, placeholder, type }) => {
-            const err = fieldError(key as keyof FormData);
+          {(["name", "nomor_wa", "alamat"] as const).map((key) => {
+            const meta = {
+              name:      { label: "Nama Lengkap",       placeholder: "e.g. Budi Santoso",        type: "text" },
+              nomor_wa:  { label: "Nomor WhatsApp",      placeholder: "e.g. 08123456789",         type: "tel"  },
+              alamat:    { label: "Alamat Pengiriman",   placeholder: "Jl. Sudirman No. 12, ...", type: "text" },
+            }[key];
+            const err = fieldError(key);
             return (
               <div key={key}>
                 <label className="block text-xs font-semibold text-[#5a3e2b] mb-1 tracking-wide uppercase">
-                  {label}
+                  {meta.label}
                 </label>
                 <input
                   data-field={key}
-                  type={type}
+                  type={meta.type}
                   inputMode={key === "nomor_wa" ? "tel" : undefined}
-                  value={form[key as keyof FormData]}
+                  value={form[key]}
                   onChange={(e) =>
                     key === "nomor_wa"
                       ? handleWaInput(e.target.value)
                       : setForm((prev) => ({ ...prev, [key]: e.target.value }))
                   }
                   onBlur={() => touch(key)}
-                  placeholder={placeholder}
+                  placeholder={meta.placeholder}
                   className={`w-full border rounded-lg px-4 py-2.5 text-[15px] text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none transition ${
                     err
                       ? "border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-400"
@@ -344,6 +344,40 @@ export default function OrderPage() {
               </div>
             );
           })}
+
+          {/* Jam Antar — dropdown */}
+          {(() => {
+            const err = fieldError("jam_antar");
+            return (
+              <div>
+                <label className="block text-xs font-semibold text-[#5a3e2b] mb-1 tracking-wide uppercase">
+                  Jam Antar
+                </label>
+                <select
+                  data-field="jam_antar"
+                  value={form.jam_antar}
+                  onChange={(e) => setForm((prev) => ({ ...prev, jam_antar: e.target.value }))}
+                  onBlur={() => touch("jam_antar")}
+                  className={`w-full border rounded-lg px-4 py-2.5 text-[15px] bg-[#fdf8f2] focus:outline-none transition appearance-none cursor-pointer ${
+                    err
+                      ? "border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-400 text-[#1c1208]"
+                      : form.jam_antar
+                      ? "border-[#d9cfc5] focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] text-[#1c1208]"
+                      : "border-[#d9cfc5] focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] text-[#b8a898]"
+                  }`}
+                >
+                  <option value="" disabled>Pilih jam pengiriman</option>
+                  <option value="11.30 - 13.00 (Siang)">11.30 - 13.00 (Siang)</option>
+                  <option value="17.00 - 19.00 (Malam)">17.00 - 19.00 (Malam)</option>
+                </select>
+                {err && (
+                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3 shrink-0" /> {err}
+                  </p>
+                )}
+              </div>
+            );
+          })()}
         </section>
 
         {/* Menu */}
