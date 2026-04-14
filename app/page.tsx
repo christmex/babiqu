@@ -210,26 +210,37 @@ export default function OrderPage() {
 
   return (
     <div className="min-h-screen bg-[#fdf8f2]">
-      {/* Header */}
+      {/* Navbar with logo */}
+      <div className="bg-[#fdf8f2] border-b border-[#e8ddd0] flex items-center justify-center py-3 px-4">
+        <Image
+          src="/logo.jpeg"
+          alt="Babiqu Logo"
+          width={140}
+          height={80}
+          className="object-contain"
+          priority
+        />
+      </div>
+
+      {/* Hero image */}
       <header className="relative text-white text-center overflow-hidden">
-        <div className="relative h-[420px] sm:h-[500px] w-full">
+        <div className="relative h-[400px] sm:h-[480px] w-full">
           <Image
             src="/hero.jpg"
             alt="Babiqu Signature Roast Pork"
             fill
-            className="object-cover object-[center_60%]"
+            className="object-cover object-[center_65%]"
             priority
           />
           {/* Dark gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#1a0a05]/90 via-[#1a0a05]/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#1a0a05]/85 via-[#1a0a05]/30 to-transparent" />
         </div>
-        {/* Text on top of image */}
+        {/* Tagline on top of image */}
         <div className="absolute inset-0 flex flex-col items-center justify-end pb-8 px-4">
-          <p className="text-[11px] tracking-[0.35em] uppercase text-red-200 mb-2">
+          <p className="text-[11px] tracking-[0.35em] uppercase text-red-200 mb-1">
             Signature Roast Pork
           </p>
-          <h1 className="text-4xl font-bold tracking-wide drop-shadow-lg">BABIQU</h1>
-          <p className="text-red-200 text-sm mt-2 tracking-wide drop-shadow">
+          <p className="text-white/80 text-sm tracking-wide drop-shadow">
             Pesan langsung · Antar ke rumah
           </p>
         </div>
@@ -471,7 +482,7 @@ export default function OrderPage() {
       </main>
 
       <footer className="text-center py-8 text-xs text-[#b8a898]">
-        © 2025 Babiqu · Signature Roast Pork
+        © 2026 Babiqu · Signature Roast Pork
       </footer>
     </div>
   );
