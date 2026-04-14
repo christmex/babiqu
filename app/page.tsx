@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { AlertCircle, MessageCircle, Loader2 } from "lucide-react";
+import { AlertCircle, MessageCircle, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 const MENUS = [
@@ -52,10 +52,14 @@ const MENUS = [
   },
 ];
 
+type Portion = {
+  options: Record<string, string>;
+  notes: string;
+};
+
 type MenuOrder = {
   qty: number;
-  // one options object per portion, so 2x means 2 independent sets of choices
-  portions: Record<string, string>[];
+  portions: Portion[];
 };
 
 type FormData = {
@@ -85,8 +89,10 @@ export default function OrderPage() {
     notes: "",
   });
 
-  const emptyPortion = (menuId: string) =>
-    Object.fromEntries(MENUS.find((m) => m.id === menuId)!.options.map((o) => [o.key, ""]));
+  const emptyPortion = (menuId: string): Portion => ({
+    options: Object.fromEntries(MENUS.find((m) => m.id === menuId)!.options.map((o) => [o.key, ""])),
+    notes: "",
+  });
 
   const [orders, setOrders] = useState<Record<string, MenuOrder>>(() =>
     Object.fromEntries(MENUS.map((m) => [m.id, { qty: 0, portions: [] }]))
@@ -131,7 +137,7 @@ export default function OrderPage() {
       const menuDef = MENUS.find((m) => m.id === menu.id)!;
       for (let i = 0; i < orders[menu.id].portions.length; i++) {
         for (const opt of menuDef.options) {
-          if (!orders[menu.id].portions[i][opt.key]) {
+          if (!orders[menu.id].portions[i].options[opt.key]) {
             document.querySelector(`[data-option="${menu.id}-${i}-${opt.key}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
             return;
           }
@@ -155,7 +161,23 @@ export default function OrderPage() {
   const setOption = (menuId: string, portionIndex: number, key: string, value: string) => {
     setOrders((prev) => {
       const portions = prev[menuId].portions.map((p, i) =>
-        i === portionIndex ? { ...p, [key]: value } : p
+        i === portionIndex ? { ...p, options: { ...p.options, [key]: value } } : p
+      );
+      return { ...prev, [menuId]: { ...prev[menuId], portions } };
+    });
+  };
+
+  const deletePortion = (menuId: string, portionIndex: number) => {
+    setOrders((prev) => {
+      const portions = prev[menuId].portions.filter((_, i) => i !== portionIndex);
+      return { ...prev, [menuId]: { qty: portions.length, portions } };
+    });
+  };
+
+  const setPortionNotes = (menuId: string, portionIndex: number, value: string) => {
+    setOrders((prev) => {
+      const portions = prev[menuId].portions.map((p, i) =>
+        i === portionIndex ? { ...p, notes: value } : p
       );
       return { ...prev, [menuId]: { ...prev[menuId], portions } };
     });
@@ -176,7 +198,7 @@ export default function OrderPage() {
     activeOrders.length > 0 &&
     activeOrders.every((menu) =>
       orders[menu.id].portions.every((portion) =>
-        MENUS.find((m) => m.id === menu.id)!.options.every((opt) => portion[opt.key] !== "")
+        MENUS.find((m) => m.id === menu.id)!.options.every((opt) => portion.options[opt.key] !== "")
       )
     );
 
@@ -190,7 +212,7 @@ export default function OrderPage() {
       const menuDef = MENUS.find((m) => m.id === menu.id)!;
       orders[menu.id].portions.forEach((portion, i) => {
         for (const opt of menuDef.options) {
-          if (!portion[opt.key]) {
+          if (!portion.options[opt.key]) {
             return `Pilih ${opt.label} untuk ${menu.name} Porsi ${i + 1}`;
           }
         }
@@ -219,8 +241,9 @@ export default function OrderPage() {
       ord.portions.forEach((portion, i) => {
         if (ord.qty > 1) lines.push(`  [ Porsi ${i + 1} ]`);
         for (const opt of m.options) {
-          lines.push(`  ${opt.label}: ${portion[opt.key]}`);
+          lines.push(`  ${opt.label}: ${portion.options[opt.key]}`);
         }
+        if (portion.notes.trim()) lines.push(`  Catatan: ${portion.notes.trim()}`);
       });
       lines.push(`  Subtotal: ${formatRupiah(m.price * ord.qty)}`);
       lines.push("");
@@ -440,14 +463,26 @@ export default function OrderPage() {
                   {isActive && (
                     <div className="mt-4 pt-4 border-t border-[#f0e8de] space-y-4">
                       {ord.portions.map((portion, portionIdx) => (
-                        <div key={portionIdx} className={ord.qty > 1 ? "space-y-2" : "space-y-2"}>
+                        <div key={portionIdx} className="space-y-2">
+                          {/* Portion header with delete button */}
                           {ord.qty > 1 && (
-                            <p className="text-[11px] font-bold tracking-[0.15em] uppercase text-[#a07850]">
-                              Porsi {portionIdx + 1}
-                            </p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-[11px] font-bold tracking-[0.15em] uppercase text-[#a07850]">
+                                Porsi {portionIdx + 1}
+                              </p>
+                              <button
+                                onClick={() => deletePortion(menu.id, portionIdx)}
+                                className="flex items-center gap-1 text-[11px] text-red-400 hover:text-red-600 transition"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                Hapus
+                              </button>
+                            </div>
                           )}
+
+                          {/* Options */}
                           {menu.options.map((opt) => {
-                            const optErr = submitted && !portion[opt.key];
+                            const optErr = submitted && !portion.options[opt.key];
                             return (
                               <div key={opt.key} data-option={`${menu.id}-${portionIdx}-${opt.key}`}>
                                 <div className="flex items-center gap-2 mb-1.5">
@@ -466,7 +501,7 @@ export default function OrderPage() {
                                       key={choice}
                                       onClick={() => setOption(menu.id, portionIdx, opt.key, choice)}
                                       className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
-                                        portion[opt.key] === choice
+                                        portion.options[opt.key] === choice
                                           ? "bg-[#7b1d1d] text-white border-[#7b1d1d]"
                                           : optErr
                                           ? "bg-white text-red-600 border-red-300 hover:border-red-500"
@@ -480,8 +515,20 @@ export default function OrderPage() {
                               </div>
                             );
                           })}
+
+                          {/* Per-portion notes */}
+                          <div>
+                            <textarea
+                              value={portion.notes}
+                              onChange={(e) => setPortionNotes(menu.id, portionIdx, e.target.value)}
+                              placeholder={`Catatan porsi ${portionIdx + 1} (opsional)...`}
+                              rows={2}
+                              className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-xs text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition resize-none"
+                            />
+                          </div>
+
                           {portionIdx < ord.portions.length - 1 && (
-                            <div className="border-b border-dashed border-[#e8ddd0] pt-2" />
+                            <div className="border-b border-dashed border-[#e8ddd0] pt-1" />
                           )}
                         </div>
                       ))}
@@ -529,12 +576,17 @@ export default function OrderPage() {
                       <div className="flex-1">
                         <p className="font-semibold text-[#1c1208] text-sm">{menu.name}</p>
                         {ord.portions.map((portion, i) => (
-                          <p key={i} className="text-xs text-[#8a7060] mt-0.5">
-                            {ord.qty > 1 ? `Porsi ${i + 1}: ` : ""}
-                            {MENUS.find((m) => m.id === menu.id)!.options
-                              .map((opt) => portion[opt.key] || "—")
-                              .join(" · ")}
-                          </p>
+                          <div key={i} className="mt-0.5">
+                            <p className="text-xs text-[#8a7060]">
+                              {ord.qty > 1 ? `Porsi ${i + 1}: ` : ""}
+                              {MENUS.find((m) => m.id === menu.id)!.options
+                                .map((opt) => portion.options[opt.key] || "—")
+                                .join(" · ")}
+                            </p>
+                            {portion.notes.trim() && (
+                              <p className="text-xs text-[#a07850] italic ml-1">↳ {portion.notes.trim()}</p>
+                            )}
+                          </div>
                         ))}
                       </div>
                       <div className="text-right shrink-0">
