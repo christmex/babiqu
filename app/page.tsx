@@ -655,7 +655,7 @@ export default function OrderPage() {
                                 </div>
                               ) : (
                                 <button
-                                  onClick={() => setAddingNote({ menuId: menu.id, text: "", selected: [] })}
+                                  onClick={() => setAddingNote({ menuId: menu.id, text: "", selected: ord.portions.map((_, i) => i) })}
                                   className="text-xs text-[#7b1d1d] hover:underline font-medium"
                                 >
                                   + Tambah catatan per porsi
