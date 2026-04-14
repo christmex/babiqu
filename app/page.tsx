@@ -60,6 +60,7 @@ type Portion = {
 type MenuOrder = {
   qty: number;
   portions: Portion[];
+  sameForAll: boolean;
 };
 
 type FormData = {
@@ -95,11 +96,12 @@ export default function OrderPage() {
   });
 
   const [orders, setOrders] = useState<Record<string, MenuOrder>>(() =>
-    Object.fromEntries(MENUS.map((m) => [m.id, { qty: 0, portions: [] }]))
+    Object.fromEntries(MENUS.map((m) => [m.id, { qty: 0, portions: [], sameForAll: true }]))
   );
 
   const [loading, setLoading] = useState(false);
-  const [qtyEditing, setQtyEditing] = useState<string | null>(null); // menuId being edited
+  const [qtyEditing, setQtyEditing] = useState<string | null>(null);
+  const [expandedPortions, setExpandedPortions] = useState<Record<string, number | null>>({});
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -155,7 +157,7 @@ export default function OrderPage() {
         delta > 0
           ? [...current.portions, emptyPortion(menuId)]
           : current.portions.slice(0, next);
-      return { ...prev, [menuId]: { qty: next, portions } };
+      return { ...prev, [menuId]: { ...prev[menuId], qty: next, portions } };
     });
   };
 
@@ -172,7 +174,7 @@ export default function OrderPage() {
       } else {
         portions = portions.slice(0, next);
       }
-      return { ...prev, [menuId]: { qty: next, portions } };
+      return { ...prev, [menuId]: { ...prev[menuId], qty: next, portions } };
     });
   };
 
@@ -187,6 +189,20 @@ export default function OrderPage() {
     });
   };
 
+  const toggleSameForAll = (menuId: string, value: boolean) => {
+    setOrders((prev) => {
+      const current = prev[menuId];
+      if (value && current.portions.length > 0) {
+        // switching to same-for-all: sync all portions to match portion[0]
+        const source = current.portions[0];
+        const portions = current.portions.map(() => ({ options: { ...source.options }, notes: "" }));
+        return { ...prev, [menuId]: { ...current, sameForAll: true, portions } };
+      }
+      return { ...prev, [menuId]: { ...current, sameForAll: value } };
+    });
+    setExpandedPortions((prev) => ({ ...prev, [menuId]: value ? null : 0 }));
+  };
+
   const setOption = (menuId: string, portionIndex: number, key: string, value: string) => {
     setOrders((prev) => {
       const portions = prev[menuId].portions.map((p, i) =>
@@ -199,7 +215,7 @@ export default function OrderPage() {
   const deletePortion = (menuId: string, portionIndex: number) => {
     setOrders((prev) => {
       const portions = prev[menuId].portions.filter((_, i) => i !== portionIndex);
-      return { ...prev, [menuId]: { qty: portions.length, portions } };
+      return { ...prev, [menuId]: { ...prev[menuId], qty: portions.length, portions } };
     });
   };
 
@@ -225,11 +241,13 @@ export default function OrderPage() {
     form.alamat.trim() !== "" &&
     form.jam_antar.trim() !== "" &&
     activeOrders.length > 0 &&
-    activeOrders.every((menu) =>
-      orders[menu.id].portions.every((portion) =>
-        MENUS.find((m) => m.id === menu.id)!.options.every((opt) => portion.options[opt.key] !== "")
-      )
-    );
+    activeOrders.every((menu) => {
+      const ord = orders[menu.id];
+      const toCheck = ord.sameForAll ? [ord.portions[0]] : ord.portions;
+      return toCheck?.every((portion) =>
+        MENUS.find((m) => m.id === menu.id)!.options.every((opt) => portion?.options[opt.key] !== "")
+      ) ?? false;
+    });
 
   const validate = () => {
     if (!form.name.trim()) return "Nama harus diisi";
@@ -512,95 +530,146 @@ export default function OrderPage() {
                     </div>
                   </div>
 
-                  {/* Options per portion (shown when qty > 0) */}
+                  {/* Options (shown when qty > 0) */}
                   {isActive && (
-                    <div className="mt-4 pt-4 border-t border-[#f0e8de] space-y-4">
-                      {ord.portions.map((portion, portionIdx) => (
-                        <div key={portionIdx} className="space-y-2">
-                          {/* Portion header with apply-all + delete */}
-                          {ord.qty > 1 && (
-                            <div className="flex items-center justify-between">
-                              <p className="text-[11px] font-bold tracking-[0.15em] uppercase text-[#a07850]">
-                                Porsi {portionIdx + 1}
-                              </p>
-                              <div className="flex items-center gap-3">
-                                {portionIdx === 0 && (
-                                  <button
-                                    onClick={() => applyToAll(menu.id, 0)}
-                                    className="text-[11px] text-[#7b1d1d] hover:underline font-medium transition"
-                                  >
-                                    Terapkan ke semua porsi
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => deletePortion(menu.id, portionIdx)}
-                                  className="flex items-center gap-1 text-[11px] text-red-400 hover:text-red-600 transition"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                  Hapus
-                                </button>
-                              </div>
-                            </div>
-                          )}
+                    <div className="mt-4 pt-4 border-t border-[#f0e8de] space-y-3">
 
-                          {/* Options */}
-                          {menu.options.map((opt) => {
-                            const optErr = submitted && !portion.options[opt.key];
-                            return (
-                              <div key={opt.key} data-option={`${menu.id}-${portionIdx}-${opt.key}`}>
-                                <div className="flex items-center gap-2 mb-1.5">
-                                  <p className={`text-xs font-semibold tracking-wide uppercase ${optErr ? "text-red-500" : "text-[#5a3e2b]"}`}>
-                                    {opt.label}
-                                  </p>
-                                  {optErr && (
-                                    <span className="text-[10px] text-red-500 font-medium flex items-center gap-0.5">
-                                      <AlertCircle className="w-3 h-3" /> Wajib dipilih
-                                    </span>
-                                  )}
-                                </div>
-                                <div className={`flex flex-wrap gap-2 p-2 rounded-lg transition ${optErr ? "bg-red-50 ring-1 ring-red-300" : ""}`}>
-                                  {opt.choices.map((choice) => (
-                                    <button
-                                      key={choice}
-                                      onClick={() => setOption(menu.id, portionIdx, opt.key, choice)}
-                                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
-                                        portion.options[opt.key] === choice
-                                          ? "bg-[#7b1d1d] text-white border-[#7b1d1d]"
-                                          : optErr
-                                          ? "bg-white text-red-600 border-red-300 hover:border-red-500"
-                                          : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"
-                                      }`}
-                                    >
-                                      {choice}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })}
+                      {/* Same-for-all toggle (only when qty > 1) */}
+                      {ord.qty > 1 && (
+                        <div className="flex items-center justify-between bg-[#fdf8f2] rounded-lg px-3 py-2">
+                          <span className="text-xs font-semibold text-[#5a3e2b]">Semua porsi sama?</span>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => toggleSameForAll(menu.id, true)}
+                              className={`px-3 py-1 rounded-full text-xs font-medium border transition ${ord.sameForAll ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"}`}
+                            >Ya, sama</button>
+                            <button
+                              onClick={() => toggleSameForAll(menu.id, false)}
+                              className={`px-3 py-1 rounded-full text-xs font-medium border transition ${!ord.sameForAll ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"}`}
+                            >Beda-beda</button>
+                          </div>
+                        </div>
+                      )}
 
-                          {/* Per-portion notes */}
-                          <div>
+                      {/* SAME FOR ALL: show one form */}
+                      {ord.sameForAll && ord.portions[0] && (() => {
+                        const portion = ord.portions[0];
+                        return (
+                          <div className="space-y-2">
+                            {menu.options.map((opt) => {
+                              const optErr = submitted && !portion.options[opt.key];
+                              return (
+                                <div key={opt.key} data-option={`${menu.id}-0-${opt.key}`}>
+                                  <div className="flex items-center gap-2 mb-1.5">
+                                    <p className={`text-xs font-semibold tracking-wide uppercase ${optErr ? "text-red-500" : "text-[#5a3e2b]"}`}>{opt.label}</p>
+                                    {optErr && <span className="text-[10px] text-red-500 flex items-center gap-0.5"><AlertCircle className="w-3 h-3" /> Wajib dipilih</span>}
+                                  </div>
+                                  <div className={`flex flex-wrap gap-2 p-2 rounded-lg transition ${optErr ? "bg-red-50 ring-1 ring-red-300" : ""}`}>
+                                    {opt.choices.map((choice) => (
+                                      <button key={choice}
+                                        onClick={() => {
+                                          // apply to all portions at once
+                                          setOrders((prev) => {
+                                            const portions = prev[menu.id].portions.map((p) => ({ ...p, options: { ...p.options, [opt.key]: choice } }));
+                                            return { ...prev, [menu.id]: { ...prev[menu.id], portions } };
+                                          });
+                                        }}
+                                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${portion.options[opt.key] === choice ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : optErr ? "bg-white text-red-600 border-red-300 hover:border-red-500" : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"}`}
+                                      >{choice}</button>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
                             <textarea
                               value={portion.notes}
-                              onChange={(e) => setPortionNotes(menu.id, portionIdx, e.target.value)}
-                              placeholder={`Catatan porsi ${portionIdx + 1} (opsional)...`}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setOrders((prev) => {
+                                  const portions = prev[menu.id].portions.map((p) => ({ ...p, notes: val }));
+                                  return { ...prev, [menu.id]: { ...prev[menu.id], portions } };
+                                });
+                              }}
+                              placeholder="Catatan (opsional)..."
                               rows={2}
                               className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-xs text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition resize-none"
                             />
                           </div>
+                        );
+                      })()}
 
-                          {portionIdx < ord.portions.length - 1 && (
-                            <div className="border-b border-dashed border-[#e8ddd0] pt-1" />
-                          )}
-                        </div>
-                      ))}
+                      {/* DIFFERENT: accordion per portion */}
+                      {!ord.sameForAll && ord.portions.map((portion, portionIdx) => {
+                        const isOpen = expandedPortions[menu.id] === portionIdx;
+                        const isConfigured = menu.options.every((opt) => portion.options[opt.key]);
+                        return (
+                          <div key={portionIdx} className="border border-[#e8ddd0] rounded-xl overflow-hidden">
+                            {/* Accordion header */}
+                            <button
+                              onClick={() => setExpandedPortions((prev) => ({ ...prev, [menu.id]: isOpen ? null : portionIdx }))}
+                              className="w-full flex items-center justify-between px-4 py-2.5 bg-[#fdf8f2] hover:bg-[#f5ede4] transition text-left"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-[#a07850] uppercase tracking-wide">Porsi {portionIdx + 1}</span>
+                                {isConfigured && (
+                                  <span className="text-[10px] text-[#8a7060]">
+                                    {menu.options.map((opt) => portion.options[opt.key]).join(" · ")}
+                                    {portion.notes && ` · ${portion.notes.slice(0, 20)}${portion.notes.length > 20 ? "…" : ""}`}
+                                  </span>
+                                )}
+                                {submitted && !isConfigured && (
+                                  <span className="text-[10px] text-red-500 flex items-center gap-0.5"><AlertCircle className="w-3 h-3" /> Belum lengkap</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); deletePortion(menu.id, portionIdx); }}
+                                  className="text-red-400 hover:text-red-600 transition p-1"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                                <span className="text-[#a07850] text-lg leading-none">{isOpen ? "−" : "+"}</span>
+                              </div>
+                            </button>
 
-                      {/* Subtotal per menu */}
+                            {/* Accordion body */}
+                            {isOpen && (
+                              <div className="px-4 py-3 space-y-2 border-t border-[#f0e8de]">
+                                {menu.options.map((opt) => {
+                                  const optErr = submitted && !portion.options[opt.key];
+                                  return (
+                                    <div key={opt.key} data-option={`${menu.id}-${portionIdx}-${opt.key}`}>
+                                      <div className="flex items-center gap-2 mb-1.5">
+                                        <p className={`text-xs font-semibold tracking-wide uppercase ${optErr ? "text-red-500" : "text-[#5a3e2b]"}`}>{opt.label}</p>
+                                        {optErr && <span className="text-[10px] text-red-500 flex items-center gap-0.5"><AlertCircle className="w-3 h-3" /> Wajib dipilih</span>}
+                                      </div>
+                                      <div className={`flex flex-wrap gap-2 p-2 rounded-lg transition ${optErr ? "bg-red-50 ring-1 ring-red-300" : ""}`}>
+                                        {opt.choices.map((choice) => (
+                                          <button key={choice}
+                                            onClick={() => setOption(menu.id, portionIdx, opt.key, choice)}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${portion.options[opt.key] === choice ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : optErr ? "bg-white text-red-600 border-red-300 hover:border-red-500" : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"}`}
+                                          >{choice}</button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                                <textarea
+                                  value={portion.notes}
+                                  onChange={(e) => setPortionNotes(menu.id, portionIdx, e.target.value)}
+                                  placeholder={`Catatan porsi ${portionIdx + 1} (opsional)...`}
+                                  rows={2}
+                                  className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-xs text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition resize-none"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      {/* Subtotal */}
                       <div className="flex justify-end pt-1">
-                        <span className="text-sm text-[#7b1d1d] font-semibold">
-                          Subtotal: {formatRupiah(subtotal)}
-                        </span>
+                        <span className="text-sm text-[#7b1d1d] font-semibold">Subtotal: {formatRupiah(subtotal)}</span>
                       </div>
                     </div>
                   )}
@@ -608,20 +677,6 @@ export default function OrderPage() {
               </div>
             );
           })}
-        </section>
-
-        {/* Notes */}
-        <section className="bg-white rounded-2xl shadow-sm border border-[#e8ddd0] p-6">
-          <label className="block text-xs font-semibold text-[#5a3e2b] mb-2 tracking-wide uppercase">
-            Catatan (opsional)
-          </label>
-          <textarea
-            value={form.notes}
-            onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
-            placeholder="Permintaan khusus, alergi, dll..."
-            rows={3}
-            className="w-full border border-[#d9cfc5] rounded-lg px-4 py-2.5 text-[15px] text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition resize-none"
-          />
         </section>
 
         {/* Order Summary */}
