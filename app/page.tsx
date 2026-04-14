@@ -151,33 +151,35 @@ export default function OrderPage() {
 
   const buildWAMessage = () => {
     const lines = [
-      "🍖 *PESANAN BABIQU*",
-      "━━━━━━━━━━━━━━━━━━━━",
-      `👤 Nama: ${form.name}`,
-      `📱 No. WA: ${form.nomor_wa}`,
-      `📍 Alamat: ${form.alamat}`,
-      `🕐 Jam Antar: ${form.jam_antar}`,
+      "*PESANAN BABIQU*",
+      "--------------------",
+      `Nama       : ${form.name}`,
+      `No. WA     : ${form.nomor_wa}`,
+      `Alamat     : ${form.alamat}`,
+      `Jam Antar  : ${form.jam_antar}`,
       "",
-      "📋 *DETAIL PESANAN:*",
+      "*DETAIL PESANAN*",
+      "--------------------",
     ];
 
     for (const menu of activeOrders) {
       const m = MENUS.find((x) => x.id === menu.id)!;
       const ord = orders[menu.id];
-      lines.push(`\n• ${m.name} (${ord.qty}x)`);
+      lines.push(`${ord.qty}x ${m.name}`);
       ord.portions.forEach((portion, i) => {
-        const label = ord.qty > 1 ? `  Porsi ${i + 1}` : " ";
+        if (ord.qty > 1) lines.push(`  [ Porsi ${i + 1} ]`);
         for (const opt of m.options) {
-          lines.push(`${label} - ${opt.label}: ${portion[opt.key]}`);
+          lines.push(`  ${opt.label}: ${portion[opt.key]}`);
         }
       });
       lines.push(`  Subtotal: ${formatRupiah(m.price * ord.qty)}`);
+      lines.push("");
     }
 
-    lines.push("", "━━━━━━━━━━━━━━━━━━━━");
-    lines.push(`💰 *TOTAL: ${formatRupiah(total)}*`);
+    lines.push("--------------------");
+    lines.push(`*TOTAL: ${formatRupiah(total)}*`);
     if (form.notes.trim()) {
-      lines.push("", `📝 Catatan: ${form.notes}`);
+      lines.push("", `Catatan: ${form.notes}`);
     }
 
     return encodeURIComponent(lines.join("\n"));
