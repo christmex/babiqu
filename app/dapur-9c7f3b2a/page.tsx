@@ -777,7 +777,7 @@ export default function DashboardPage() {
         const isCancelled = o.status === "cancelled";
         const isDelivered = o.status === "delivered";
         return (
-          <div className="fixed inset-0 z-50 bg-[#fdf8f2] flex flex-col">
+          <div className="fixed inset-0 z-[60] bg-[#fdf8f2] flex flex-col">
             {/* Top bar */}
             <div className="shrink-0 bg-white border-b border-[#e8ddd0] px-4 py-3 flex items-center gap-3">
               <button onClick={closeModal}
