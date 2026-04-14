@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { ClipboardList, BarChart2, Receipt, CalendarDays, ExternalLink, RefreshCw } from "lucide-react";
 
@@ -91,6 +91,17 @@ export default function DashboardPage() {
 
   // Order detail modal
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showSummary, setShowSummary] = useState(true);
+  const touchStartY = useRef(0);
+  const sheetScrollRef = useRef<HTMLDivElement>(null);
+
+  const closeModal = useCallback(() => { setSelectedOrder(null); setCancelling(null); setCancelReason(""); }, []);
+
+  const handleSheetTouchStart = (e: React.TouchEvent) => { touchStartY.current = e.touches[0].clientY; };
+  const handleSheetTouchMove = (e: React.TouchEvent) => {
+    const dy = e.touches[0].clientY - touchStartY.current;
+    if (dy > 90 && (!sheetScrollRef.current || sheetScrollRef.current.scrollTop === 0)) closeModal();
+  };
 
   // Expense form
   const [expForm, setExpForm] = useState({
@@ -226,6 +237,21 @@ export default function DashboardPage() {
   const displayedOrders = jamFilter === "all" ? baseOrders
     : baseOrders.filter((o) => jamFilter === "siang" ? o.jam_antar.includes("Siang") : !o.jam_antar.includes("Siang"));
 
+  // Production summary — today's non-cancelled orders grouped by menu
+  const productionSummary = (() => {
+    const map: Record<string, { name: string; portions: Array<{ opts: string; notes: string }> }> = {};
+    todayOrders.filter(o => o.status !== "cancelled").forEach(order => {
+      order.items?.forEach(item => {
+        if (!map[item.menu_id]) map[item.menu_id] = { name: item.menu_name, portions: [] };
+        item.portions?.forEach(p => map[item.menu_id].portions.push({
+          opts: Object.values(p.options).filter(Boolean).join(" · "),
+          notes: p.notes?.trim() || "",
+        }));
+      });
+    });
+    return Object.values(map);
+  })();
+
   const expByCategory = EXPENSE_CATEGORIES.map((cat) => ({
     cat, total: periodExpenses.filter((e) => e.category === cat).reduce((s, e) => s + e.amount, 0),
   })).filter((x) => x.total > 0);
@@ -310,6 +336,42 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
+
+            {/* Ringkasan Produksi */}
+            {productionSummary.length > 0 && (
+              <div className="bg-white rounded-xl border border-[#e8ddd0] overflow-hidden">
+                <button onClick={() => setShowSummary(v => !v)}
+                  className="w-full flex items-center justify-between px-4 py-3">
+                  <p className="text-xs font-bold text-[#7b1d1d] uppercase tracking-wider">
+                    Ringkasan Produksi Hari Ini
+                  </p>
+                  <span className="text-[#a07850] text-sm">{showSummary ? "−" : "+"}</span>
+                </button>
+                {showSummary && (
+                  <div className="border-t border-[#f0e8de] divide-y divide-[#f0e8de]">
+                    {productionSummary.map((menu) => (
+                      <div key={menu.name} className="px-4 py-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <p className="text-sm font-bold text-[#1c1208]">{menu.name}</p>
+                          <span className="text-[10px] font-bold bg-[#7b1d1d] text-white px-2 py-0.5 rounded-full">
+                            {menu.portions.length} porsi
+                          </span>
+                        </div>
+                        <div className="space-y-1">
+                          {menu.portions.map((p, pi) => (
+                            <div key={pi} className="flex items-baseline gap-2">
+                              <span className="text-[10px] font-bold text-[#a07850] w-6 shrink-0">P{pi + 1}</span>
+                              <span className="text-xs text-[#5a3e2b]">{p.opts}</span>
+                              {p.notes && <span className="text-xs text-[#a07850] italic">· {p.notes}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {loading && <p className="text-center text-[#8a7060] py-12">Memuat...</p>}
             {!loading && displayedOrders.length === 0 && (
@@ -708,16 +770,20 @@ export default function DashboardPage() {
         return (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
             {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedOrder(null)} />
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeModal} />
             {/* Sheet */}
-            <div className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-xl max-h-[90vh] flex flex-col">
-              {/* Handle */}
-              <div className="flex justify-center pt-3 pb-1 shrink-0">
+            <div
+              className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-xl max-h-[90vh] flex flex-col"
+              onTouchStart={handleSheetTouchStart}
+              onTouchMove={handleSheetTouchMove}
+            >
+              {/* Handle — tap also closes */}
+              <button onClick={closeModal} className="flex justify-center pt-3 pb-1 shrink-0 w-full">
                 <div className="w-10 h-1 bg-[#e8ddd0] rounded-full" />
-              </div>
+              </button>
 
               {/* Scrollable content */}
-              <div className="overflow-y-auto px-5 pb-5">
+              <div ref={sheetScrollRef} className="overflow-y-auto px-5 pb-5 overscroll-contain">
                 {/* Status */}
                 {isCancelled && (
                   <div className="flex items-center justify-between bg-red-50 rounded-xl px-3 py-2 mb-4">
@@ -805,21 +871,23 @@ export default function DashboardPage() {
                         </div>
                       </>
                     ) : (
-                      <div className="flex gap-2">
+                      <div className="grid grid-cols-2 gap-2">
                         <button onClick={() => handleDeliver(o.id)}
-                          className="flex-1 text-sm font-semibold text-white bg-green-500 hover:bg-green-600 py-3 rounded-xl transition">
-                          Tandai Selesai
+                          className="flex flex-col items-center gap-0.5 py-3.5 rounded-2xl bg-green-500 hover:bg-green-600 transition active:scale-95">
+                          <span className="text-white text-lg">✓</span>
+                          <span className="text-white text-xs font-bold">Selesai</span>
                         </button>
                         <button onClick={() => setCancelling(o.id)}
-                          className="px-4 py-3 text-sm font-medium text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition">
-                          Batal
+                          className="flex flex-col items-center gap-0.5 py-3.5 rounded-2xl bg-[#fdf0f0] hover:bg-red-100 border border-red-100 transition active:scale-95">
+                          <span className="text-red-400 text-lg">✕</span>
+                          <span className="text-red-400 text-xs font-bold">Batalkan</span>
                         </button>
                       </div>
                     )}
                   </div>
                 )}
 
-                <button onClick={() => { setSelectedOrder(null); setCancelling(null); setCancelReason(""); }}
+                <button onClick={closeModal}
                   className="w-full mt-3 py-3 text-sm text-[#8a7060] bg-[#f0e8de] hover:bg-[#e8ddd0] rounded-xl transition">
                   Tutup
                 </button>
