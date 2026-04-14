@@ -220,18 +220,6 @@ export default function OrderPage() {
 
   return (
     <div className="min-h-screen bg-[#fdf8f2]">
-      {/* Navbar with logo */}
-      <div className="bg-[#fdf8f2] border-b border-[#e8ddd0] flex items-center justify-center py-3 px-4">
-        <Image
-          src="/logo.jpeg"
-          alt="Babiqu Logo"
-          width={140}
-          height={80}
-          className="object-contain"
-          priority
-        />
-      </div>
-
       {/* Hero image */}
       <header className="relative text-white text-center overflow-hidden">
         <div className="relative h-[400px] sm:h-[480px] w-full">
@@ -245,12 +233,13 @@ export default function OrderPage() {
           {/* Dark gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#1a0a05]/85 via-[#1a0a05]/30 to-transparent" />
         </div>
-        {/* Tagline on top of image */}
+        {/* Text on top of image */}
         <div className="absolute inset-0 flex flex-col items-center justify-end pb-8 px-4">
-          <p className="text-[11px] tracking-[0.35em] uppercase text-red-200 mb-1">
+          <p className="text-[11px] tracking-[0.35em] uppercase text-red-200 mb-2">
             Signature Roast Pork
           </p>
-          <p className="text-white/80 text-sm tracking-wide drop-shadow">
+          <h1 className="text-4xl font-bold tracking-wide drop-shadow-lg">BABIQU</h1>
+          <p className="text-white/80 text-sm mt-2 tracking-wide drop-shadow">
             Pesan langsung · Antar ke rumah
           </p>
         </div>
