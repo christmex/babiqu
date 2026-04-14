@@ -603,7 +603,7 @@ export default function OrderPage() {
                               {addingNote?.menuId === menu.id ? (
                                 <div className="bg-[#fdf8f2] border border-[#d9cfc5] rounded-xl p-3 space-y-2">
                                   <p className="text-[11px] font-semibold text-[#5a3e2b] uppercase tracking-wide">Pilih porsi:</p>
-                                  <div className="flex flex-wrap gap-1.5">
+                                  <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
                                     {ord.portions.map((_, idx) => {
                                       const sel = addingNote.selected.includes(idx);
                                       return (
@@ -646,7 +646,7 @@ export default function OrderPage() {
                                         setAddingNote(null);
                                       }}
                                       className="flex-1 bg-[#7b1d1d] text-white text-xs font-semibold py-1.5 rounded-lg hover:bg-[#6a1717] transition"
-                                    >Tambah</button>
+                                    >Tambah Catatan</button>
                                     <button
                                       onClick={() => setAddingNote(null)}
                                       className="px-4 text-xs text-[#8a7060] hover:text-[#1c1208] transition"
