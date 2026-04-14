@@ -95,6 +95,16 @@ export default function DashboardPage() {
 
   const closeModal = useCallback(() => { setSelectedOrder(null); setCancelling(null); setCancelReason(""); }, []);
 
+  // Lock background scroll when modal is open
+  useEffect(() => {
+    if (selectedOrder) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [selectedOrder]);
+
   // Expense form
   const [expForm, setExpForm] = useState({
     description: "", amount: "", category: "Bahan Baku",
@@ -143,11 +153,13 @@ export default function DashboardPage() {
     if (!cancelReason.trim()) return;
     setCancelLoading(true);
     await updateStatus(orderId, "cancelled", { cancel_reason: cancelReason.trim() });
-    setCancelling(null); setCancelReason(""); setCancelLoading(false);
+    setCancelLoading(false);
+    closeModal();
   }
 
   async function handleDeliver(orderId: string) {
     await updateStatus(orderId, "delivered");
+    closeModal();
   }
 
   async function handleRestore(orderId: string) {
@@ -765,9 +777,9 @@ export default function DashboardPage() {
         const isCancelled = o.status === "cancelled";
         const isDelivered = o.status === "delivered";
         return (
-          <div className="fixed inset-0 z-50 bg-[#fdf8f2] overflow-y-auto pb-6">
+          <div className="fixed inset-0 z-50 bg-[#fdf8f2] flex flex-col">
             {/* Top bar */}
-            <div className="sticky top-0 z-10 bg-white border-b border-[#e8ddd0] px-4 py-3 flex items-center gap-3">
+            <div className="shrink-0 bg-white border-b border-[#e8ddd0] px-4 py-3 flex items-center gap-3">
               <button onClick={closeModal}
                 className="flex items-center gap-1.5 text-sm font-semibold text-[#7b1d1d] hover:text-[#5a1515] transition">
                 ← Kembali
@@ -779,100 +791,108 @@ export default function DashboardPage() {
               }`}>{o.jam_antar.includes("Siang") ? "Siang" : "Malam"}</span>
             </div>
 
-            <div className="max-w-2xl mx-auto px-4 pt-5 space-y-4">
+            {/* Scrollable content */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="max-w-2xl mx-auto px-4 pt-5 pb-4 space-y-4">
 
-              {/* Status banner */}
-              {isCancelled && (
-                <div className="flex items-center justify-between bg-red-50 border border-red-100 rounded-2xl px-4 py-3">
-                  <div>
-                    <p className="text-xs font-bold text-red-500 uppercase tracking-wide mb-0.5">Pesanan Dibatalkan</p>
-                    {o.cancel_reason && <p className="text-sm text-red-400">{o.cancel_reason}</p>}
-                  </div>
-                  <button onClick={() => handleRestore(o.id)}
-                    className="shrink-0 text-sm font-bold text-white bg-green-500 hover:bg-green-600 px-4 py-2 rounded-xl transition ml-3">
-                    Pulihkan
-                  </button>
-                </div>
-              )}
-              {isDelivered && (
-                <div className="flex items-center justify-between bg-green-50 border border-green-100 rounded-2xl px-4 py-3">
-                  <p className="text-sm font-bold text-green-700">✓ Pesanan sudah diantar</p>
-                  <button onClick={() => handleRestore(o.id)}
-                    className="shrink-0 text-sm text-[#8a7060] hover:text-[#1c1208] transition ml-3">Batalkan</button>
-                </div>
-              )}
-
-              {/* Customer info */}
-              <div className="bg-white rounded-2xl border border-[#e8ddd0] divide-y divide-[#f0e8de]">
-                <div className="px-4 py-3">
-                  <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold mb-0.5">Pelanggan</p>
-                  <p className="font-bold text-[#1c1208]">{o.name}</p>
-                  <a href={`https://wa.me/${o.nomor_wa.replace(/\D/g,"")}`} target="_blank" rel="noopener noreferrer"
-                    className="text-sm text-[#7b1d1d] hover:underline font-medium">{o.nomor_wa}</a>
-                </div>
-                <div className="px-4 py-3">
-                  <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold mb-0.5">Alamat</p>
-                  <p className="text-sm text-[#1c1208]">{o.alamat}</p>
-                </div>
-                <div className="px-4 py-3">
-                  <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold mb-0.5">Waktu Antar</p>
-                  <p className="text-sm text-[#1c1208]">{o.jam_antar} · {formatDate(o.created_at)}</p>
-                </div>
-              </div>
-
-              {/* Items */}
-              <div className="bg-white rounded-2xl border border-[#e8ddd0] overflow-hidden">
-                <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold px-4 pt-3 pb-2">Detail Pesanan</p>
-                <div className="divide-y divide-[#f0e8de]">
-                  {o.items?.map((item, i) => (
-                    <div key={i} className="px-4 py-3">
-                      <div className="flex justify-between items-baseline gap-2 mb-1">
-                        <p className="text-sm font-bold text-[#1c1208]">{item.qty}× {item.menu_name}</p>
-                        <span className="text-sm font-semibold text-[#5a3e2b] shrink-0">{formatRupiah(item.subtotal)}</span>
-                      </div>
-                      {item.portions?.map((p, pi) => (
-                        <p key={pi} className="text-xs text-[#8a7060] mt-0.5">
-                          {item.qty > 1 && <span className="font-semibold text-[#a07850]">P{pi+1} </span>}
-                          {Object.values(p.options).filter(Boolean).join(" · ")}
-                          {p.notes?.trim() && <span className="text-[#a07850] italic"> · {p.notes}</span>}
-                        </p>
-                      ))}
+                {/* Status banner */}
+                {isCancelled && (
+                  <div className="flex items-center justify-between bg-red-50 border border-red-100 rounded-2xl px-4 py-3">
+                    <div>
+                      <p className="text-xs font-bold text-red-500 uppercase tracking-wide mb-0.5">Pesanan Dibatalkan</p>
+                      {o.cancel_reason && <p className="text-sm text-red-400">{o.cancel_reason}</p>}
                     </div>
-                  ))}
-                </div>
-                {o.notes?.trim() && (
-                  <div className="px-4 py-3 bg-amber-50 border-t border-amber-100">
-                    <p className="text-xs text-[#a07850] italic">📝 {o.notes}</p>
+                    <button onClick={() => handleRestore(o.id)}
+                      className="shrink-0 text-sm font-bold text-white bg-green-500 hover:bg-green-600 px-4 py-2 rounded-xl transition ml-3">
+                      Pulihkan
+                    </button>
                   </div>
                 )}
-                <div className="flex justify-between items-center px-4 py-3 bg-[#fdf8f2] border-t border-[#f0e8de]">
-                  <p className="text-sm font-semibold text-[#5a3e2b]">Total</p>
-                  <p className="text-xl font-bold text-[#7b1d1d]">{formatRupiah(o.total)}</p>
-                </div>
-              </div>
+                {isDelivered && (
+                  <div className="flex items-center justify-between bg-green-50 border border-green-100 rounded-2xl px-4 py-3">
+                    <p className="text-sm font-bold text-green-700">✓ Pesanan sudah diantar</p>
+                    <button onClick={() => handleRestore(o.id)}
+                      className="shrink-0 text-sm text-[#8a7060] hover:text-[#1c1208] transition ml-3">Batalkan</button>
+                  </div>
+                )}
 
-              {/* Actions */}
-              {o.status === "active" && (
-                <div className="space-y-2">
-                  {cancelling === o.id ? (
-                    <>
-                      <input autoFocus value={cancelReason}
-                        onChange={(e) => setCancelReason(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") handleCancel(o.id); if (e.key === "Escape") { setCancelling(null); setCancelReason(""); } }}
-                        placeholder="Tulis alasan pembatalan..."
-                        className="w-full border border-red-200 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-red-400 bg-white"
-                      />
-                      <div className="flex gap-2">
-                        <button onClick={() => handleCancel(o.id)} disabled={cancelLoading || !cancelReason.trim()}
-                          className="flex-1 text-sm font-bold text-white bg-red-500 hover:bg-red-600 py-3.5 rounded-2xl transition disabled:opacity-40">
-                          {cancelLoading ? "Menyimpan..." : "Konfirmasi Batalkan"}
-                        </button>
-                        <button onClick={() => { setCancelling(null); setCancelReason(""); }}
-                          className="px-5 py-3.5 text-sm font-semibold text-[#8a7060] bg-white border border-[#e8ddd0] rounded-2xl">Batal</button>
+                {/* Customer info */}
+                <div className="bg-white rounded-2xl border border-[#e8ddd0] divide-y divide-[#f0e8de]">
+                  <div className="px-4 py-3">
+                    <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold mb-0.5">Pelanggan</p>
+                    <p className="font-bold text-[#1c1208]">{o.name}</p>
+                    <a href={`https://wa.me/${o.nomor_wa.replace(/\D/g,"")}`} target="_blank" rel="noopener noreferrer"
+                      className="text-sm text-[#7b1d1d] hover:underline font-medium">{o.nomor_wa}</a>
+                  </div>
+                  <div className="px-4 py-3">
+                    <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold mb-0.5">Alamat</p>
+                    <p className="text-sm text-[#1c1208]">{o.alamat}</p>
+                  </div>
+                  <div className="px-4 py-3">
+                    <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold mb-0.5">Waktu Antar</p>
+                    <p className="text-sm text-[#1c1208]">{o.jam_antar} · {formatDate(o.created_at)}</p>
+                  </div>
+                </div>
+
+                {/* Items */}
+                <div className="bg-white rounded-2xl border border-[#e8ddd0] overflow-hidden">
+                  <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold px-4 pt-3 pb-2">Detail Pesanan</p>
+                  <div className="divide-y divide-[#f0e8de]">
+                    {o.items?.map((item, i) => (
+                      <div key={i} className="px-4 py-3">
+                        <div className="flex justify-between items-baseline gap-2 mb-1">
+                          <p className="text-sm font-bold text-[#1c1208]">{item.qty}× {item.menu_name}</p>
+                          <span className="text-sm font-semibold text-[#5a3e2b] shrink-0">{formatRupiah(item.subtotal)}</span>
+                        </div>
+                        {item.portions?.map((p, pi) => (
+                          <p key={pi} className="text-xs text-[#8a7060] mt-0.5">
+                            {item.qty > 1 && <span className="font-semibold text-[#a07850]">P{pi+1} </span>}
+                            {Object.values(p.options).filter(Boolean).join(" · ")}
+                            {p.notes?.trim() && <span className="text-[#a07850] italic"> · {p.notes}</span>}
+                          </p>
+                        ))}
                       </div>
-                    </>
+                    ))}
+                  </div>
+                  {o.notes?.trim() && (
+                    <div className="px-4 py-3 bg-amber-50 border-t border-amber-100">
+                      <p className="text-xs text-[#a07850] italic">📝 {o.notes}</p>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center px-4 py-3 bg-[#fdf8f2] border-t border-[#f0e8de]">
+                    <p className="text-sm font-semibold text-[#5a3e2b]">Total</p>
+                    <p className="text-xl font-bold text-[#7b1d1d]">{formatRupiah(o.total)}</p>
+                  </div>
+                </div>
+
+                {/* Cancel reason input (shown inline when cancelling) */}
+                {o.status === "active" && cancelling === o.id && (
+                  <input autoFocus value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleCancel(o.id); if (e.key === "Escape") { setCancelling(null); setCancelReason(""); } }}
+                    placeholder="Tulis alasan pembatalan..."
+                    className="w-full border border-red-200 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-red-400 bg-white"
+                  />
+                )}
+
+              </div>
+            </div>
+
+            {/* Sticky bottom action bar — only for active orders */}
+            {o.status === "active" && (
+              <div className="shrink-0 bg-white border-t border-[#e8ddd0] px-4 py-4 safe-area-pb">
+                <div className="max-w-2xl mx-auto space-y-2">
+                  {cancelling === o.id ? (
+                    <div className="flex gap-2">
+                      <button onClick={() => handleCancel(o.id)} disabled={cancelLoading || !cancelReason.trim()}
+                        className="flex-1 text-sm font-bold text-white bg-red-500 hover:bg-red-600 py-3.5 rounded-2xl transition disabled:opacity-40">
+                        {cancelLoading ? "Menyimpan..." : "Konfirmasi Batalkan"}
+                      </button>
+                      <button onClick={() => { setCancelling(null); setCancelReason(""); }}
+                        className="px-5 py-3.5 text-sm font-semibold text-[#8a7060] bg-[#f0e8de] rounded-2xl">Batal</button>
+                    </div>
                   ) : (
-                    <div className="space-y-2">
+                    <>
                       <button onClick={() => handleDeliver(o.id)}
                         className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-green-500 hover:bg-green-600 active:scale-[0.99] transition font-bold text-white text-base">
                         <span className="text-xl leading-none">✓</span> Selesaikan Pesanan
@@ -881,12 +901,11 @@ export default function DashboardPage() {
                         className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-white border-2 border-red-200 hover:border-red-300 hover:bg-red-50 active:scale-[0.99] transition font-bold text-red-500 text-base">
                         <span className="text-xl leading-none">✕</span> Batalkan Pesanan
                       </button>
-                    </div>
+                    </>
                   )}
                 </div>
-              )}
-
-            </div>
+              </div>
+            )}
           </div>
         );
       })()}
