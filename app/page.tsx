@@ -52,7 +52,8 @@ const MENUS = [
 
 type MenuOrder = {
   qty: number;
-  options: Record<string, string>;
+  // one options object per portion, so 2x means 2 independent sets of choices
+  portions: Record<string, string>[];
 };
 
 type FormData = {
@@ -82,13 +83,11 @@ export default function OrderPage() {
     notes: "",
   });
 
+  const emptyPortion = (menuId: string) =>
+    Object.fromEntries(MENUS.find((m) => m.id === menuId)!.options.map((o) => [o.key, ""]));
+
   const [orders, setOrders] = useState<Record<string, MenuOrder>>(() =>
-    Object.fromEntries(
-      MENUS.map((m) => [
-        m.id,
-        { qty: 0, options: Object.fromEntries(m.options.map((o) => [o.key, ""])) },
-      ])
-    )
+    Object.fromEntries(MENUS.map((m) => [m.id, { qty: 0, portions: [] }]))
   );
 
   const [loading, setLoading] = useState(false);
@@ -96,20 +95,23 @@ export default function OrderPage() {
 
   const setQty = (menuId: string, delta: number) => {
     setOrders((prev) => {
-      const current = prev[menuId].qty;
-      const next = Math.max(0, current + delta);
-      return { ...prev, [menuId]: { ...prev[menuId], qty: next } };
+      const current = prev[menuId];
+      const next = Math.max(0, current.qty + delta);
+      const portions =
+        delta > 0
+          ? [...current.portions, emptyPortion(menuId)]
+          : current.portions.slice(0, next);
+      return { ...prev, [menuId]: { qty: next, portions } };
     });
   };
 
-  const setOption = (menuId: string, key: string, value: string) => {
-    setOrders((prev) => ({
-      ...prev,
-      [menuId]: {
-        ...prev[menuId],
-        options: { ...prev[menuId].options, [key]: value },
-      },
-    }));
+  const setOption = (menuId: string, portionIndex: number, key: string, value: string) => {
+    setOrders((prev) => {
+      const portions = prev[menuId].portions.map((p, i) =>
+        i === portionIndex ? { ...p, [key]: value } : p
+      );
+      return { ...prev, [menuId]: { ...prev[menuId], portions } };
+    });
   };
 
   const total = MENUS.reduce((sum, menu) => {
@@ -125,11 +127,14 @@ export default function OrderPage() {
     if (!form.jam_antar.trim()) return "Jam antar harus diisi";
     if (activeOrders.length === 0) return "Pilih minimal 1 menu";
     for (const menu of activeOrders) {
-      for (const opt of MENUS.find((m) => m.id === menu.id)!.options) {
-        if (!orders[menu.id].options[opt.key]) {
-          return `Pilih ${opt.label} untuk ${menu.name}`;
+      const menuDef = MENUS.find((m) => m.id === menu.id)!;
+      orders[menu.id].portions.forEach((portion, i) => {
+        for (const opt of menuDef.options) {
+          if (!portion[opt.key]) {
+            return `Pilih ${opt.label} untuk ${menu.name} Porsi ${i + 1}`;
+          }
         }
-      }
+      });
     }
     return "";
   };
@@ -149,10 +154,13 @@ export default function OrderPage() {
     for (const menu of activeOrders) {
       const m = MENUS.find((x) => x.id === menu.id)!;
       const ord = orders[menu.id];
-      lines.push(`\n• ${ord.qty}x ${m.name}`);
-      for (const opt of m.options) {
-        lines.push(`  - ${opt.label}: ${ord.options[opt.key]}`);
-      }
+      lines.push(`\n• ${m.name} (${ord.qty}x)`);
+      ord.portions.forEach((portion, i) => {
+        const label = ord.qty > 1 ? `  Porsi ${i + 1}` : " ";
+        for (const opt of m.options) {
+          lines.push(`${label} - ${opt.label}: ${portion[opt.key]}`);
+        }
+      });
       lines.push(`  Subtotal: ${formatRupiah(m.price * ord.qty)}`);
     }
 
@@ -175,7 +183,7 @@ export default function OrderPage() {
       menu_id: menu.id,
       menu_name: menu.name,
       qty: orders[menu.id].qty,
-      options: orders[menu.id].options,
+      portions: orders[menu.id].portions,
       subtotal: menu.price * orders[menu.id].qty,
     }));
 
@@ -298,29 +306,41 @@ export default function OrderPage() {
                     </div>
                   </div>
 
-                  {/* Options (shown when qty > 0) */}
+                  {/* Options per portion (shown when qty > 0) */}
                   {isActive && (
-                    <div className="mt-4 pt-4 border-t border-[#f0e8de] space-y-3">
-                      {menu.options.map((opt) => (
-                        <div key={opt.key}>
-                          <p className="text-xs font-semibold text-[#5a3e2b] mb-2 tracking-wide uppercase">
-                            {opt.label}
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {opt.choices.map((choice) => (
-                              <button
-                                key={choice}
-                                onClick={() => setOption(menu.id, opt.key, choice)}
-                                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
-                                  ord.options[opt.key] === choice
-                                    ? "bg-[#7b1d1d] text-white border-[#7b1d1d]"
-                                    : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"
-                                }`}
-                              >
-                                {choice}
-                              </button>
-                            ))}
-                          </div>
+                    <div className="mt-4 pt-4 border-t border-[#f0e8de] space-y-4">
+                      {ord.portions.map((portion, portionIdx) => (
+                        <div key={portionIdx} className={ord.qty > 1 ? "space-y-2" : "space-y-2"}>
+                          {ord.qty > 1 && (
+                            <p className="text-[11px] font-bold tracking-[0.15em] uppercase text-[#a07850]">
+                              Porsi {portionIdx + 1}
+                            </p>
+                          )}
+                          {menu.options.map((opt) => (
+                            <div key={opt.key}>
+                              <p className="text-xs font-semibold text-[#5a3e2b] mb-1.5 tracking-wide uppercase">
+                                {opt.label}
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {opt.choices.map((choice) => (
+                                  <button
+                                    key={choice}
+                                    onClick={() => setOption(menu.id, portionIdx, opt.key, choice)}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
+                                      portion[opt.key] === choice
+                                        ? "bg-[#7b1d1d] text-white border-[#7b1d1d]"
+                                        : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"
+                                    }`}
+                                  >
+                                    {choice}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                          {portionIdx < ord.portions.length - 1 && (
+                            <div className="border-b border-dashed border-[#e8ddd0] pt-2" />
+                          )}
                         </div>
                       ))}
 
