@@ -372,6 +372,46 @@ export default function OrderPage() {
           />
         </section>
 
+        {/* Order Summary */}
+        {activeOrders.length > 0 && (
+          <section className="bg-white rounded-2xl shadow-sm border border-[#e8ddd0] p-6">
+            <h2 className="text-sm font-bold tracking-[0.2em] uppercase text-[#7b1d1d] mb-4">
+              Ringkasan Pesanan
+            </h2>
+            <div className="space-y-3">
+              {activeOrders.map((menu) => {
+                const ord = orders[menu.id];
+                return (
+                  <div key={menu.id}>
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex-1">
+                        <p className="font-semibold text-[#1c1208] text-sm">{menu.name}</p>
+                        {ord.portions.map((portion, i) => (
+                          <p key={i} className="text-xs text-[#8a7060] mt-0.5">
+                            {ord.qty > 1 ? `Porsi ${i + 1}: ` : ""}
+                            {MENUS.find((m) => m.id === menu.id)!.options
+                              .map((opt) => portion[opt.key] || "—")
+                              .join(" · ")}
+                          </p>
+                        ))}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-xs text-[#8a7060]">{ord.qty}x {formatRupiah(menu.price)}</p>
+                        <p className="text-sm font-semibold text-[#7b1d1d]">
+                          {formatRupiah(menu.price * ord.qty)}
+                        </p>
+                      </div>
+                    </div>
+                    {activeOrders.indexOf(menu) < activeOrders.length - 1 && (
+                      <div className="border-b border-[#f0e8de] mt-3" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         {/* Total & CTA */}
         <section className="bg-white rounded-2xl shadow-sm border border-[#e8ddd0] p-6">
           <div className="flex items-center justify-between mb-5">
