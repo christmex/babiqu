@@ -94,13 +94,32 @@ export default function DashboardPage() {
   const [showSummary, setShowSummary] = useState(true);
   const touchStartY = useRef(0);
   const sheetScrollRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
 
   const closeModal = useCallback(() => { setSelectedOrder(null); setCancelling(null); setCancelReason(""); }, []);
 
-  const handleSheetTouchStart = (e: React.TouchEvent) => { touchStartY.current = e.touches[0].clientY; };
+  const handleSheetTouchStart = (e: React.TouchEvent) => {
+    if (sheetScrollRef.current && sheetScrollRef.current.scrollTop > 0) return;
+    touchStartY.current = e.touches[0].clientY;
+    isDragging.current = true;
+  };
   const handleSheetTouchMove = (e: React.TouchEvent) => {
-    const dy = e.touches[0].clientY - touchStartY.current;
-    if (dy > 90 && (!sheetScrollRef.current || sheetScrollRef.current.scrollTop === 0)) closeModal();
+    if (!isDragging.current) return;
+    if (sheetScrollRef.current && sheetScrollRef.current.scrollTop > 0) { isDragging.current = false; return; }
+    const dy = Math.max(0, e.touches[0].clientY - touchStartY.current);
+    if (sheetRef.current) { sheetRef.current.style.transform = `translateY(${dy}px)`; sheetRef.current.style.transition = "none"; }
+  };
+  const handleSheetTouchEnd = (e: React.TouchEvent) => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    if (dy > 90) {
+      if (sheetRef.current) { sheetRef.current.style.transform = "translateY(100%)"; sheetRef.current.style.transition = "transform 0.28s ease"; }
+      setTimeout(closeModal, 280);
+    } else {
+      if (sheetRef.current) { sheetRef.current.style.transform = "translateY(0)"; sheetRef.current.style.transition = "transform 0.2s ease"; }
+    }
   };
 
   // Expense form
@@ -252,6 +271,10 @@ export default function DashboardPage() {
     return Object.values(map);
   })();
 
+  // Current open batch (for labeling filters)
+  const currentBatch = batches.find(b => isBatchActive(b, orders.filter(o => o.batch_id === b.id && o.status !== "cancelled").length));
+  const poFilterLabel = currentBatch ? currentBatch.label.split(/[—–-]/)[0].trim() : "PO Ini";
+
   const expByCategory = EXPENSE_CATEGORIES.map((cat) => ({
     cat, total: periodExpenses.filter((e) => e.category === cat).reduce((s, e) => s + e.amount, 0),
   })).filter((x) => x.total > 0);
@@ -319,7 +342,7 @@ export default function DashboardPage() {
                     className={`flex-1 py-1.5 rounded-[10px] text-xs font-semibold transition ${
                       orderFilter === f ? "bg-white text-[#7b1d1d] shadow-sm" : "text-[#8a7060]"
                     }`}>
-                    {f === "today" ? `Hari Ini (${todayOrders.length})` : `Semua (${orders.length})`}
+                    {f === "today" ? `${poFilterLabel} (${todayOrders.length})` : `Semua (${orders.length})`}
                   </button>
                 ))}
               </div>
@@ -343,7 +366,7 @@ export default function DashboardPage() {
                 <button onClick={() => setShowSummary(v => !v)}
                   className="w-full flex items-center justify-between px-4 py-3">
                   <p className="text-xs font-bold text-[#7b1d1d] uppercase tracking-wider">
-                    Ringkasan Produksi Hari Ini
+                    Ringkasan Produksi
                   </p>
                   <span className="text-[#a07850] text-sm">{showSummary ? "−" : "+"}</span>
                 </button>
@@ -616,33 +639,34 @@ export default function DashboardPage() {
                     placeholder="e.g. Batch #1 — April 2026" required
                     className="w-full border border-[#d9cfc5] rounded-lg px-4 py-2.5 text-sm text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                {/* Dates: full-width on mobile to avoid cramping */}
+                <div className="grid grid-cols-2 gap-2">
                   {([["open_date", "PO Buka"], ["close_date", "PO Tutup"]] as const).map(([field, label]) => (
                     <div key={field}>
-                      <label className="block text-xs text-[#8a7060] mb-1">{label}</label>
+                      <label className="block text-[11px] text-[#8a7060] mb-1">{label}</label>
                       <input type="date" value={batchForm[field]} onChange={(e) => setBatchForm((p) => ({ ...p, [field]: e.target.value }))} required
-                        className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-sm text-[#1c1208] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
+                        className="w-full border border-[#d9cfc5] rounded-lg px-2 py-2 text-[#1c1208] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
                     </div>
                   ))}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] text-[#8a7060] mb-1">Tanggal Antar</label>
+                  <input type="date" value={batchForm.delivery_date} onChange={(e) => setBatchForm((p) => ({ ...p, delivery_date: e.target.value }))} required
+                    className="w-full border border-[#d9cfc5] rounded-lg px-2 py-2 text-[#1c1208] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs text-[#8a7060] mb-1">Tanggal Antar</label>
-                    <input type="date" value={batchForm.delivery_date} onChange={(e) => setBatchForm((p) => ({ ...p, delivery_date: e.target.value }))} required
-                      className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-sm text-[#1c1208] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-[#8a7060] mb-1">Maks. Pesanan</label>
+                    <label className="block text-[11px] text-[#8a7060] mb-1">Maks. Pesanan</label>
                     <input value={batchForm.max_orders} onChange={(e) => setBatchForm((p) => ({ ...p, max_orders: e.target.value.replace(/\D/g, "") }))}
                       placeholder="Tak terbatas" inputMode="numeric"
-                      className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-sm text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
+                      className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
                   </div>
-                </div>
-                <div>
-                  <label className="block text-xs text-[#8a7060] mb-1">Catatan (opsional)</label>
-                  <input value={batchForm.notes} onChange={(e) => setBatchForm((p) => ({ ...p, notes: e.target.value }))}
-                    placeholder="e.g. Minimal order 1 porsi"
-                    className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-sm text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
+                  <div>
+                    <label className="block text-[11px] text-[#8a7060] mb-1">Catatan</label>
+                    <input value={batchForm.notes} onChange={(e) => setBatchForm((p) => ({ ...p, notes: e.target.value }))}
+                      placeholder="opsional"
+                      className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
+                  </div>
                 </div>
                 <button type="submit" disabled={batchLoading || !batchForm.label.trim()}
                   className="w-full bg-[#7b1d1d] text-white font-bold py-3 rounded-xl hover:bg-[#6a1717] transition disabled:opacity-40 text-sm">
@@ -773,9 +797,11 @@ export default function DashboardPage() {
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeModal} />
             {/* Sheet */}
             <div
+              ref={sheetRef}
               className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-xl max-h-[90vh] flex flex-col"
               onTouchStart={handleSheetTouchStart}
               onTouchMove={handleSheetTouchMove}
+              onTouchEnd={handleSheetTouchEnd}
             >
               {/* Handle — tap also closes */}
               <button onClick={closeModal} className="flex justify-center pt-3 pb-1 shrink-0 w-full">
