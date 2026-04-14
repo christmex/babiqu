@@ -335,16 +335,16 @@ export default function DashboardPage() {
                   )}
 
                   <div className={`bg-white rounded-xl border px-4 py-3 transition-all ${
-                    isCancelled ? "opacity-60 border-red-200" : isDelivered ? "border-green-200 bg-green-50/20" : "border-[#e8ddd0]"
+                    isCancelled ? "border-red-200" : isDelivered ? "border-green-200 bg-green-50/20" : "border-[#e8ddd0]"
                   }`}>
-                    {/* Status banner */}
+                    {/* Status banner — full opacity always */}
                     {isCancelled && (
                       <div className="flex items-center justify-between bg-red-50 rounded-lg px-3 py-1.5 mb-2 -mx-1">
                         <p className="text-xs text-red-500">
                           Dibatalkan{order.cancel_reason ? `: ${order.cancel_reason}` : ""}
                         </p>
                         <button onClick={() => handleRestore(order.id)}
-                          className="text-[11px] font-bold text-white bg-green-500 hover:bg-green-600 px-2.5 py-0.5 rounded-md transition shrink-0 ml-2">
+                          className="text-[11px] font-bold text-white bg-green-500 hover:bg-green-600 px-2.5 py-1 rounded-md transition shrink-0 ml-2">
                           Pulihkan
                         </button>
                       </div>
@@ -356,6 +356,9 @@ export default function DashboardPage() {
                           className="text-[11px] text-[#8a7060] hover:text-[#1c1208] transition">Batalkan</button>
                       </div>
                     )}
+
+                    {/* Card body — muted when cancelled */}
+                    <div className={isCancelled ? "opacity-50" : ""}>
 
                     {/* Top row: name · wa · badge + date */}
                     <div className="flex items-center justify-between gap-2 mb-1">
@@ -411,22 +414,7 @@ export default function DashboardPage() {
                               className="text-[11px] font-semibold text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg px-2.5 py-1 transition">
                               Selesai
                             </button>
-                            {cancelling === order.id ? (
-                              <div className="flex items-center gap-1.5">
-                                <input autoFocus value={cancelReason}
-                                  onChange={(e) => setCancelReason(e.target.value)}
-                                  onKeyDown={(e) => { if (e.key === "Enter") handleCancel(order.id); if (e.key === "Escape") { setCancelling(null); setCancelReason(""); } }}
-                                  placeholder="Alasan..."
-                                  className="text-xs border border-red-200 rounded-lg px-2 py-1 focus:outline-none focus:border-red-400 w-28"
-                                />
-                                <button onClick={() => handleCancel(order.id)} disabled={cancelLoading || !cancelReason.trim()}
-                                  className="text-[11px] font-semibold text-white bg-red-500 hover:bg-red-600 px-2 py-1 rounded-lg transition disabled:opacity-40">
-                                  {cancelLoading ? "..." : "OK"}
-                                </button>
-                                <button onClick={() => { setCancelling(null); setCancelReason(""); }}
-                                  className="text-xs text-[#8a7060]">✕</button>
-                              </div>
-                            ) : (
+                            {cancelling !== order.id && (
                               <button onClick={() => setCancelling(order.id)}
                                 className="text-[11px] text-red-400 hover:text-red-600 font-medium transition">Batal</button>
                             )}
@@ -435,6 +423,28 @@ export default function DashboardPage() {
                       </div>
                       <span className="font-bold text-[#7b1d1d] text-sm shrink-0">{formatRupiah(order.total)}</span>
                     </div>
+
+                    {/* Cancel form — full width below actions */}
+                    {cancelling === order.id && (
+                      <div className="mt-2 pt-2 border-t border-red-100">
+                        <input autoFocus value={cancelReason}
+                          onChange={(e) => setCancelReason(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") handleCancel(order.id); if (e.key === "Escape") { setCancelling(null); setCancelReason(""); } }}
+                          placeholder="Tulis alasan pembatalan..."
+                          className="w-full text-sm border border-red-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-red-400 mb-2"
+                        />
+                        <div className="flex gap-2">
+                          <button onClick={() => handleCancel(order.id)} disabled={cancelLoading || !cancelReason.trim()}
+                            className="flex-1 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 py-2 rounded-xl transition disabled:opacity-40">
+                            {cancelLoading ? "Menyimpan..." : "Konfirmasi Batal"}
+                          </button>
+                          <button onClick={() => { setCancelling(null); setCancelReason(""); }}
+                            className="px-4 py-2 text-sm text-[#8a7060] bg-[#f0e8de] hover:bg-[#e8ddd0] rounded-xl transition">Tutup</button>
+                        </div>
+                      </div>
+                    )}
+
+                    </div>{/* end muted wrapper */}
                   </div>
                 </div>
               );
