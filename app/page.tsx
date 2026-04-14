@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 
 const MENUS = [
@@ -210,14 +211,28 @@ export default function OrderPage() {
   return (
     <div className="min-h-screen bg-[#fdf8f2]">
       {/* Header */}
-      <header className="bg-[#7b1d1d] text-white py-10 px-4 text-center">
-        <p className="text-[11px] tracking-[0.35em] uppercase text-red-200 mb-2">
-          Signature Roast Pork
-        </p>
-        <h1 className="text-4xl font-bold tracking-wide">BABIQU</h1>
-        <p className="text-red-200 text-sm mt-2 tracking-wide">
-          Pesan langsung · Antar ke rumah
-        </p>
+      <header className="relative text-white text-center overflow-hidden">
+        <div className="relative h-72 sm:h-80 w-full">
+          <Image
+            src="/hero.jpg"
+            alt="Babiqu Signature Roast Pork"
+            fill
+            className="object-cover object-center"
+            priority
+          />
+          {/* Dark gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#1a0a05]/90 via-[#1a0a05]/40 to-transparent" />
+        </div>
+        {/* Text on top of image */}
+        <div className="absolute inset-0 flex flex-col items-center justify-end pb-8 px-4">
+          <p className="text-[11px] tracking-[0.35em] uppercase text-red-200 mb-2">
+            Signature Roast Pork
+          </p>
+          <h1 className="text-4xl font-bold tracking-wide drop-shadow-lg">BABIQU</h1>
+          <p className="text-red-200 text-sm mt-2 tracking-wide drop-shadow">
+            Pesan langsung · Antar ke rumah
+          </p>
+        </div>
       </header>
 
       <main className="max-w-xl mx-auto px-4 py-8 space-y-6">
