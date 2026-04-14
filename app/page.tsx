@@ -581,19 +581,24 @@ export default function OrderPage() {
                                 </div>
                               );
                             })}
-                            <textarea
-                              value={portion.notes}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setOrders((prev) => {
-                                  const portions = prev[menu.id].portions.map((p) => ({ ...p, notes: val }));
-                                  return { ...prev, [menu.id]: { ...prev[menu.id], portions } };
-                                });
-                              }}
-                              placeholder="Catatan (opsional)..."
-                              rows={2}
-                              className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-xs text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition resize-none"
-                            />
+                            {/* Per-portion notes in same-for-all mode */}
+                            <div className="border-t border-dashed border-[#e8ddd0] pt-2 space-y-2">
+                              <p className="text-[11px] font-semibold text-[#a07850] uppercase tracking-wide">
+                                Catatan per porsi (opsional)
+                              </p>
+                              {ord.portions.map((p, idx) => (
+                                <div key={idx} className="flex items-start gap-2">
+                                  <span className="text-[11px] text-[#a07850] font-bold mt-2 shrink-0 w-12">P{idx + 1}</span>
+                                  <input
+                                    type="text"
+                                    value={p.notes}
+                                    onChange={(e) => setPortionNotes(menu.id, idx, e.target.value)}
+                                    placeholder={`Catatan porsi ${idx + 1}...`}
+                                    className="flex-1 border border-[#d9cfc5] rounded-lg px-3 py-1.5 text-xs text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition"
+                                  />
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         );
                       })()}
@@ -661,6 +666,14 @@ export default function OrderPage() {
                                   rows={2}
                                   className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-xs text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition resize-none"
                                 />
+                                {ord.qty > 1 && (
+                                  <button
+                                    onClick={() => applyToAll(menu.id, portionIdx)}
+                                    className="text-[11px] text-[#7b1d1d] hover:underline font-medium"
+                                  >
+                                    Salin pengaturan ini ke semua porsi lain
+                                  </button>
+                                )}
                               </div>
                             )}
                           </div>
