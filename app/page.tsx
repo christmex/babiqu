@@ -93,6 +93,15 @@ export default function OrderPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const touch = (key: string) => setTouched((prev) => ({ ...prev, [key]: true }));
+
+  const fieldError = (key: keyof FormData) =>
+    (submitted || touched[key]) && !form[key].trim()
+      ? "Wajib diisi"
+      : "";
 
   const setQty = (menuId: string, delta: number) => {
     setOrders((prev) => {
@@ -175,6 +184,7 @@ export default function OrderPage() {
   };
 
   const handleSubmit = async () => {
+    setSubmitted(true);
     const err = validate();
     if (err) { setError(err); return; }
     setError("");
@@ -258,22 +268,35 @@ export default function OrderPage() {
             { key: "nomor_wa", label: "Nomor WhatsApp", placeholder: "e.g. 08123456789", type: "tel" },
             { key: "alamat", label: "Alamat Pengiriman", placeholder: "Jl. Sudirman No. 12, Jakarta", type: "text" },
             { key: "jam_antar", label: "Jam Antar", placeholder: "e.g. 12:00 WIB", type: "text" },
-          ].map(({ key, label, placeholder, type }) => (
-            <div key={key}>
-              <label className="block text-xs font-semibold text-[#5a3e2b] mb-1 tracking-wide uppercase">
-                {label}
-              </label>
-              <input
-                type={type}
-                value={form[key as keyof FormData]}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, [key]: e.target.value }))
-                }
-                placeholder={placeholder}
-                className="w-full border border-[#d9cfc5] rounded-lg px-4 py-2.5 text-[15px] text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition"
-              />
-            </div>
-          ))}
+          ].map(({ key, label, placeholder, type }) => {
+            const err = fieldError(key as keyof FormData);
+            return (
+              <div key={key}>
+                <label className="block text-xs font-semibold text-[#5a3e2b] mb-1 tracking-wide uppercase">
+                  {label}
+                </label>
+                <input
+                  type={type}
+                  value={form[key as keyof FormData]}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, [key]: e.target.value }))
+                  }
+                  onBlur={() => touch(key)}
+                  placeholder={placeholder}
+                  className={`w-full border rounded-lg px-4 py-2.5 text-[15px] text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none transition ${
+                    err
+                      ? "border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-400"
+                      : "border-[#d9cfc5] focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d]"
+                  }`}
+                />
+                {err && (
+                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                    <span>⚠</span> {err}
+                  </p>
+                )}
+              </div>
+            );
+          })}
         </section>
 
         {/* Menu */}
@@ -342,28 +365,40 @@ export default function OrderPage() {
                               Porsi {portionIdx + 1}
                             </p>
                           )}
-                          {menu.options.map((opt) => (
-                            <div key={opt.key}>
-                              <p className="text-xs font-semibold text-[#5a3e2b] mb-1.5 tracking-wide uppercase">
-                                {opt.label}
-                              </p>
-                              <div className="flex flex-wrap gap-2">
-                                {opt.choices.map((choice) => (
-                                  <button
-                                    key={choice}
-                                    onClick={() => setOption(menu.id, portionIdx, opt.key, choice)}
-                                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
-                                      portion[opt.key] === choice
-                                        ? "bg-[#7b1d1d] text-white border-[#7b1d1d]"
-                                        : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"
-                                    }`}
-                                  >
-                                    {choice}
-                                  </button>
-                                ))}
+                          {menu.options.map((opt) => {
+                            const optErr = submitted && !portion[opt.key];
+                            return (
+                              <div key={opt.key}>
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <p className={`text-xs font-semibold tracking-wide uppercase ${optErr ? "text-red-500" : "text-[#5a3e2b]"}`}>
+                                    {opt.label}
+                                  </p>
+                                  {optErr && (
+                                    <span className="text-[10px] text-red-500 font-medium">
+                                      ⚠ Wajib dipilih
+                                    </span>
+                                  )}
+                                </div>
+                                <div className={`flex flex-wrap gap-2 p-2 rounded-lg transition ${optErr ? "bg-red-50 ring-1 ring-red-300" : ""}`}>
+                                  {opt.choices.map((choice) => (
+                                    <button
+                                      key={choice}
+                                      onClick={() => setOption(menu.id, portionIdx, opt.key, choice)}
+                                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
+                                        portion[opt.key] === choice
+                                          ? "bg-[#7b1d1d] text-white border-[#7b1d1d]"
+                                          : optErr
+                                          ? "bg-white text-red-600 border-red-300 hover:border-red-500"
+                                          : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"
+                                      }`}
+                                    >
+                                      {choice}
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                           {portionIdx < ord.portions.length - 1 && (
                             <div className="border-b border-dashed border-[#e8ddd0] pt-2" />
                           )}
@@ -449,9 +484,14 @@ export default function OrderPage() {
             </span>
           </div>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4">
-              {error}
+          {submitted && activeOrders.length === 0 && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4 flex items-center gap-2">
+              <span>⚠</span> Pilih minimal 1 menu dulu ya
+            </div>
+          )}
+          {error && !error.includes("menu") && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4 flex items-center gap-2">
+              <span>⚠</span> {error}
             </div>
           )}
 
