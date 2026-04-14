@@ -367,7 +367,7 @@ export default function OrderPage() {
                   }`}
                 >
                   <option value="" disabled>Pilih jam pengiriman</option>
-                  <option value="11.30 - 13.00 (Siang)">11.30 - 13.00 (Siang)</option>
+                  <option value="11.00 - 13.00 (Siang)">11.00 - 13.00 (Siang)</option>
                   <option value="17.00 - 19.00 (Malam)">17.00 - 19.00 (Malam)</option>
                 </select>
                 {err && (
