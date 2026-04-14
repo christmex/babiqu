@@ -22,6 +22,7 @@ type Expense = {
 type Batch = {
   id: string; created_at: string; label: string;
   open_date: string; close_date: string; delivery_date: string; notes: string;
+  is_closed: boolean; max_orders: number | null;
 };
 
 const EXPENSE_CATEGORIES = ["Bahan Baku", "Operasional", "Kemasan", "Transportasi", "Lainnya"];
@@ -31,9 +32,15 @@ type Period = keyof typeof PERIOD_LABELS;
 function formatBatchDate(d: string) {
   return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(new Date(d + "T00:00:00"));
 }
-function isBatchActive(b: Batch) {
+function isBatchDateActive(b: Batch) {
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
   return b.open_date <= today && b.close_date >= today;
+}
+function isBatchActive(b: Batch, orderCount: number) {
+  return isBatchDateActive(b) && !b.is_closed && (b.max_orders == null || orderCount < b.max_orders);
+}
+function isBatchFull(b: Batch, orderCount: number) {
+  return b.max_orders != null && orderCount >= b.max_orders;
 }
 function isBatchUpcoming(b: Batch) {
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
@@ -91,7 +98,7 @@ export default function DashboardPage() {
   // Batch form
   const todayIso = new Date().toISOString().slice(0, 10);
   const [batchForm, setBatchForm] = useState({
-    label: "", open_date: todayIso, close_date: todayIso, delivery_date: todayIso, notes: "",
+    label: "", open_date: todayIso, close_date: todayIso, delivery_date: todayIso, notes: "", max_orders: "",
   });
   const [batchLoading, setBatchLoading] = useState(false);
   const [deletingBatch, setDeletingBatch] = useState<string | null>(null);
@@ -160,16 +167,24 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!batchForm.label.trim()) return;
     setBatchLoading(true);
+    const max = batchForm.max_orders ? parseInt(batchForm.max_orders) : null;
     const { data } = await supabase.from("batches").insert({
       label: batchForm.label.trim(),
       open_date: batchForm.open_date,
       close_date: batchForm.close_date,
       delivery_date: batchForm.delivery_date,
       notes: batchForm.notes.trim(),
+      max_orders: max,
     }).select().single();
     if (data) setBatches((prev) => [data, ...prev]);
-    setBatchForm({ label: "", open_date: todayIso, close_date: todayIso, delivery_date: todayIso, notes: "" });
+    setBatchForm({ label: "", open_date: todayIso, close_date: todayIso, delivery_date: todayIso, notes: "", max_orders: "" });
     setBatchLoading(false);
+  }
+
+  async function handleToggleBatchClosed(batch: Batch) {
+    const newVal = !batch.is_closed;
+    await supabase.from("batches").update({ is_closed: newVal }).eq("id", batch.id);
+    setBatches((prev) => prev.map((b) => b.id === batch.id ? { ...b, is_closed: newVal } : b));
   }
 
   async function handleDeleteBatch(id: string) {
@@ -225,10 +240,16 @@ export default function DashboardPage() {
               <p className="text-xs text-[#b8a898] mt-0.5">Update: {lastUpdated.toLocaleTimeString("id-ID")}</p>
             )}
           </div>
-          <button onClick={fetchAll} disabled={loading}
-            className="px-4 py-2 bg-[#7b1d1d] text-white text-sm font-semibold rounded-xl hover:bg-[#6a1717] transition disabled:opacity-50">
-            {loading ? "..." : "Refresh"}
-          </button>
+          <div className="flex items-center gap-2">
+            <a href="/" target="_blank" rel="noopener noreferrer"
+              className="px-4 py-2 bg-white border border-[#d9cfc5] text-[#7b1d1d] text-sm font-semibold rounded-xl hover:border-[#7b1d1d] transition">
+              Form Pesan
+            </a>
+            <button onClick={fetchAll} disabled={loading}
+              className="px-4 py-2 bg-[#7b1d1d] text-white text-sm font-semibold rounded-xl hover:bg-[#6a1717] transition disabled:opacity-50">
+              {loading ? "..." : "Refresh"}
+            </button>
+          </div>
         </div>
 
         {/* Quick stats */}
@@ -272,9 +293,12 @@ export default function DashboardPage() {
               <div className="bg-white rounded-2xl border border-[#e8ddd0] overflow-hidden">
                 <button onClick={() => setShowDelivery((v) => !v)}
                   className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-[#fdf8f2] transition">
-                  <p className="text-xs font-bold text-[#7b1d1d] uppercase tracking-wider">
-                    Rute Antar Hari Ini ({deliveryList.length})
-                  </p>
+                  <div>
+                    <p className="text-xs font-bold text-[#7b1d1d] uppercase tracking-wider">
+                      Rute Antar Hari Ini ({deliveryList.length})
+                    </p>
+                    <p className="text-[10px] text-[#a07850] mt-0.5">Pesanan aktif hari ini — klik Selesai saat sudah diantar</p>
+                  </div>
                   <span className="text-[#a07850]">{showDelivery ? "−" : "+"}</span>
                 </button>
                 {showDelivery && (
@@ -307,7 +331,10 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* Filter */}
+            {/* Filter — semua pesanan di bawah ini */}
+            <p className="text-xs font-bold text-[#5a3e2b] uppercase tracking-wider px-1 mt-2">
+              Daftar Pesanan
+            </p>
             <div className="flex gap-2">
               {(["today", "all"] as const).map((f) => (
                 <button key={f} onClick={() => setOrderFilter(f)}
@@ -352,7 +379,7 @@ export default function DashboardPage() {
                           Dibatalkan{order.cancel_reason ? `: ${order.cancel_reason}` : ""}
                         </p>
                         <button onClick={() => handleRestore(order.id)}
-                          className="text-xs text-[#7b1d1d] hover:underline font-semibold shrink-0 ml-2">Pulihkan</button>
+                          className="text-xs font-bold text-white bg-[#7b1d1d] hover:bg-[#6a1717] px-2.5 py-1 rounded-lg transition shrink-0 ml-2">Pulihkan</button>
                       </div>
                     )}
                     {isDelivered && (
@@ -627,11 +654,19 @@ export default function DashboardPage() {
                     </div>
                   ))}
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[#5a3e2b] mb-1 uppercase tracking-wide">Catatan (opsional)</label>
-                  <input value={batchForm.notes} onChange={(e) => setBatchForm((p) => ({ ...p, notes: e.target.value }))}
-                    placeholder="e.g. Minimal order 1 porsi"
-                    className="w-full border border-[#d9cfc5] rounded-lg px-4 py-2.5 text-sm text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#5a3e2b] mb-1 uppercase tracking-wide">Maks. Pesanan (opsional)</label>
+                    <input value={batchForm.max_orders} onChange={(e) => setBatchForm((p) => ({ ...p, max_orders: e.target.value.replace(/\D/g, "") }))}
+                      placeholder="Kosong = tak terbatas" inputMode="numeric"
+                      className="w-full border border-[#d9cfc5] rounded-lg px-4 py-2.5 text-sm text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#5a3e2b] mb-1 uppercase tracking-wide">Catatan (opsional)</label>
+                    <input value={batchForm.notes} onChange={(e) => setBatchForm((p) => ({ ...p, notes: e.target.value }))}
+                      placeholder="e.g. Minimal order 1 porsi"
+                      className="w-full border border-[#d9cfc5] rounded-lg px-4 py-2.5 text-sm text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
+                  </div>
                 </div>
                 <button type="submit" disabled={batchLoading || !batchForm.label.trim()}
                   className="w-full bg-[#7b1d1d] text-white font-bold py-3 rounded-xl hover:bg-[#6a1717] transition disabled:opacity-40 text-sm">
@@ -654,27 +689,48 @@ export default function DashboardPage() {
                 const batchExp = expenses.filter((e) => e.batch_id === batch.id);
                 const batchExpTotal = batchExp.reduce((s, e) => s + e.amount, 0);
                 const batchProfit = batchRevenue - batchExpTotal;
-                const isActive = isBatchActive(batch);
+                const orderCount = batchOrders.length;
+                const isActive = isBatchActive(batch, orderCount);
+                const isFull = isBatchFull(batch, orderCount);
                 const isUpcoming = isBatchUpcoming(batch);
 
                 return (
                   <div key={batch.id} className={`bg-white rounded-2xl border p-5 ${isActive ? "border-[#7b1d1d] shadow-sm" : "border-[#e8ddd0]"}`}>
                     {/* Header */}
                     <div className="flex items-start justify-between gap-3 mb-3">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center flex-wrap gap-2 mb-1">
                           <p className="font-bold text-[#1c1208]">{batch.label}</p>
                           {isActive && <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">AKTIF</span>}
+                          {isFull && <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">PENUH</span>}
+                          {batch.is_closed && !isUpcoming && <span className="text-[10px] font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">TUTUP MANUAL</span>}
                           {isUpcoming && <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">AKAN DATANG</span>}
                         </div>
                         <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-[#8a7060]">
                           <span>PO: {formatBatchDate(batch.open_date)} – {formatBatchDate(batch.close_date)}</span>
                           <span>Antar: {formatBatchDate(batch.delivery_date)}</span>
+                          {batch.max_orders != null && (
+                            <span className={`font-semibold ${isFull ? "text-orange-600" : "text-[#8a7060]"}`}>
+                              Kuota: {orderCount}/{batch.max_orders}
+                            </span>
+                          )}
                         </div>
                         {batch.notes && <p className="text-xs text-[#a07850] italic mt-1">{batch.notes}</p>}
                       </div>
-                      <button onClick={() => setDeletingBatch(deletingBatch === batch.id ? null : batch.id)}
-                        className="text-[#b8a898] hover:text-red-500 transition text-lg leading-none shrink-0">×</button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isBatchDateActive(batch) && (
+                          <button onClick={() => handleToggleBatchClosed(batch)}
+                            className={`text-[11px] font-bold px-2.5 py-1 rounded-lg transition ${
+                              batch.is_closed
+                                ? "bg-green-100 text-green-700 hover:bg-green-200"
+                                : "bg-red-100 text-red-600 hover:bg-red-200"
+                            }`}>
+                            {batch.is_closed ? "Buka PO" : "Tutup PO"}
+                          </button>
+                        )}
+                        <button onClick={() => setDeletingBatch(deletingBatch === batch.id ? null : batch.id)}
+                          className="text-[#b8a898] hover:text-red-500 transition text-lg leading-none">×</button>
+                      </div>
                     </div>
 
                     {deletingBatch === batch.id && (

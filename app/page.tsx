@@ -80,6 +80,8 @@ type Batch = {
   close_date: string;
   delivery_date: string;
   notes: string;
+  is_closed: boolean;
+  max_orders: number | null;
 };
 
 function formatBatchDate(dateStr: string) {
@@ -116,6 +118,8 @@ export default function OrderPage() {
 
   const [activeBatch, setActiveBatch] = useState<Batch | null | undefined>(undefined);
   const [nextBatch, setNextBatch] = useState<Batch | null>(null);
+  const [batchOrderCount, setBatchOrderCount] = useState(0);
+  const [batchClosedFull, setBatchClosedFull] = useState(false);
   const [loading, setLoading] = useState(false);
   const [qtyEditing, setQtyEditing] = useState<string | null>(null);
   const [expandedPortions, setExpandedPortions] = useState<Record<string, number | null>>({});
@@ -132,8 +136,29 @@ export default function OrderPage() {
         .from("batches").select("*")
         .lte("open_date", today).gte("close_date", today)
         .order("open_date", { ascending: false }).limit(1).maybeSingle();
-      setActiveBatch(active ?? null);
-      if (!active) {
+
+      if (active) {
+        // Count non-cancelled orders in this batch to check quota
+        const { count } = await supabase
+          .from("orders").select("*", { count: "exact", head: true })
+          .eq("batch_id", active.id).neq("status", "cancelled");
+        const cnt = count ?? 0;
+        setBatchOrderCount(cnt);
+        // If manually closed or quota full → treat as no active batch
+        const isFull = active.max_orders != null && cnt >= active.max_orders;
+        if (active.is_closed || isFull) {
+          setActiveBatch(null);
+          setBatchClosedFull(isFull && !active.is_closed);
+          const { data: next } = await supabase
+            .from("batches").select("*")
+            .gt("open_date", today)
+            .order("open_date", { ascending: true }).limit(1).maybeSingle();
+          setNextBatch(next ?? null);
+        } else {
+          setActiveBatch(active);
+        }
+      } else {
+        setActiveBatch(null);
         const { data: next } = await supabase
           .from("batches").select("*")
           .gt("open_date", today)
@@ -416,11 +441,14 @@ export default function OrderPage() {
         {hero}
         <main className="max-w-xl mx-auto px-4 py-10">
           <div className="bg-white rounded-2xl border border-[#e8ddd0] shadow-sm p-8 text-center">
-            <p className="text-3xl mb-3">🔒</p>
-            <h2 className="text-xl font-bold text-[#1c1208] mb-2">PO Sedang Tutup</h2>
+            <p className="text-3xl mb-3">{batchClosedFull ? "🎯" : "🔒"}</p>
+            <h2 className="text-xl font-bold text-[#1c1208] mb-2">
+              {batchClosedFull ? "Kuota Penuh!" : "PO Sedang Tutup"}
+            </h2>
             <p className="text-sm text-[#8a7060] leading-relaxed mb-5">
-              Pemesanan untuk batch ini sudah ditutup.<br />
-              Pantau terus untuk batch berikutnya!
+              {batchClosedFull
+                ? "Pesanan untuk batch ini sudah mencapai batas kuota.\nPantau terus untuk batch berikutnya!"
+                : "Pemesanan untuk batch ini sudah ditutup.\nPantau terus untuk batch berikutnya!"}
             </p>
             {nextBatch ? (
               <div className="bg-[#fdf8f2] rounded-xl border border-[#e8ddd0] p-4 text-left">
@@ -462,6 +490,9 @@ export default function OrderPage() {
           <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-white/90">
             <span>PO tutup: <span className="font-semibold text-white">{formatBatchDate(activeBatch.close_date)}</span></span>
             <span>Antar: <span className="font-semibold text-white">{formatBatchDate(activeBatch.delivery_date)}</span></span>
+            {activeBatch.max_orders != null && (
+              <span>Sisa kuota: <span className="font-semibold text-white">{Math.max(0, activeBatch.max_orders - batchOrderCount)}/{activeBatch.max_orders}</span></span>
+            )}
           </div>
           {activeBatch.notes && <p className="text-xs text-red-200 mt-1.5 italic">{activeBatch.notes}</p>}
         </div>
