@@ -119,6 +119,9 @@ export default function DashboardPage() {
   });
   const [batchLoading, setBatchLoading] = useState(false);
   const [deletingBatch, setDeletingBatch] = useState<string | null>(null);
+  const [editingBatch, setEditingBatch] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ label: "", open_date: "", close_date: "", delivery_date: "", notes: "", max_orders: "" });
+  const [editLoading, setEditLoading] = useState(false);
 
   // Filters
   const [orderFilter, setOrderFilter] = useState<"today" | "all">("today");
@@ -211,6 +214,40 @@ export default function DashboardPage() {
     await supabase.from("batches").delete().eq("id", id);
     setBatches((prev) => prev.filter((b) => b.id !== id));
     setDeletingBatch(null);
+  }
+
+  function startEditBatch(batch: Batch) {
+    setEditingBatch(batch.id);
+    setDeletingBatch(null);
+    setEditForm({
+      label: batch.label,
+      open_date: batch.open_date,
+      close_date: batch.close_date,
+      delivery_date: batch.delivery_date,
+      notes: batch.notes ?? "",
+      max_orders: batch.max_orders != null ? String(batch.max_orders) : "",
+    });
+  }
+
+  async function handleSaveBatch(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingBatch || !editForm.label.trim()) return;
+    setEditLoading(true);
+    const max = editForm.max_orders ? parseInt(editForm.max_orders) : null;
+    await supabase.from("batches").update({
+      label: editForm.label.trim(),
+      open_date: editForm.open_date,
+      close_date: editForm.close_date,
+      delivery_date: editForm.delivery_date,
+      notes: editForm.notes.trim(),
+      max_orders: max,
+    }).eq("id", editingBatch);
+    setBatches((prev) => prev.map((b) => b.id === editingBatch
+      ? { ...b, label: editForm.label.trim(), open_date: editForm.open_date, close_date: editForm.close_date, delivery_date: editForm.delivery_date, notes: editForm.notes.trim(), max_orders: max }
+      : b
+    ));
+    setEditingBatch(null);
+    setEditLoading(false);
   }
 
   async function handleDeleteExpense(id: string) {
@@ -683,53 +720,108 @@ export default function DashboardPage() {
 
                 return (
                   <div key={batch.id} className={`bg-white rounded-2xl border p-5 ${isActive ? "border-[#7b1d1d] shadow-sm" : "border-[#e8ddd0]"}`}>
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center flex-wrap gap-2 mb-1">
-                          <p className="font-bold text-[#1c1208]">{batch.label}</p>
-                          {isActive && <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">AKTIF</span>}
-                          {isFull && <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">PENUH</span>}
-                          {batch.is_closed && !isUpcoming && <span className="text-[10px] font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">TUTUP MANUAL</span>}
-                          {isUpcoming && <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">AKAN DATANG</span>}
-                        </div>
-                        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-[#8a7060]">
-                          <span>PO: {formatBatchDate(batch.open_date)} – {formatBatchDate(batch.close_date)}</span>
-                          <span>Antar: {formatBatchDate(batch.delivery_date)}</span>
-                          {batch.max_orders != null && (
-                            <span className={`font-semibold ${isFull ? "text-orange-600" : "text-[#8a7060]"}`}>
-                              Kuota: {orderCount}/{batch.max_orders}
-                            </span>
-                          )}
-                        </div>
-                        {batch.notes && <p className="text-xs text-[#a07850] italic mt-1">{batch.notes}</p>}
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {isBatchDateActive(batch) && (
-                          <button onClick={() => handleToggleBatchClosed(batch)}
-                            className={`text-[11px] font-bold px-2.5 py-1 rounded-lg transition ${
-                              batch.is_closed
-                                ? "bg-green-100 text-green-700 hover:bg-green-200"
-                                : "bg-red-100 text-red-600 hover:bg-red-200"
-                            }`}>
-                            {batch.is_closed ? "Buka PO" : "Tutup PO"}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => canDelete && setDeletingBatch(deletingBatch === batch.id ? null : batch.id)}
-                          disabled={!canDelete}
-                          title={!canDelete ? `Tidak bisa dihapus — ada ${batchTotalOrders} pesanan` : "Hapus batch"}
-                          className={`text-lg leading-none transition ${canDelete ? "text-[#b8a898] hover:text-red-500 cursor-pointer" : "text-[#d9cfc5] cursor-not-allowed"}`}>×</button>
-                      </div>
-                    </div>
 
-                    {deletingBatch === batch.id && canDelete && (
-                      <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-3">
-                        <p className="text-xs text-red-600 flex-1">Hapus batch ini?</p>
-                        <button onClick={() => handleDeleteBatch(batch.id)}
-                          className="text-xs font-bold text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-lg">Hapus</button>
-                        <button onClick={() => setDeletingBatch(null)} className="text-xs text-[#8a7060]">Batal</button>
-                      </div>
+                    {/* ── Edit form (inline, shown when editing) ── */}
+                    {editingBatch === batch.id ? (
+                      <form onSubmit={handleSaveBatch} className="space-y-3 mb-4">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-xs font-bold text-[#7b1d1d] uppercase tracking-wider">Edit Batch</p>
+                          <button type="button" onClick={() => setEditingBatch(null)}
+                            className="text-xs text-[#8a7060] hover:text-[#1c1208] transition">Batal</button>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] text-[#8a7060] mb-1">Nama Batch</label>
+                          <input value={editForm.label} onChange={(e) => setEditForm((p) => ({ ...p, label: e.target.value }))} required
+                            className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-sm text-[#1c1208] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 overflow-hidden">
+                          {([["open_date", "PO Buka"], ["close_date", "PO Tutup"]] as const).map(([field, label]) => (
+                            <div key={field} className="min-w-0">
+                              <label className="block text-[11px] text-[#8a7060] mb-1">{label}</label>
+                              <input type="date" value={editForm[field]} onChange={(e) => setEditForm((p) => ({ ...p, [field]: e.target.value }))} required
+                                className="w-full border border-[#d9cfc5] rounded-lg px-2 py-2 text-[#1c1208] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
+                            </div>
+                          ))}
+                        </div>
+                        <div>
+                          <label className="block text-[11px] text-[#8a7060] mb-1">Tanggal Antar</label>
+                          <input type="date" value={editForm.delivery_date} onChange={(e) => setEditForm((p) => ({ ...p, delivery_date: e.target.value }))} required
+                            className="w-full border border-[#d9cfc5] rounded-lg px-2 py-2 text-[#1c1208] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 overflow-hidden">
+                          <div className="min-w-0">
+                            <label className="block text-[11px] text-[#8a7060] mb-1">Maks. Pesanan</label>
+                            <input value={editForm.max_orders} onChange={(e) => setEditForm((p) => ({ ...p, max_orders: e.target.value.replace(/\D/g, "") }))}
+                              placeholder="Tak terbatas" inputMode="numeric"
+                              className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
+                          </div>
+                          <div className="min-w-0">
+                            <label className="block text-[11px] text-[#8a7060] mb-1">Catatan</label>
+                            <input value={editForm.notes} onChange={(e) => setEditForm((p) => ({ ...p, notes: e.target.value }))}
+                              placeholder="opsional"
+                              className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
+                          </div>
+                        </div>
+                        <button type="submit" disabled={editLoading || !editForm.label.trim()}
+                          className="w-full bg-[#7b1d1d] text-white font-bold py-2.5 rounded-xl hover:bg-[#6a1717] transition disabled:opacity-40 text-sm">
+                          {editLoading ? "Menyimpan..." : "Simpan Perubahan"}
+                        </button>
+                      </form>
+                    ) : (
+                      <>
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center flex-wrap gap-2 mb-1">
+                              <p className="font-bold text-[#1c1208]">{batch.label}</p>
+                              {isActive && <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">AKTIF</span>}
+                              {isFull && <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">PENUH</span>}
+                              {batch.is_closed && !isUpcoming && <span className="text-[10px] font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">TUTUP MANUAL</span>}
+                              {isUpcoming && <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">AKAN DATANG</span>}
+                            </div>
+                            <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-[#8a7060]">
+                              <span>PO: {formatBatchDate(batch.open_date)} – {formatBatchDate(batch.close_date)}</span>
+                              <span>Antar: {formatBatchDate(batch.delivery_date)}</span>
+                              {batch.max_orders != null && (
+                                <span className={`font-semibold ${isFull ? "text-orange-600" : "text-[#8a7060]"}`}>
+                                  Kuota: {orderCount}/{batch.max_orders}
+                                </span>
+                              )}
+                            </div>
+                            {batch.notes && <p className="text-xs text-[#a07850] italic mt-1">{batch.notes}</p>}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {isBatchDateActive(batch) && (
+                              <button onClick={() => handleToggleBatchClosed(batch)}
+                                className={`text-[11px] font-bold px-2.5 py-1 rounded-lg transition ${
+                                  batch.is_closed
+                                    ? "bg-green-100 text-green-700 hover:bg-green-200"
+                                    : "bg-red-100 text-red-600 hover:bg-red-200"
+                                }`}>
+                                {batch.is_closed ? "Buka PO" : "Tutup PO"}
+                              </button>
+                            )}
+                            <button onClick={() => startEditBatch(batch)}
+                              className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-[#f0e8de] text-[#5a3e2b] hover:bg-[#e8ddd0] transition">
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => canDelete && setDeletingBatch(deletingBatch === batch.id ? null : batch.id)}
+                              disabled={!canDelete}
+                              title={!canDelete ? `Tidak bisa dihapus — ada ${batchTotalOrders} pesanan` : "Hapus batch"}
+                              className={`text-lg leading-none transition ${canDelete ? "text-[#b8a898] hover:text-red-500 cursor-pointer" : "text-[#d9cfc5] cursor-not-allowed"}`}>×</button>
+                          </div>
+                        </div>
+
+                        {deletingBatch === batch.id && canDelete && (
+                          <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-3">
+                            <p className="text-xs text-red-600 flex-1">Hapus batch ini?</p>
+                            <button onClick={() => handleDeleteBatch(batch.id)}
+                              className="text-xs font-bold text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-lg">Hapus</button>
+                            <button onClick={() => setDeletingBatch(null)} className="text-xs text-[#8a7060]">Batal</button>
+                          </div>
+                        )}
+                      </>
                     )}
 
                     {/* Stats grid */}
