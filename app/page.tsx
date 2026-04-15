@@ -75,10 +75,10 @@ const WA_NUMBER = "6285280221998";
 
 async function compressImage(file: File, maxMB = 2): Promise<File> {
   const maxBytes = maxMB * 1024 * 1024;
-  if (file.size <= maxBytes) return file; // already small enough
+  if (file.size <= maxBytes || typeof window === "undefined") return file;
 
   return new Promise((resolve) => {
-    const img = new Image();
+    const img = new window.Image();
     img.onload = () => {
       // Scale down large dimensions (max 2048px on longest side)
       const maxDim = 2048;
