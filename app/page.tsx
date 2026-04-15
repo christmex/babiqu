@@ -73,6 +73,50 @@ type FormData = {
 
 const WA_NUMBER = "6285280221998";
 
+async function compressImage(file: File, maxMB = 2): Promise<File> {
+  const maxBytes = maxMB * 1024 * 1024;
+  if (file.size <= maxBytes) return file; // already small enough
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      // Scale down large dimensions (max 2048px on longest side)
+      const maxDim = 2048;
+      let { naturalWidth: w, naturalHeight: h } = img;
+      if (w > maxDim || h > maxDim) {
+        const ratio = Math.min(maxDim / w, maxDim / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+
+      // Step quality down from 0.85 until under maxBytes
+      let quality = 0.85;
+      const tryEncode = () => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) { resolve(file); return; }
+            if (blob.size <= maxBytes || quality <= 0.1) {
+              resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }));
+            } else {
+              quality = Math.max(0.1, quality - 0.1);
+              tryEncode();
+            }
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+      tryEncode();
+    };
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 const BANK_INFO = {
   transfer_mandiri: { bank: "Bank Mandiri", account: "1090021894001", name: "KORNELIUS SOPHIANO T" },
   transfer_bca:     { bank: "Bank BCA",     account: "8210598261",    name: "KORNELIUS SOPHIANO T" },
@@ -1065,13 +1109,14 @@ export default function OrderPage() {
                 <label className="flex flex-col items-center gap-2 border-2 border-dashed border-[#d9cfc5] rounded-xl py-6 cursor-pointer hover:border-[#7b1d1d] transition bg-[#fdf8f2]">
                   <span className="text-2xl">📎</span>
                   <span className="text-sm font-semibold text-[#5a3e2b]">Upload Bukti Transfer</span>
-                  <span className="text-xs text-[#b8a898]">JPG, PNG, HEIC — maks 5MB</span>
+                  <span className="text-xs text-[#b8a898]">JPG, PNG, HEIC · Auto-compress ke maks 2MB</span>
                   <input type="file" accept="image/*" className="hidden"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      setProofFile(file);
-                      setProofPreview(URL.createObjectURL(file));
+                      const compressed = await compressImage(file);
+                      setProofFile(compressed);
+                      setProofPreview(URL.createObjectURL(compressed));
                     }} />
                 </label>
               )}
