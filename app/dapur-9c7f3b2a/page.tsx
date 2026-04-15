@@ -13,7 +13,7 @@ type Order = {
   id: string; created_at: string; name: string; nomor_wa: string;
   alamat: string; jam_antar: string; items: OrderItem[];
   notes: string; total: number; status: OrderStatus; cancel_reason: string;
-  batch_id: string | null;
+  batch_id: string | null; payment_method: string; payment_proof_url: string | null;
 };
 type Expense = {
   id: string; created_at: string; date: string;
@@ -476,7 +476,14 @@ export default function DashboardPage() {
                       <p className="text-xs text-[#8a7060] truncate">
                         {order.items?.map((it) => `${it.qty}× ${it.menu_name.split(" ").slice(0,2).join(" ")}`).join(", ")}
                       </p>
-                      <span className="font-bold text-[#7b1d1d] text-sm shrink-0 ml-2">{formatRupiah(order.total)}</span>
+                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                          order.payment_method === "cash" ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"
+                        }`}>
+                          {order.payment_method === "cash" ? "TUNAI" : order.payment_method === "transfer_mandiri" ? "MANDIRI" : "BCA"}
+                        </span>
+                        <span className="font-bold text-[#7b1d1d] text-sm">{formatRupiah(order.total)}</span>
+                      </div>
                     </div>
                   </button>
                 </div>
@@ -954,6 +961,27 @@ export default function DashboardPage() {
                   <div className="flex justify-between items-center px-4 py-3 bg-[#fdf8f2] border-t border-[#f0e8de]">
                     <p className="text-sm font-semibold text-[#5a3e2b]">Total</p>
                     <p className="text-xl font-bold text-[#7b1d1d]">{formatRupiah(o.total)}</p>
+                  </div>
+                  {/* Payment */}
+                  <div className="px-4 py-3 border-t border-[#f0e8de]">
+                    <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold mb-1">Pembayaran</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className={`text-sm font-bold ${o.payment_method === "cash" ? "text-amber-700" : "text-green-700"}`}>
+                        {o.payment_method === "cash" ? "💵 Tunai"
+                          : o.payment_method === "transfer_mandiri" ? "🏦 Transfer Mandiri"
+                          : o.payment_method === "transfer_bca" ? "🏦 Transfer BCA"
+                          : o.payment_method}
+                      </span>
+                      {o.payment_proof_url && (
+                        <a href={o.payment_proof_url} target="_blank" rel="noopener noreferrer"
+                          className="text-xs font-semibold text-[#7b1d1d] border border-[#7b1d1d] rounded-lg px-3 py-1 hover:bg-[#7b1d1d] hover:text-white transition">
+                          Lihat Bukti
+                        </a>
+                      )}
+                    </div>
+                    {o.payment_method !== "cash" && !o.payment_proof_url && (
+                      <p className="text-xs text-amber-600 mt-1">⚠ Bukti transfer belum diupload</p>
+                    )}
                   </div>
                 </div>
 

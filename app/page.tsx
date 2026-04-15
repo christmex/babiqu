@@ -73,6 +73,13 @@ type FormData = {
 
 const WA_NUMBER = "6285280221998";
 
+const BANK_INFO = {
+  transfer_mandiri: { bank: "Bank Mandiri", account: "1090021894001", name: "KORNELIUS SOPHIANO T" },
+  transfer_bca:     { bank: "Bank BCA",     account: "8210598261",    name: "KORNELIUS SOPHIANO T" },
+} as const;
+
+type PaymentMethod = "cash" | "transfer_mandiri" | "transfer_bca";
+
 type Batch = {
   id: string;
   label: string;
@@ -128,6 +135,11 @@ export default function OrderPage() {
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // Payment
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchBatch() {
@@ -298,6 +310,7 @@ export default function OrderPage() {
   const activeOrders = MENUS.filter((m) => orders[m.id].qty > 0);
 
   const waDigits = form.nomor_wa.replace(/\D/g, "");
+  const isTransfer = paymentMethod !== "cash";
   const isFormComplete =
     form.name.trim() !== "" &&
     waDigits.length >= 9 && waDigits.length <= 15 &&
@@ -310,7 +323,8 @@ export default function OrderPage() {
       return toCheck?.every((portion) =>
         MENUS.find((m) => m.id === menu.id)!.options.every((opt) => portion?.options[opt.key] !== "")
       ) ?? false;
-    });
+    }) &&
+    (!isTransfer || proofFile !== null);
 
   const validate = () => {
     if (!form.name.trim()) return "Nama harus diisi";
@@ -331,7 +345,7 @@ export default function OrderPage() {
     return "";
   };
 
-  const buildWAMessage = () => {
+  const buildWAMessage = (proofUrl?: string) => {
     const lines = [
       "*PESANAN BABIQU*",
       "--------------------",
@@ -361,8 +375,16 @@ export default function OrderPage() {
 
     lines.push("--------------------");
     lines.push(`*TOTAL: ${formatRupiah(total)}*`);
-    if (form.notes.trim()) {
-      lines.push("", `Catatan: ${form.notes}`);
+    if (form.notes.trim()) lines.push("", `Catatan: ${form.notes}`);
+
+    lines.push("", "*PEMBAYARAN*", "--------------------");
+    if (paymentMethod === "cash") {
+      lines.push("Metode : Tunai (bayar saat diterima)");
+    } else {
+      const bank = BANK_INFO[paymentMethod];
+      lines.push(`Metode : Transfer ${bank.bank}`);
+      lines.push(`Rek    : ${bank.account} a/n ${bank.name}`);
+      if (proofUrl) lines.push(`Bukti  : ${proofUrl}`);
     }
 
     return encodeURIComponent(lines.join("\n"));
@@ -383,6 +405,24 @@ export default function OrderPage() {
     // immediately, then redirect it once the DB write succeeds.
     const waWindow = window.open("", "_blank");
 
+    // Upload proof of payment if transfer method selected
+    let proofUrl: string | null = null;
+    if (isTransfer && proofFile) {
+      const ext = proofFile.name.split(".").pop() ?? "jpg";
+      const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("payment-proofs")
+        .upload(filename, proofFile, { contentType: proofFile.type });
+      if (uploadError) {
+        setError("Gagal upload bukti transfer. Coba lagi.");
+        setLoading(false);
+        waWindow?.close();
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("payment-proofs").getPublicUrl(filename);
+      proofUrl = urlData.publicUrl;
+    }
+
     const items = activeOrders.map((menu) => ({
       menu_id: menu.id,
       menu_name: menu.name,
@@ -400,6 +440,8 @@ export default function OrderPage() {
       notes: form.notes,
       total,
       batch_id: activeBatch?.id ?? null,
+      payment_method: paymentMethod,
+      payment_proof_url: proofUrl,
     });
 
     if (dbError) {
@@ -409,11 +451,10 @@ export default function OrderPage() {
       return;
     }
 
-    const waUrl = `https://wa.me/${WA_NUMBER}?text=${buildWAMessage()}`;
+    const waUrl = `https://wa.me/${WA_NUMBER}?text=${buildWAMessage(proofUrl ?? undefined)}`;
     if (waWindow) {
       waWindow.location.href = waUrl;
     } else {
-      // Fallback: if popup was still blocked, navigate current tab
       window.location.href = waUrl;
     }
     setLoading(false);
@@ -960,6 +1001,84 @@ export default function OrderPage() {
             </div>
           </section>
         )}
+
+        {/* Payment Method */}
+        <section className="bg-white rounded-2xl shadow-sm border border-[#e8ddd0] p-6">
+          <p className="text-xs font-bold text-[#5a3e2b] uppercase tracking-wider mb-3">Metode Pembayaran</p>
+
+          {/* Picker */}
+          <div className="flex gap-2 mb-4">
+            {([
+              ["cash",             "💵", "Tunai"],
+              ["transfer_mandiri", "🏦", "Mandiri"],
+              ["transfer_bca",     "🏦", "BCA"],
+            ] as [PaymentMethod, string, string][]).map(([val, icon, label]) => (
+              <button key={val} type="button" onClick={() => { setPaymentMethod(val); setProofFile(null); setProofPreview(null); }}
+                className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 rounded-xl border-2 text-xs font-bold transition ${
+                  paymentMethod === val
+                    ? "border-[#7b1d1d] bg-[#fdf5f0] text-[#7b1d1d]"
+                    : "border-[#e8ddd0] text-[#8a7060] hover:border-[#c8b8a8]"
+                }`}>
+                <span className="text-base">{icon}</span>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Bank account info */}
+          {isTransfer && (
+            <div className="bg-[#fdf8f2] rounded-xl border border-[#e8ddd0] px-4 py-3 mb-4">
+              <p className="text-[10px] text-[#8a7060] uppercase tracking-wider font-semibold mb-2">Info Rekening</p>
+              <p className="text-sm font-bold text-[#1c1208]">{BANK_INFO[paymentMethod as keyof typeof BANK_INFO].bank}</p>
+              <p className="text-lg font-bold text-[#7b1d1d] tracking-wider my-0.5">
+                {BANK_INFO[paymentMethod as keyof typeof BANK_INFO].account}
+              </p>
+              <p className="text-xs text-[#5a3e2b]">a/n {BANK_INFO[paymentMethod as keyof typeof BANK_INFO].name}</p>
+              <button type="button"
+                onClick={() => navigator.clipboard.writeText(BANK_INFO[paymentMethod as keyof typeof BANK_INFO].account)}
+                className="mt-2 text-xs font-semibold text-[#7b1d1d] border border-[#7b1d1d] rounded-lg px-3 py-1 hover:bg-[#7b1d1d] hover:text-white transition">
+                Salin Nomor Rekening
+              </button>
+            </div>
+          )}
+
+          {/* Proof upload */}
+          {isTransfer && (
+            <div className="mb-4">
+              <p className="text-[10px] text-[#8a7060] uppercase tracking-wider font-semibold mb-2">Bukti Transfer <span className="text-red-400">*</span></p>
+              {proofPreview ? (
+                <div className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={proofPreview} alt="Bukti transfer" className="w-full max-h-48 object-cover rounded-xl border border-[#e8ddd0]" />
+                  <button type="button" onClick={() => { setProofFile(null); setProofPreview(null); }}
+                    className="absolute top-2 right-2 bg-white/90 text-red-500 rounded-full w-7 h-7 flex items-center justify-center text-lg font-bold shadow">×</button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center gap-2 border-2 border-dashed border-[#d9cfc5] rounded-xl py-6 cursor-pointer hover:border-[#7b1d1d] transition bg-[#fdf8f2]">
+                  <span className="text-2xl">📎</span>
+                  <span className="text-sm font-semibold text-[#5a3e2b]">Upload Bukti Transfer</span>
+                  <span className="text-xs text-[#b8a898]">JPG, PNG, HEIC — maks 5MB</span>
+                  <input type="file" accept="image/*" className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setProofFile(file);
+                      setProofPreview(URL.createObjectURL(file));
+                    }} />
+                </label>
+              )}
+              {submitted && isTransfer && !proofFile && (
+                <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Upload bukti transfer dulu ya</p>
+              )}
+            </div>
+          )}
+
+          {paymentMethod === "cash" && (
+            <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-4">
+              <p className="text-sm text-[#5a3e2b]">💵 Pembayaran tunai dilakukan saat pesanan diterima.</p>
+            </div>
+          )}
+        </section>
 
         {/* Total & CTA */}
         <section className="bg-white rounded-2xl shadow-sm border border-[#e8ddd0] p-6">
