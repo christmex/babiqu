@@ -595,33 +595,37 @@ export default function OrderPage() {
             );
           })}
 
-          {/* Jam Antar — dropdown */}
+          {/* Jam Antar — toggle */}
           {(() => {
             const err = fieldError("jam_antar");
+            const options = [
+              { value: "11.00 - 13.00 (Siang)", label: "Siang", sub: "11.00 – 13.00", icon: "☀️" },
+              { value: "17.00 - 19.00 (Malam)", label: "Malam", sub: "17.00 – 19.00", icon: "🌙" },
+            ];
             return (
-              <div>
-                <label className="block text-xs font-semibold text-[#5a3e2b] mb-1 tracking-wide uppercase">
+              <div data-field="jam_antar">
+                <label className="block text-xs font-semibold text-[#5a3e2b] mb-2 tracking-wide uppercase">
                   Jam Antar
                 </label>
-                <select
-                  data-field="jam_antar"
-                  value={form.jam_antar}
-                  onChange={(e) => setForm((prev) => ({ ...prev, jam_antar: e.target.value }))}
-                  onBlur={() => touch("jam_antar")}
-                  className={`w-full border rounded-lg px-4 py-2.5 text-[15px] bg-[#fdf8f2] focus:outline-none transition appearance-none cursor-pointer ${
-                    err
-                      ? "border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-400 text-[#1c1208]"
-                      : form.jam_antar
-                      ? "border-[#d9cfc5] focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] text-[#1c1208]"
-                      : "border-[#d9cfc5] focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] text-[#b8a898]"
-                  }`}
-                >
-                  <option value="" disabled>Pilih jam pengiriman</option>
-                  <option value="11.00 - 13.00 (Siang)">11.00 - 13.00 (Siang)</option>
-                  <option value="17.00 - 19.00 (Malam)">17.00 - 19.00 (Malam)</option>
-                </select>
+                <div className="grid grid-cols-2 gap-3">
+                  {options.map((opt) => (
+                    <button key={opt.value} type="button"
+                      onClick={() => { setForm((prev) => ({ ...prev, jam_antar: opt.value })); touch("jam_antar"); }}
+                      className={`flex flex-col items-center gap-1 py-4 rounded-xl border-2 font-semibold transition active:scale-[0.98] ${
+                        form.jam_antar === opt.value
+                          ? "border-[#7b1d1d] bg-[#fdf5f0] text-[#7b1d1d]"
+                          : err
+                          ? "border-red-300 bg-white text-[#8a7060]"
+                          : "border-[#e8ddd0] bg-white text-[#8a7060] hover:border-[#c8b8a8]"
+                      }`}>
+                      <span className="text-2xl">{opt.icon}</span>
+                      <span className="text-sm font-bold">{opt.label}</span>
+                      <span className="text-xs opacity-70">{opt.sub}</span>
+                    </button>
+                  ))}
+                </div>
                 {err && (
-                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <p className="text-red-500 text-xs mt-2 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3 shrink-0" /> {err}
                   </p>
                 )}
