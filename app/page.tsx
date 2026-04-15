@@ -140,6 +140,7 @@ export default function OrderPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [proofLightbox, setProofLightbox] = useState(false);
 
   useEffect(() => {
     async function fetchBatch() {
@@ -1053,9 +1054,12 @@ export default function OrderPage() {
               {proofPreview ? (
                 <div className="relative">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={proofPreview} alt="Bukti transfer" className="w-full max-h-48 object-cover rounded-xl border border-[#e8ddd0]" />
+                  <img src={proofPreview} alt="Bukti transfer"
+                    onClick={() => setProofLightbox(true)}
+                    className="w-full max-h-48 object-cover rounded-xl border border-[#e8ddd0] cursor-zoom-in" />
                   <button type="button" onClick={() => { setProofFile(null); setProofPreview(null); }}
                     className="absolute top-2 right-2 bg-white/90 text-red-500 rounded-full w-7 h-7 flex items-center justify-center text-lg font-bold shadow">×</button>
+                  <span className="absolute bottom-2 left-2 text-[10px] bg-black/40 text-white rounded px-1.5 py-0.5">Tap untuk perbesar</span>
                 </div>
               ) : (
                 <label className="flex flex-col items-center gap-2 border-2 border-dashed border-[#d9cfc5] rounded-xl py-6 cursor-pointer hover:border-[#7b1d1d] transition bg-[#fdf8f2]">
@@ -1133,6 +1137,19 @@ export default function OrderPage() {
       <footer className="text-center py-8 text-xs text-[#b8a898]">
         © 2026 Babiqu · Signature Roast Pork
       </footer>
+
+      {/* Proof image lightbox */}
+      {proofLightbox && proofPreview && (
+        <div className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setProofLightbox(false)}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={proofPreview} alt="Bukti transfer"
+            className="max-w-full max-h-full object-contain rounded-xl"
+            onClick={(e) => e.stopPropagation()} />
+          <button onClick={() => setProofLightbox(false)}
+            className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold transition">×</button>
+        </div>
+      )}
     </div>
   );
 }

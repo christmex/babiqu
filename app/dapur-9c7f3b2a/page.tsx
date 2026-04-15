@@ -964,21 +964,21 @@ export default function DashboardPage() {
                   </div>
                   {/* Payment */}
                   <div className="px-4 py-3 border-t border-[#f0e8de]">
-                    <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold mb-1">Pembayaran</p>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className={`text-sm font-bold ${o.payment_method === "cash" ? "text-amber-700" : "text-green-700"}`}>
-                        {o.payment_method === "cash" ? "💵 Tunai"
-                          : o.payment_method === "transfer_mandiri" ? "🏦 Transfer Mandiri"
-                          : o.payment_method === "transfer_bca" ? "🏦 Transfer BCA"
-                          : o.payment_method}
-                      </span>
-                      {o.payment_proof_url && (
-                        <a href={o.payment_proof_url} target="_blank" rel="noopener noreferrer"
-                          className="text-xs font-semibold text-[#7b1d1d] border border-[#7b1d1d] rounded-lg px-3 py-1 hover:bg-[#7b1d1d] hover:text-white transition">
-                          Lihat Bukti
-                        </a>
-                      )}
-                    </div>
+                    <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold mb-2">Pembayaran</p>
+                    <span className={`text-sm font-bold ${o.payment_method === "cash" ? "text-amber-700" : "text-green-700"}`}>
+                      {o.payment_method === "cash" ? "💵 Tunai"
+                        : o.payment_method === "transfer_mandiri" ? "🏦 Transfer Mandiri"
+                        : o.payment_method === "transfer_bca" ? "🏦 Transfer BCA"
+                        : o.payment_method}
+                    </span>
+                    {o.payment_proof_url && (
+                      <a href={o.payment_proof_url} target="_blank" rel="noopener noreferrer" className="block mt-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={o.payment_proof_url} alt="Bukti transfer"
+                          className="w-full max-h-56 object-cover rounded-xl border border-[#e8ddd0] cursor-zoom-in" />
+                        <p className="text-[10px] text-[#8a7060] mt-1 text-center">Tap untuk buka penuh</p>
+                      </a>
+                    )}
                     {o.payment_method !== "cash" && !o.payment_proof_url && (
                       <p className="text-xs text-amber-600 mt-1">⚠ Bukti transfer belum diupload</p>
                     )}
