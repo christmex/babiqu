@@ -92,6 +92,7 @@ export default function DashboardPage() {
   // Order detail modal
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showSummary, setShowSummary] = useState(true);
+  const [proofLightbox, setProofLightbox] = useState<string | null>(null);
 
   const closeModal = useCallback(() => { setSelectedOrder(null); setCancelling(null); setCancelReason(""); }, []);
 
@@ -972,12 +973,12 @@ export default function DashboardPage() {
                         : o.payment_method}
                     </span>
                     {o.payment_proof_url && (
-                      <a href={o.payment_proof_url} target="_blank" rel="noopener noreferrer" className="block mt-2">
+                      <button type="button" onClick={() => setProofLightbox(o.payment_proof_url!)} className="block w-full mt-2">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={o.payment_proof_url} alt="Bukti transfer"
                           className="w-full max-h-56 object-cover rounded-xl border border-[#e8ddd0] cursor-zoom-in" />
-                        <p className="text-[10px] text-[#8a7060] mt-1 text-center">Tap untuk buka penuh</p>
-                      </a>
+                        <p className="text-[10px] text-[#8a7060] mt-1 text-center">Tap untuk perbesar</p>
+                      </button>
                     )}
                     {o.payment_method !== "cash" && !o.payment_proof_url && (
                       <p className="text-xs text-amber-600 mt-1">⚠ Bukti transfer belum diupload</p>
@@ -1029,6 +1030,19 @@ export default function DashboardPage() {
           </div>
         );
       })()}
+
+      {/* ── Proof image lightbox ────────────────────────────────────────── */}
+      {proofLightbox && (
+        <div className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setProofLightbox(null)}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={proofLightbox} alt="Bukti transfer"
+            className="max-w-full max-h-full object-contain rounded-xl"
+            onClick={(e) => e.stopPropagation()} />
+          <button onClick={() => setProofLightbox(null)}
+            className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold transition">×</button>
+        </div>
+      )}
 
       {/* ── Bottom Nav Dock ─────────────────────────────────────────────── */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-[#e8ddd0] safe-area-pb">
