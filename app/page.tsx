@@ -377,6 +377,12 @@ export default function OrderPage() {
     setError("");
     setLoading(true);
 
+    // Open the window NOW — synchronously inside the click handler.
+    // Safari blocks window.open() called after any await (treats it as
+    // a programmatic popup, not a user gesture). We open a blank tab
+    // immediately, then redirect it once the DB write succeeds.
+    const waWindow = window.open("", "_blank");
+
     const items = activeOrders.map((menu) => ({
       menu_id: menu.id,
       menu_name: menu.name,
@@ -399,10 +405,17 @@ export default function OrderPage() {
     if (dbError) {
       setError("Gagal menyimpan pesanan. Coba lagi.");
       setLoading(false);
+      waWindow?.close();
       return;
     }
 
-    window.open(`https://wa.me/${WA_NUMBER}?text=${buildWAMessage()}`, "_blank");
+    const waUrl = `https://wa.me/${WA_NUMBER}?text=${buildWAMessage()}`;
+    if (waWindow) {
+      waWindow.location.href = waUrl;
+    } else {
+      // Fallback: if popup was still blocked, navigate current tab
+      window.location.href = waUrl;
+    }
     setLoading(false);
   };
 
