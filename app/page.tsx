@@ -881,8 +881,20 @@ export default function OrderPage() {
         {/* Total & CTA */}
         <section className="bg-white rounded-2xl shadow-sm border border-[#e8ddd0] p-6">
             {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" /> {error}
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4 space-y-2">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /> {error}
+              </div>
+              {error.includes("Hubungi kami") && (
+                <a
+                  href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Halo Babiqu, saya ingin mengubah/menanyakan pesanan saya di batch ini. Nomor WA saya: " + form.nomor_wa)}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2.5 rounded-lg transition"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Hubungi Kami via WhatsApp
+                </a>
+              )}
             </div>
           )}
 
