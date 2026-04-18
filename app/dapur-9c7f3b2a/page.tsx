@@ -57,6 +57,31 @@ function isBatchUpcoming(b: Batch) {
   return b.open_date > today;
 }
 
+// ─── Cash-due helpers ─────────────────────────────────────────────────────────
+
+function getCashDue(order: { logs?: { action: string; detail: string }[] }): number {
+  return (order.logs ?? [])
+    .filter(l => l.action === "edited" && l.detail.includes("tunai saat antar"))
+    .reduce((sum, l) => {
+      const match = l.detail.match(/\+Rp\s?([\d.]+)/);
+      return match ? sum + parseInt(match[1].replace(/\./g, "")) : sum;
+    }, 0);
+}
+
+/** True when there are cash additions that haven't been confirmed yet */
+function hasPendingCash(order: { logs?: { action: string; detail: string }[] }): boolean {
+  const logs = order.logs ?? [];
+  let lastAdditionIdx = -1;
+  for (let i = logs.length - 1; i >= 0; i--) {
+    if (logs[i].action === "edited" && logs[i].detail.includes("tunai saat antar")) {
+      lastAdditionIdx = i;
+      break;
+    }
+  }
+  if (lastAdditionIdx === -1) return false;
+  return !logs.slice(lastAdditionIdx + 1).some(l => l.action === "cash_confirmed");
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatRupiah(n: number) {
@@ -376,6 +401,22 @@ export default function DashboardPage() {
     }
     setDeliverAllLoading(false);
     setDeliverAllBatchId(null);
+  }
+
+  // ── Confirm cash payment for additions ───────────────────────────────────
+
+  async function handleConfirmCash(order: Order) {
+    const cashDue = getCashDue(order);
+    const newLog: OrderLog = {
+      at: new Date().toISOString(),
+      action: "cash_confirmed",
+      detail: `Kekurangan tunai ${formatRupiah(cashDue)} sudah diterima`,
+    };
+    const updatedLogs = [...(order.logs ?? []), newLog];
+    await supabase.from("orders").update({ logs: updatedLogs }).eq("id", order.id);
+    const updated = { ...order, logs: updatedLogs };
+    setOrders(prev => prev.map(o => o.id === order.id ? updated : o));
+    setSelectedOrder(updated);
   }
 
   // ── Edit order items ─────────────────────────────────────────────────────
@@ -1579,22 +1620,23 @@ export default function DashboardPage() {
                   </div>
                 )}
 
-                {/* Cash due banner — shown if order was edited with additions */}
+                {/* Cash due banner */}
                 {(() => {
-                  const cashDue = (o.logs ?? [])
-                    .filter(l => l.action === "edited" && l.detail.includes("tunai saat antar"))
-                    .reduce((sum, l) => {
-                      const match = l.detail.match(/\+Rp\s?([\d.]+)/);
-                      if (!match) return sum;
-                      return sum + parseInt(match[1].replace(/\./g, ""));
-                    }, 0);
+                  const cashDue = getCashDue(o);
+                  const pending = hasPendingCash(o);
                   if (cashDue <= 0) return null;
                   return (
-                    <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
-                      <Banknote size={18} className="text-amber-500 shrink-0" />
+                    <div className={`flex items-center gap-3 rounded-2xl px-4 py-3 border ${
+                      pending ? "bg-amber-50 border-amber-200" : "bg-green-50 border-green-200"
+                    }`}>
+                      <Banknote size={18} className={pending ? "text-amber-500 shrink-0" : "text-green-500 shrink-0"} />
                       <div>
-                        <p className="text-sm font-bold text-amber-700">Kekurangan tunai: {formatRupiah(cashDue)}</p>
-                        <p className="text-xs text-amber-600 mt-0.5">Bayar saat antar (dari penambahan item)</p>
+                        <p className={`text-sm font-bold ${pending ? "text-amber-700" : "text-green-700"}`}>
+                          {pending ? `Kekurangan tunai: ${formatRupiah(cashDue)}` : `Tunai ${formatRupiah(cashDue)} ✓ sudah diterima`}
+                        </p>
+                        <p className={`text-xs mt-0.5 ${pending ? "text-amber-600" : "text-green-600"}`}>
+                          {pending ? "Belum dikonfirmasi — konfirmasi dulu sebelum selesaikan" : "Dari penambahan item"}
+                        </p>
                       </div>
                     </div>
                   );
@@ -1681,10 +1723,11 @@ export default function DashboardPage() {
                       {[...o.logs].reverse().map((log, i) => (
                         <div key={i} className="px-4 py-2.5 flex items-start gap-3">
                           <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${
-                            log.action === "confirmed" ? "bg-blue-400" :
-                            log.action === "delivered" ? "bg-green-500" :
-                            log.action === "cancelled" ? "bg-red-400" :
-                            log.action === "edited"    ? "bg-amber-400" :
+                            log.action === "confirmed"      ? "bg-blue-400" :
+                            log.action === "delivered"      ? "bg-green-500" :
+                            log.action === "cancelled"      ? "bg-red-400" :
+                            log.action === "edited"         ? "bg-amber-400" :
+                            log.action === "cash_confirmed" ? "bg-emerald-400" :
                             "bg-[#d9cfc5]"
                           }`} />
                           <div className="flex-1 min-w-0">
@@ -1892,10 +1935,18 @@ export default function DashboardPage() {
                     </div>
                   ) : (
                     <>
-                      <button onClick={() => handleDeliver(o.id)}
-                        className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-green-500 hover:bg-green-600 active:scale-[0.99] transition font-bold text-white text-base">
-                        <span className="text-xl leading-none">✓</span> Selesaikan Pesanan
-                      </button>
+                      {/* Gate: must confirm cash before delivering */}
+                      {hasPendingCash(o) ? (
+                        <button onClick={() => handleConfirmCash(o)}
+                          className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-[0.99] transition font-bold text-white text-base">
+                          <Banknote size={20} /> Konfirmasi Kekurangan Bayar ({formatRupiah(getCashDue(o))})
+                        </button>
+                      ) : (
+                        <button onClick={() => handleDeliver(o.id)}
+                          className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-green-500 hover:bg-green-600 active:scale-[0.99] transition font-bold text-white text-base">
+                          <CheckCheck size={20} /> Selesaikan Pesanan
+                        </button>
+                      )}
                       <button onClick={() => setCancelling(o.id)}
                         className="w-full flex items-center justify-center gap-2.5 py-3 rounded-2xl bg-white border-2 border-red-200 hover:border-red-300 hover:bg-red-50 active:scale-[0.99] transition font-bold text-red-500 text-sm">
                         ✕ Batalkan
