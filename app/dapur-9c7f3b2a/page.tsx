@@ -162,7 +162,13 @@ export default function DashboardPage() {
   const [showSummary, setShowSummary] = useState(true);
   const [proofLightbox, setProofLightbox] = useState<string | null>(null);
 
-  const closeModal = useCallback(() => { setSelectedOrder(null); setCancelling(null); setCancelReason(""); }, []);
+  const closeModal = useCallback(() => {
+    setSelectedOrder(null);
+    setCancelling(null);
+    setCancelReason("");
+    setEditingOrderItems(false);
+    setEditOrderQty({});
+  }, []);
 
   // Lock background scroll when modal is open
   useEffect(() => {
@@ -210,6 +216,11 @@ export default function DashboardPage() {
   // Deliver-all batch confirmation
   const [deliverAllBatchId, setDeliverAllBatchId] = useState<string | null>(null);
   const [deliverAllLoading, setDeliverAllLoading] = useState(false);
+
+  // Edit order
+  const [editingOrderItems, setEditingOrderItems] = useState(false);
+  const [editOrderQty, setEditOrderQty] = useState<Record<string, number>>({});
+  const [editOrderLoading, setEditOrderLoading] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -353,6 +364,42 @@ export default function DashboardPage() {
     }
     setDeliverAllLoading(false);
     setDeliverAllBatchId(null);
+  }
+
+  // ── Edit order items ─────────────────────────────────────────────────────
+
+  function startEditOrder(order: Order) {
+    const qty: Record<string, number> = {};
+    order.items?.forEach(it => { qty[it.menu_id] = it.qty; });
+    setEditOrderQty(qty);
+    setEditingOrderItems(true);
+  }
+
+  async function handleSaveOrderItems(order: Order) {
+    setEditOrderLoading(true);
+    const allMenus = [...MENUS, ...ALA_CARTE];
+    const newItems: OrderItem[] = allMenus
+      .filter(m => (editOrderQty[m.id] ?? 0) > 0)
+      .map(m => {
+        const qty = editOrderQty[m.id];
+        const existing = order.items?.find(it => it.menu_id === m.id);
+        // Reuse existing portions if qty matches, otherwise build fresh empty ones
+        const portions: Portion[] = Array.from({ length: qty }, (_, i) =>
+          existing?.portions?.[i] ?? { options: {}, notes: "" }
+        );
+        return { menu_id: m.id, menu_name: m.name, qty, portions, subtotal: m.price * qty };
+      });
+
+    const subtotal = newItems.reduce((s, it) => s + it.subtotal, 0);
+    const newTotal = subtotal > 0 ? subtotal + ONGKIR : 0;
+
+    await supabase.from("orders").update({ items: newItems, total: newTotal }).eq("id", order.id);
+    const updated = { ...order, items: newItems, total: newTotal };
+    setOrders(prev => prev.map(o => o.id === order.id ? updated : o));
+    setSelectedOrder(updated);
+    setEditingOrderItems(false);
+    setEditOrderQty({});
+    setEditOrderLoading(false);
   }
 
   // ── Add expense ──────────────────────────────────────────────────────────
@@ -1560,6 +1607,98 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
+                {/* ── Edit order items ── */}
+                {editingOrderItems ? (
+                  <div className="bg-white rounded-2xl border border-[#e8ddd0] overflow-hidden">
+                    <div className="px-4 py-3 bg-[#fdf8f2] border-b border-[#e8ddd0] flex items-center justify-between">
+                      <p className="text-xs font-bold text-[#7b1d1d] uppercase tracking-wider">Edit Pesanan</p>
+                      <button onClick={() => { setEditingOrderItems(false); setEditOrderQty({}); }}
+                        className="text-xs text-[#8a7060] hover:text-[#1c1208] transition">Batal</button>
+                    </div>
+
+                    {/* Paket */}
+                    <div className="px-4 pt-3 pb-1">
+                      <p className="text-[10px] font-bold text-[#8a7060] uppercase tracking-widest mb-2">Menu Paket</p>
+                      <div className="space-y-2">
+                        {MENUS.map(m => {
+                          const qty = editOrderQty[m.id] ?? 0;
+                          return (
+                            <div key={m.id} className="flex items-center justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-[#1c1208] truncate">{m.name}</p>
+                                <p className="text-[10px] text-[#a09080]">{formatRupiah(m.price)}</p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button onClick={() => setEditOrderQty(p => ({ ...p, [m.id]: Math.max(0, (p[m.id] ?? 0) - 1) }))}
+                                  className="w-7 h-7 rounded-full bg-[#f0e8de] text-[#5a3e2b] font-bold flex items-center justify-center hover:bg-[#e8ddd0] transition disabled:opacity-30"
+                                  disabled={qty === 0}>
+                                  <Minus size={12} />
+                                </button>
+                                <span className={`w-5 text-center text-sm font-bold ${qty > 0 ? "text-[#7b1d1d]" : "text-[#c0b0a0]"}`}>{qty}</span>
+                                <button onClick={() => setEditOrderQty(p => ({ ...p, [m.id]: (p[m.id] ?? 0) + 1 }))}
+                                  className="w-7 h-7 rounded-full bg-[#7b1d1d] text-white font-bold flex items-center justify-center hover:bg-[#6a1717] transition">
+                                  <Plus size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* À La Carte */}
+                    <div className="px-4 pt-3 pb-3 border-t border-[#f0e8de]">
+                      <p className="text-[10px] font-bold text-[#8a7060] uppercase tracking-widest mb-2">À La Carte</p>
+                      <div className="space-y-2">
+                        {ALA_CARTE.map(m => {
+                          const qty = editOrderQty[m.id] ?? 0;
+                          return (
+                            <div key={m.id} className="flex items-center justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-[#1c1208] truncate">{m.name}</p>
+                                <p className="text-[10px] text-[#a09080]">{formatRupiah(m.price)}</p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button onClick={() => setEditOrderQty(p => ({ ...p, [m.id]: Math.max(0, (p[m.id] ?? 0) - 1) }))}
+                                  className="w-7 h-7 rounded-full bg-[#f0e8de] text-[#5a3e2b] font-bold flex items-center justify-center hover:bg-[#e8ddd0] transition disabled:opacity-30"
+                                  disabled={qty === 0}>
+                                  <Minus size={12} />
+                                </button>
+                                <span className={`w-5 text-center text-sm font-bold ${qty > 0 ? "text-[#7b1d1d]" : "text-[#c0b0a0]"}`}>{qty}</span>
+                                <button onClick={() => setEditOrderQty(p => ({ ...p, [m.id]: (p[m.id] ?? 0) + 1 }))}
+                                  className="w-7 h-7 rounded-full bg-[#7b1d1d] text-white font-bold flex items-center justify-center hover:bg-[#6a1717] transition">
+                                  <Plus size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* New total preview */}
+                    {(() => {
+                      const allMenus = [...MENUS, ...ALA_CARTE];
+                      const subtotal = allMenus.reduce((s, m) => s + m.price * (editOrderQty[m.id] ?? 0), 0);
+                      const newTotal = subtotal > 0 ? subtotal + ONGKIR : 0;
+                      const hasItems = subtotal > 0;
+                      return (
+                        <div className="px-4 py-3 bg-[#fdf8f2] border-t border-[#f0e8de] flex items-center justify-between gap-3">
+                          <div className="text-xs text-[#8a7060]">
+                            {hasItems ? <>Subtotal + Ongkir = <span className="font-bold text-[#1c1208]">{formatRupiah(newTotal)}</span></> : <span className="text-amber-600">Belum ada item dipilih</span>}
+                          </div>
+                          <button
+                            onClick={() => handleSaveOrderItems(o)}
+                            disabled={editOrderLoading || !hasItems}
+                            className="px-4 py-2 bg-[#7b1d1d] text-white text-xs font-bold rounded-xl hover:bg-[#6a1717] transition disabled:opacity-40">
+                            {editOrderLoading ? "Menyimpan..." : "Simpan"}
+                          </button>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                ) : null}
+
                 {/* Cancel reason input (shown inline when cancelling) */}
                 {o.status === "active" && cancelling === o.id && (
                   <input autoFocus value={cancelReason}
@@ -1577,6 +1716,16 @@ export default function DashboardPage() {
             {!isCancelled && (
               <div className="shrink-0 bg-white border-t border-[#e8ddd0] px-4 py-4 safe-area-pb">
                 <div className="max-w-2xl mx-auto space-y-2">
+                  {/* Edit Pesanan */}
+                  {!editingOrderItems ? (
+                    <button onClick={() => startEditOrder(o)}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-white border border-[#d9cfc5] hover:border-[#7b1d1d] text-[#5a3e2b] text-sm font-semibold transition">
+                      ✎ Edit Pesanan
+                    </button>
+                  ) : (
+                    <div className="text-center text-xs text-[#8a7060] py-1">Scroll ke atas untuk edit item</div>
+                  )}
+
                   {/* Kirim WA — always visible */}
                   <a href={buildOrderWAUrl(o)} target="_blank" rel="noopener noreferrer"
                     className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl bg-[#25D366] hover:bg-[#20ba5a] active:scale-[0.99] transition font-bold text-white text-sm">
