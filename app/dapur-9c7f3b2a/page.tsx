@@ -15,11 +15,13 @@ import { buildWAMessage, MENUS, ALA_CARTE, ONGKIR, type PaymentMethod } from "@/
 type Portion = { options: Record<string, string>; notes: string };
 type OrderItem = { menu_id: string; menu_name: string; qty: number; portions: Portion[]; subtotal: number };
 type OrderStatus = "active" | "pending" | "confirmed" | "delivered" | "cancelled";
+type OrderLog = { at: string; action: string; detail: string };
 type Order = {
   id: string; created_at: string; name: string; nomor_wa: string;
   alamat: string; jam_antar: string; items: OrderItem[];
   notes: string; total: number; status: OrderStatus; cancel_reason: string;
   batch_id: string | null; payment_method: string; payment_proof_url: string | null;
+  logs: OrderLog[];
 };
 type Expense = {
   id: string; created_at: string; date: string;
@@ -320,10 +322,20 @@ export default function DashboardPage() {
 
   // ── Status helpers ────────────────────────────────────────────────────────
 
-  async function updateStatus(orderId: string, status: OrderStatus, extra?: { cancel_reason?: string }) {
-    await supabase.from("orders").update({ status, ...extra }).eq("id", orderId);
-    setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status, ...(extra || {}) } : o));
-    setSelectedOrder((prev) => prev?.id === orderId ? { ...prev, status, ...(extra || {}) } : prev);
+  async function updateStatus(orderId: string, status: OrderStatus, extra?: { cancel_reason?: string }, logDetail?: string) {
+    const order = orders.find(o => o.id === orderId);
+    const defaultDetail: Record<OrderStatus, string> = {
+      active:    "Dipulihkan ke Menunggu",
+      pending:   "Dipulihkan ke Menunggu",
+      confirmed: "Pembayaran dikonfirmasi",
+      delivered: "Pesanan selesai diantar",
+      cancelled: extra?.cancel_reason ? `Dibatalkan: ${extra.cancel_reason}` : "Dibatalkan",
+    };
+    const newLog: OrderLog = { at: new Date().toISOString(), action: status, detail: logDetail ?? defaultDetail[status] };
+    const updatedLogs = [...(order?.logs ?? []), newLog];
+    await supabase.from("orders").update({ status, logs: updatedLogs, ...extra }).eq("id", orderId);
+    setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status, logs: updatedLogs, ...(extra || {}) } : o));
+    setSelectedOrder((prev) => prev?.id === orderId ? { ...prev, status, logs: updatedLogs, ...(extra || {}) } : prev);
   }
 
   async function handleCancel(orderId: string) {
@@ -392,6 +404,7 @@ export default function DashboardPage() {
     const subtotal = newItems.reduce((s, it) => s + it.subtotal, 0);
     const newTotal = subtotal > 0 ? subtotal + ONGKIR : 0;
     const totalChanged = newTotal !== order.total;
+    const diff = newTotal - order.total;
     const isTransfer = order.payment_method !== "cash";
 
     // If transfer order and total changed → revert to pending so admin re-confirms payment
@@ -399,13 +412,31 @@ export default function DashboardPage() {
       ? "pending"
       : order.status;
 
+    // Build logs
+    const editLog: OrderLog = {
+      at: new Date().toISOString(),
+      action: "edited",
+      detail: totalChanged
+        ? `Item diubah: ${formatRupiah(order.total)} → ${formatRupiah(newTotal)} (${diff > 0 ? "+" : ""}${formatRupiah(diff)})`
+        : "Item diubah (total sama)",
+    };
+    let updatedLogs = [...(order.logs ?? []), editLog];
+    if (newStatus !== order.status) {
+      updatedLogs = [...updatedLogs, {
+        at: new Date().toISOString(),
+        action: newStatus,
+        detail: "Status kembali ke Menunggu — konfirmasi ulang pembayaran",
+      }];
+    }
+
     await supabase.from("orders").update({
       items: newItems,
       total: newTotal,
+      logs: updatedLogs,
       ...(newStatus !== order.status ? { status: newStatus } : {}),
     }).eq("id", order.id);
 
-    const updated = { ...order, items: newItems, total: newTotal, status: newStatus };
+    const updated = { ...order, items: newItems, total: newTotal, status: newStatus, logs: updatedLogs };
     setOrders(prev => prev.map(o => o.id === order.id ? updated : o));
     setSelectedOrder(updated);
     setEditingOrderItems(false);
@@ -1617,6 +1648,30 @@ export default function DashboardPage() {
                     )}
                   </div>
                 </div>
+
+                {/* ── Order log ── */}
+                {o.logs?.length > 0 && (
+                  <div className="bg-white rounded-2xl border border-[#e8ddd0] overflow-hidden">
+                    <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold px-4 pt-3 pb-2">Riwayat</p>
+                    <div className="divide-y divide-[#f0e8de]">
+                      {[...o.logs].reverse().map((log, i) => (
+                        <div key={i} className="px-4 py-2.5 flex items-start gap-3">
+                          <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${
+                            log.action === "confirmed" ? "bg-blue-400" :
+                            log.action === "delivered" ? "bg-green-500" :
+                            log.action === "cancelled" ? "bg-red-400" :
+                            log.action === "edited"    ? "bg-amber-400" :
+                            "bg-[#d9cfc5]"
+                          }`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-[#1c1208]">{log.detail}</p>
+                            <p className="text-[10px] text-[#b8a898] mt-0.5">{formatDate(log.at)}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* ── Edit order items ── */}
                 {editingOrderItems ? (
