@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { ClipboardList, BarChart2, Receipt, CalendarDays, ExternalLink, RefreshCw, MessageCircle } from "lucide-react";
+import { ClipboardList, BarChart2, Receipt, CalendarDays, ExternalLink, RefreshCw, MessageCircle, TrendingUp } from "lucide-react";
 import { buildWAMessage, MENUS, ALA_CARTE, ONGKIR, type PaymentMethod } from "@/lib/order-utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -65,6 +65,20 @@ function formatDateShort(iso: string) {
   return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", timeZone: "Asia/Jakarta" }).format(new Date(iso));
 }
 function isToday(iso: string) { return new Date(iso).toDateString() === new Date().toDateString(); }
+function nameInitials(name: string) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+const AVATAR_COLORS = [
+  "bg-rose-400","bg-orange-400","bg-amber-400","bg-lime-500","bg-teal-500",
+  "bg-cyan-500","bg-sky-500","bg-blue-500","bg-violet-500","bg-fuchsia-500",
+];
+function avatarColor(name: string) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -126,7 +140,7 @@ export default function DashboardPage() {
   }
 
   // ── All dashboard hooks (must come before any early return) ─────────────────
-  const [tab, setTab] = useState<"pesanan" | "keuangan" | "pengeluaran" | "batch">("pesanan");
+  const [tab, setTab] = useState<"pesanan" | "keuangan" | "pengeluaran" | "batch" | "dashboard">("pesanan");
   const [orders, setOrders] = useState<Order[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -499,13 +513,66 @@ export default function DashboardPage() {
   const nonBatchExps = expenses.filter(e => !e.batch_id);
   const nonBatchExpTotal = nonBatchExps.reduce((s, e) => s + e.amount, 0);
 
+  // ── Analytics / statistics derived data ──────────────────────────────────
+
+  const analyticsOrders = orders; // all orders
+  const anActive = analyticsOrders.filter(o => o.status !== "cancelled");
+  const anDelivered = analyticsOrders.filter(o => o.status === "delivered");
+  const anConfirmedOrDelivered = analyticsOrders.filter(o => o.status === "confirmed" || o.status === "delivered");
+  const anCancelled = analyticsOrders.filter(o => o.status === "cancelled");
+
+  const totalRevenue = anConfirmedOrDelivered.reduce((s, o) => s + o.total, 0);
+  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+  const totalProfit = totalRevenue - totalExpenses;
+  const completionRate = anActive.length > 0 ? Math.round((anDelivered.length / anActive.length) * 100) : 0;
+  const avgOrderValue = anActive.length > 0 ? Math.round(totalRevenue / anConfirmedOrDelivered.length || 0) : 0;
+
+  // Top menus by qty — across all non-cancelled orders
+  const menuQtyMap: Record<string, { name: string; qty: number }> = {};
+  anActive.forEach(o => {
+    o.items?.forEach(it => {
+      if (!menuQtyMap[it.menu_id]) menuQtyMap[it.menu_id] = { name: it.menu_name, qty: 0 };
+      menuQtyMap[it.menu_id].qty += it.qty;
+    });
+  });
+  const topMenus = Object.values(menuQtyMap).sort((a, b) => b.qty - a.qty).slice(0, 6);
+  const topMenusMaxQty = topMenus[0]?.qty || 1;
+
+  // Payment method breakdown
+  const paymentBreakdown = ["cash", "transfer_mandiri", "transfer_bca"].map(pm => {
+    const pmOrders = anConfirmedOrDelivered.filter(o => o.payment_method === pm);
+    return {
+      method: pm,
+      label: pm === "cash" ? "Tunai" : pm === "transfer_mandiri" ? "Mandiri" : "BCA",
+      count: pmOrders.length,
+      revenue: pmOrders.reduce((s, o) => s + o.total, 0),
+    };
+  }).filter(p => p.count > 0);
+
+  // Jam antar breakdown
+  const siangOrders = anActive.filter(o => o.jam_antar.includes("Siang"));
+  const malamOrders = anActive.filter(o => !o.jam_antar.includes("Siang"));
+
+  // Batch performance for chart
+  const batchPerf = batches.map(b => {
+    const bAll = orders.filter(o => o.batch_id === b.id);
+    const bNonCancelled = bAll.filter(o => o.status !== "cancelled");
+    const bDelivered = bAll.filter(o => o.status === "delivered");
+    const bRevenue = bAll.filter(o => o.status === "confirmed" || o.status === "delivered").reduce((s, o) => s + o.total, 0);
+    const bPortions = totalPortions(bNonCancelled);
+    const rate = bNonCancelled.length > 0 ? Math.round((bDelivered.length / bNonCancelled.length) * 100) : 0;
+    return { id: b.id, label: b.label.split(/[—–-]/)[0].trim(), revenue: bRevenue, portions: bPortions, deliveryRate: rate, orderCount: bNonCancelled.length };
+  }).filter(b => b.orderCount > 0);
+  const batchPerfMaxRevenue = Math.max(...batchPerf.map(b => b.revenue), 1);
+
   // ─────────────────────────────────────────────────────────────────────────
 
   const NAV = [
-    { key: "pesanan",     label: "Pesanan",     Icon: ClipboardList },
-    { key: "keuangan",    label: "Keuangan",    Icon: BarChart2 },
-    { key: "pengeluaran", label: "Pengeluaran", Icon: Receipt },
-    { key: "batch",       label: "Batch PO",    Icon: CalendarDays },
+    { key: "pesanan",     label: "Pesanan",  Icon: ClipboardList },
+    { key: "keuangan",    label: "Keuangan", Icon: BarChart2 },
+    { key: "pengeluaran", label: "Biaya",    Icon: Receipt },
+    { key: "batch",       label: "Batch",    Icon: CalendarDays },
+    { key: "dashboard",   label: "Statistik", Icon: TrendingUp },
   ] as const;
 
   return (
@@ -513,38 +580,51 @@ export default function DashboardPage() {
       <div className="max-w-2xl mx-auto px-4 pt-5 pb-4">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-start justify-between mb-5 pt-1">
           <div>
-            <p className="text-[10px] tracking-[0.25em] uppercase text-[#7b1d1d] font-semibold">Babiqu</p>
-            <h1 className="text-xl font-bold text-[#1c1208] leading-tight">Dapur Dashboard</h1>
+            <p className="text-[10px] tracking-[0.3em] uppercase text-[#7b1d1d] font-bold mb-0.5">Babiqu</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-black text-[#1c1208] leading-tight">Dapur</h1>
+              {currentBatch && (
+                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                  isBatchActive(currentBatch, totalPortions(orders.filter(o => o.batch_id === currentBatch.id && o.status !== "cancelled")))
+                    ? "bg-green-100 text-green-700"
+                    : "bg-[#f0e8de] text-[#8a7060]"
+                }`}>
+                  {currentBatch.label.split(/[—–-]/)[0].trim()}
+                </span>
+              )}
+            </div>
             {lastUpdated && (
-              <p className="text-[10px] text-[#b8a898]">Update: {lastUpdated.toLocaleTimeString("id-ID")}</p>
+              <p className="text-[10px] text-[#b8a898] mt-0.5">Diperbarui {lastUpdated.toLocaleTimeString("id-ID")}</p>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 mt-1">
             <a href="/" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-[#d9cfc5] text-[#7b1d1d] text-xs font-semibold rounded-xl hover:border-[#7b1d1d] transition">
-              <ExternalLink size={13} /> Form
+              className="flex items-center justify-center w-9 h-9 bg-white border border-[#d9cfc5] text-[#7b1d1d] rounded-2xl hover:border-[#7b1d1d] hover:shadow-sm transition"
+              title="Buka Form">
+              <ExternalLink size={15} />
             </a>
             <button onClick={fetchAll} disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-2 bg-[#7b1d1d] text-white text-xs font-semibold rounded-xl hover:bg-[#6a1717] transition disabled:opacity-50">
-              <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
-              {loading ? "..." : "Refresh"}
+              className="flex items-center justify-center w-9 h-9 bg-[#7b1d1d] text-white rounded-2xl hover:bg-[#6a1717] hover:shadow-sm transition disabled:opacity-50"
+              title="Refresh">
+              <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
             </button>
           </div>
         </div>
 
-        {/* Quick stats — 2×2 on mobile, 4 col on wider */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
+        {/* Quick stats — 2×2 grid */}
+        <div className="grid grid-cols-2 gap-3 mb-5">
           {[
-            { label: "Menunggu",     value: todayPending.length,    color: "text-amber-600" },
-            { label: "Konfirmasi",   value: todayConfirmed.length,  color: "text-blue-600" },
-            { label: "Selesai",      value: todayDelivered.length,  color: "text-green-700" },
-            { label: "Omzet Batch",  value: formatRupiah(currentBatchRevenue), color: "text-[#7b1d1d]", small: true },
+            { label: "MENUNGGU",   value: todayPending.length,   icon: "⏳", iconBg: "bg-amber-50",  numColor: "text-amber-600" },
+            { label: "KONFIRMASI", value: todayConfirmed.length, icon: "✓",  iconBg: "bg-blue-50",   numColor: "text-blue-600" },
+            { label: "SELESAI",    value: todayDelivered.length, icon: "✓",  iconBg: "bg-green-50",  numColor: "text-green-700" },
+            { label: "OMZET",      value: formatRupiah(currentBatchRevenue), icon: "💰", iconBg: "bg-red-50", numColor: "text-[#7b1d1d]", small: true },
           ].map((s) => (
-            <div key={s.label} className="bg-white rounded-2xl border border-[#e8ddd0] px-3 py-2.5">
-              <p className="text-[9px] text-[#8a7060] uppercase tracking-widest font-semibold leading-tight">{s.label}</p>
-              <p className={`font-bold mt-0.5 ${s.color} ${s.small ? "text-sm" : "text-2xl"}`}>{s.value}</p>
+            <div key={s.label} className="bg-white rounded-2xl shadow-sm px-4 py-3.5">
+              <span className={`inline-flex items-center justify-center w-7 h-7 rounded-xl ${s.iconBg} text-sm mb-2`}>{s.icon}</span>
+              <p className={`font-black leading-none ${s.numColor} ${s.small ? "text-lg" : "text-3xl"}`}>{s.value}</p>
+              <p className="text-[9px] text-[#a09080] uppercase tracking-widest font-semibold mt-1.5">{s.label}</p>
             </div>
           ))}
         </div>
@@ -553,15 +633,17 @@ export default function DashboardPage() {
         {tab === "pesanan" && (
           <div className="space-y-3">
 
-            {/* Filter button */}
+            {/* Filter row */}
             <div className="flex items-center justify-between">
-              <p className="text-xs text-[#8a7060]">
-                {displayedOrders.length} pesanan
-                {resolvedFilterBatchId !== "all" && currentBatch && filterBatchId === "auto"
-                  ? ` · ${currentBatch.label.split(/[—–-]/)[0].trim()}`
-                  : resolvedFilterBatchId !== "all"
-                  ? ` · ${batches.find(b => b.id === resolvedFilterBatchId)?.label.split(/[—–-]/)[0].trim() ?? ""}`
-                  : " · Semua batch"}
+              <p className="text-sm font-semibold text-[#5a3e2b]">
+                <span className="font-black text-[#1c1208]">{displayedOrders.length}</span>
+                <span className="text-[#a09080] font-normal ml-1">
+                  {resolvedFilterBatchId !== "all" && currentBatch && filterBatchId === "auto"
+                    ? currentBatch.label.split(/[—–-]/)[0].trim()
+                    : resolvedFilterBatchId !== "all"
+                    ? batches.find(b => b.id === resolvedFilterBatchId)?.label.split(/[—–-]/)[0].trim() ?? "pesanan"
+                    : "pesanan"}
+                </span>
               </p>
               <button
                 onClick={() => {
@@ -570,10 +652,10 @@ export default function DashboardPage() {
                   setTmpJam(filterJam);
                   setFilterModalOpen(true);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition ${
                   activeFilterCount > 0
-                    ? "bg-[#7b1d1d] text-white border-[#7b1d1d]"
-                    : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"
+                    ? "bg-[#7b1d1d] text-white shadow-sm"
+                    : "bg-white text-[#5a3e2b] border border-[#d9cfc5] hover:border-[#7b1d1d]"
                 }`}
               >
                 <span>⚙ Filter</span>
@@ -587,13 +669,13 @@ export default function DashboardPage() {
 
             {/* Ringkasan Produksi */}
             {productionSummary.length > 0 && (
-              <div className="bg-white rounded-xl border border-[#e8ddd0] overflow-hidden">
+              <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
                 <button onClick={() => { setShowSummary(v => !v); setSelectedProdMenuId(null); }}
-                  className="w-full flex items-center justify-between px-4 py-3">
-                  <p className="text-xs font-bold text-[#7b1d1d] uppercase tracking-wider">
+                  className="w-full flex items-center justify-between px-4 py-3.5 bg-gradient-to-r from-[#7b1d1d] to-[#a03030]">
+                  <p className="text-xs font-bold text-white uppercase tracking-widest">
                     Ringkasan Produksi
                   </p>
-                  <span className="text-[#a07850] text-sm">{showSummary ? "−" : "+"}</span>
+                  <span className="text-red-200 text-base font-bold">{showSummary ? "−" : "+"}</span>
                 </button>
                 {showSummary && (
                   <div className="border-t border-[#f0e8de]">
@@ -675,58 +757,70 @@ export default function DashboardPage() {
               return (
                 <div key={order.id}>
                   {showDate && (
-                    <p className="text-xs font-semibold text-[#8a7060] uppercase tracking-wider px-1 pt-2 pb-1">
+                    <p className="text-sm font-black text-[#1c1208] uppercase tracking-wider px-1 pt-3 pb-1.5">
                       {isToday(order.created_at) ? "Hari Ini" : new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long" }).format(new Date(order.created_at))}
                     </p>
                   )}
 
                   <button onClick={() => setSelectedOrder(order)}
-                    className={`w-full text-left bg-white rounded-xl border px-4 py-3 transition-all active:scale-[0.99] ${
-                      isCancelled ? "border-red-200 opacity-60" :
-                      isDelivered ? "border-green-200 bg-green-50/20" :
-                      isConfirmed ? "border-blue-200 bg-blue-50/10" :
-                      "border-[#e8ddd0] hover:border-[#c8b8a8]"
+                    className={`w-full text-left bg-white rounded-2xl shadow-sm overflow-hidden transition-all active:scale-[0.99] ${
+                      isCancelled ? "opacity-60" : ""
                     }`}>
-                    {/* Status badge row */}
-                    {(isCancelled || isDelivered || isConfirmed) && (
-                      <div className="flex items-center gap-2 mb-2">
-                        {isCancelled && <>
-                          <span className="text-[10px] font-bold bg-red-100 text-red-500 px-2 py-0.5 rounded-full">BATAL</span>
-                          {order.cancel_reason && <span className="text-xs text-red-400 truncate">{order.cancel_reason}</span>}
-                        </>}
-                        {isDelivered && <span className="text-[10px] font-bold bg-green-100 text-green-600 px-2 py-0.5 rounded-full">SELESAI</span>}
-                        {isConfirmed && <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">KONFIRMASI ✓</span>}
-                      </div>
-                    )}
-                    {isOrderPending && (
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-bold bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">MENUNGGU</span>
-                      </div>
-                    )}
-
-                    {/* Top: name + badge + time */}
-                    <div className={`flex items-center justify-between gap-2 ${isCancelled ? "opacity-50" : ""}`}>
-                      <div className="flex items-center gap-2 min-w-0">
-                        <p className="font-bold text-[#1c1208] text-sm truncate">{order.name}</p>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                          order.jam_antar.includes("Siang") ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700"
-                        }`}>{order.jam_antar.includes("Siang") ? "Siang" : "Malam"}</span>
-                      </div>
-                      <p className="text-[10px] text-[#b8a898] shrink-0">{formatDate(order.created_at)}</p>
-                    </div>
-
-                    {/* Summary row */}
-                    <div className={`flex items-center justify-between mt-1 ${isCancelled ? "opacity-50" : ""}`}>
-                      <p className="text-xs text-[#8a7060] truncate">
-                        {order.items?.map((it) => `${it.qty}× ${it.menu_name.split(" ").slice(0,2).join(" ")}`).join(", ")}
-                      </p>
-                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
-                          order.payment_method === "cash" ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"
-                        }`}>
-                          {order.payment_method === "cash" ? "TUNAI" : order.payment_method === "transfer_mandiri" ? "MANDIRI" : "BCA"}
+                    <div className={`flex items-stretch border-l-[3px] ${
+                      isCancelled    ? "border-red-400" :
+                      isDelivered    ? "border-green-500" :
+                      isConfirmed    ? "border-blue-500" :
+                                       "border-amber-400"
+                    }`}>
+                      {/* Avatar */}
+                      <div className="flex items-center justify-center pl-3 pr-2 py-3">
+                        <span className={`flex items-center justify-center w-9 h-9 rounded-full text-white text-xs font-black shrink-0 ${avatarColor(order.name)}`}>
+                          {nameInitials(order.name)}
                         </span>
-                        <span className="font-bold text-[#7b1d1d] text-sm">{formatRupiah(order.total)}</span>
+                      </div>
+
+                      {/* Main content */}
+                      <div className="flex-1 min-w-0 py-3 pr-4">
+                        {/* Name row */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <p className="font-bold text-[#1c1208] text-sm truncate">{order.name}</p>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                              order.jam_antar.includes("Siang") ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700"
+                            }`}>{order.jam_antar.includes("Siang") ? "Siang" : "Malam"}</span>
+                          </div>
+                          <p className="text-[10px] text-[#b8a898] shrink-0">{formatDate(order.created_at)}</p>
+                        </div>
+
+                        {/* Items + status badge row */}
+                        <div className="flex items-center justify-between mt-1 gap-2">
+                          <p className="text-xs text-[#8a7060] truncate">
+                            {order.items?.map((it) => `${it.qty}× ${it.menu_name.split(" ").slice(0,2).join(" ")}`).join(", ")}
+                          </p>
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                            isCancelled    ? "bg-red-100 text-red-500" :
+                            isDelivered    ? "bg-green-100 text-green-600" :
+                            isConfirmed    ? "bg-blue-100 text-blue-700" :
+                                             "bg-amber-100 text-amber-600"
+                          }`}>
+                            {isCancelled ? "BATAL" : isDelivered ? "SELESAI" : isConfirmed ? "KONFIRMASI ✓" : "MENUNGGU"}
+                          </span>
+                        </div>
+
+                        {/* Cancel reason */}
+                        {isCancelled && order.cancel_reason && (
+                          <p className="text-xs text-red-400 truncate mt-0.5">{order.cancel_reason}</p>
+                        )}
+
+                        {/* Price row */}
+                        <div className="flex items-center justify-between mt-1.5">
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                            order.payment_method === "cash" ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"
+                          }`}>
+                            {order.payment_method === "cash" ? "TUNAI" : order.payment_method === "transfer_mandiri" ? "MANDIRI" : "BCA"}
+                          </span>
+                          <span className="font-bold text-[#7b1d1d] text-sm">{formatRupiah(order.total)}</span>
+                        </div>
                       </div>
                     </div>
                   </button>
@@ -1150,6 +1244,180 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* ── TAB: DASHBOARD ──────────────────────────────────────────────── */}
+        {tab === "dashboard" && (
+          <div className="space-y-4">
+
+            {/* Overview stats — 2×2 */}
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: "TOTAL OMZET", value: formatRupiah(totalRevenue), icon: "💰", iconBg: "bg-emerald-50", numColor: "text-emerald-700", small: true },
+                { label: "KEUNTUNGAN", value: formatRupiah(totalProfit), icon: totalProfit >= 0 ? "📈" : "📉", iconBg: totalProfit >= 0 ? "bg-green-50" : "bg-red-50", numColor: totalProfit >= 0 ? "text-green-700" : "text-red-600", small: true },
+                { label: "TINGKAT SELESAI", value: `${completionRate}%`, icon: "✓", iconBg: "bg-blue-50", numColor: "text-blue-700", small: false },
+                { label: "RATA-RATA ORDER", value: formatRupiah(avgOrderValue), icon: "🧾", iconBg: "bg-violet-50", numColor: "text-violet-700", small: true },
+              ].map((s) => (
+                <div key={s.label} className="bg-white rounded-2xl shadow-sm px-4 py-3.5">
+                  <span className={`inline-flex items-center justify-center w-7 h-7 rounded-xl ${s.iconBg} text-sm mb-2`}>{s.icon}</span>
+                  <p className={`font-black leading-none ${s.numColor} ${s.small ? "text-lg" : "text-3xl"}`}>{s.value}</p>
+                  <p className="text-[9px] text-[#a09080] uppercase tracking-widest font-semibold mt-1.5">{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Status breakdown */}
+            <div className="bg-white rounded-2xl shadow-sm p-4">
+              <p className="text-[10px] font-bold text-[#8a7060] uppercase tracking-widest mb-3">Status Pesanan</p>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { label: "Menunggu", value: orders.filter(o => o.status === "pending" || o.status === "active").length, color: "text-amber-600", bg: "bg-amber-50" },
+                  { label: "Konfirmasi", value: orders.filter(o => o.status === "confirmed").length, color: "text-blue-600", bg: "bg-blue-50" },
+                  { label: "Selesai", value: anDelivered.length, color: "text-green-700", bg: "bg-green-50" },
+                  { label: "Batal", value: anCancelled.length, color: "text-red-500", bg: "bg-red-50" },
+                ].map(s => (
+                  <div key={s.label} className={`${s.bg} rounded-xl p-2.5 text-center`}>
+                    <p className={`text-xl font-black ${s.color}`}>{s.value}</p>
+                    <p className="text-[9px] text-[#a09080] font-semibold mt-0.5">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Simple progress bar — delivered / total non-cancelled */}
+              {anActive.length > 0 && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-[10px] text-[#8a7060] mb-1">
+                    <span>{anDelivered.length} selesai dari {anActive.length} pesanan aktif</span>
+                    <span className="font-bold text-green-700">{completionRate}%</span>
+                  </div>
+                  <div className="w-full bg-[#f0e8de] rounded-full h-2">
+                    <div
+                      className="bg-green-500 h-2 rounded-full transition-all"
+                      style={{ width: `${completionRate}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Jam Antar split */}
+            {(siangOrders.length > 0 || malamOrders.length > 0) && (
+              <div className="bg-white rounded-2xl shadow-sm p-4">
+                <p className="text-[10px] font-bold text-[#8a7060] uppercase tracking-widest mb-3">Distribusi Jam Antar</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-amber-50 rounded-xl p-3 text-center">
+                    <p className="text-2xl font-black text-amber-600">{siangOrders.length}</p>
+                    <p className="text-[10px] text-amber-500 font-semibold mt-0.5">☀ Siang</p>
+                  </div>
+                  <div className="bg-indigo-50 rounded-xl p-3 text-center">
+                    <p className="text-2xl font-black text-indigo-600">{malamOrders.length}</p>
+                    <p className="text-[10px] text-indigo-500 font-semibold mt-0.5">🌙 Malam</p>
+                  </div>
+                </div>
+                {siangOrders.length + malamOrders.length > 0 && (
+                  <div className="flex mt-2 rounded-full overflow-hidden h-2">
+                    <div className="bg-amber-400 transition-all" style={{ width: `${Math.round(siangOrders.length / (siangOrders.length + malamOrders.length) * 100)}%` }} />
+                    <div className="bg-indigo-400 flex-1" />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Top menus */}
+            {topMenus.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-4 py-3.5 bg-gradient-to-r from-[#7b1d1d] to-[#a03030]">
+                  <p className="text-xs font-bold text-white uppercase tracking-widest">Menu Terlaris</p>
+                </div>
+                <div className="divide-y divide-[#f0e8de] px-4">
+                  {topMenus.map((m, idx) => (
+                    <div key={m.name} className="py-3">
+                      <div className="flex items-center justify-between gap-3 mb-1.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
+                            idx === 0 ? "bg-amber-400 text-white" : idx === 1 ? "bg-[#b0b0b0] text-white" : idx === 2 ? "bg-[#cd7f32] text-white" : "bg-[#f0e8de] text-[#8a7060]"
+                          }`}>{idx + 1}</span>
+                          <p className="text-sm text-[#1c1208] truncate">{m.name}</p>
+                        </div>
+                        <span className="text-sm font-bold text-[#7b1d1d] shrink-0">{m.qty}×</span>
+                      </div>
+                      <div className="ml-7 w-full bg-[#f0e8de] rounded-full h-1.5">
+                        <div
+                          className="bg-[#7b1d1d] h-1.5 rounded-full transition-all"
+                          style={{ width: `${Math.round((m.qty / topMenusMaxQty) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Batch performance */}
+            {batchPerf.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-4 py-3.5 border-b border-[#f0e8de]">
+                  <p className="text-[10px] font-bold text-[#8a7060] uppercase tracking-widest">Performa per Batch</p>
+                </div>
+                <div className="divide-y divide-[#f0e8de]">
+                  {batchPerf.map(b => (
+                    <div key={b.id} className="px-4 py-3">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <p className="text-sm font-bold text-[#1c1208] truncate">{b.label}</p>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                          b.deliveryRate >= 80 ? "bg-green-100 text-green-700" : b.deliveryRate >= 40 ? "bg-amber-100 text-amber-700" : "bg-[#f0e8de] text-[#8a7060]"
+                        }`}>{b.deliveryRate}% selesai</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <div className="w-full bg-[#f0e8de] rounded-full h-1.5">
+                            <div
+                              className="bg-[#7b1d1d] h-1.5 rounded-full"
+                              style={{ width: `${Math.round((b.revenue / batchPerfMaxRevenue) * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                        <span className="text-xs font-bold text-[#1c1208] shrink-0">{formatRupiah(b.revenue)}</span>
+                      </div>
+                      <p className="text-[10px] text-[#8a7060] mt-1">{b.orderCount} pesanan · {b.portions} porsi</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Payment method breakdown */}
+            {paymentBreakdown.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm p-4">
+                <p className="text-[10px] font-bold text-[#8a7060] uppercase tracking-widest mb-3">Metode Pembayaran</p>
+                <div className="space-y-2.5">
+                  {paymentBreakdown.map(p => (
+                    <div key={p.method}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            p.method === "cash" ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"
+                          }`}>{p.label}</span>
+                          <span className="text-xs text-[#8a7060]">{p.count} pesanan</span>
+                        </div>
+                        <span className="text-xs font-bold text-[#1c1208]">{formatRupiah(p.revenue)}</span>
+                      </div>
+                      <div className="w-full bg-[#f0e8de] rounded-full h-1.5">
+                        <div
+                          className={`h-1.5 rounded-full ${p.method === "cash" ? "bg-amber-400" : "bg-green-500"}`}
+                          style={{ width: `${anConfirmedOrDelivered.length > 0 ? Math.round((p.count / anConfirmedOrDelivered.length) * 100) : 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {orders.length === 0 && !loading && (
+              <p className="text-center text-[#b8a898] py-12">Belum ada data untuk ditampilkan.</p>
+            )}
+          </div>
+        )}
+
       </div>
 
       {/* ── Order Detail — full-page overlay ───────────────────────────── */}
@@ -1470,20 +1738,24 @@ export default function DashboardPage() {
       )}
 
       {/* ── Bottom Nav Dock ─────────────────────────────────────────────── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-[#e8ddd0] safe-area-pb">
-        <div className="max-w-2xl mx-auto flex">
-          {NAV.map(({ key, label, Icon }) => (
-            <button key={key} onClick={() => { setTab(key as typeof tab); closeModal(); }}
-              className={`relative flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors ${
-                tab === key ? "text-[#7b1d1d]" : "text-[#a09080] hover:text-[#5a3e2b]"
-              }`}>
-              <Icon size={20} strokeWidth={tab === key ? 2.2 : 1.6} />
-              <span className={`text-[10px] font-semibold tracking-wide ${tab === key ? "text-[#7b1d1d]" : "text-[#a09080]"}`}>
-                {label}
-              </span>
-              {tab === key && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#7b1d1d] rounded-full" />}
-            </button>
-          ))}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur shadow-[0_-4px_24px_rgba(0,0,0,0.06)] safe-area-pb">
+        <div className="max-w-2xl mx-auto flex items-center px-2 h-16">
+          {NAV.map(({ key, label, Icon }) => {
+            const isActive = tab === key;
+            return (
+              <button key={key} onClick={() => { setTab(key as typeof tab); closeModal(); }}
+                className="relative flex-1 flex flex-col items-center justify-center h-full transition-colors">
+                <div className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-full transition-all ${
+                  isActive ? "bg-[#7b1d1d]" : ""
+                }`}>
+                  <Icon size={20} strokeWidth={isActive ? 2.2 : 1.6} className={isActive ? "text-white" : "text-[#c0b0a0]"} />
+                  <span className={`text-[10px] font-bold tracking-wide ${isActive ? "text-white" : "text-[#c0b0a0]"}`}>
+                    {label}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </nav>
     </div>
