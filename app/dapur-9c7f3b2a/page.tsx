@@ -182,6 +182,10 @@ export default function DashboardPage() {
   const [filterMenu, setFilterMenu] = useState<string>("all");
   const [tmpMenu, setTmpMenu] = useState<string>("all");
 
+  // Deliver-all batch confirmation
+  const [deliverAllBatchId, setDeliverAllBatchId] = useState<string | null>(null);
+  const [deliverAllLoading, setDeliverAllLoading] = useState(false);
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const [{ data: ord }, { data: exp }, { data: bat }] = await Promise.all([
@@ -306,6 +310,24 @@ export default function DashboardPage() {
 
   async function handleRestore(orderId: string) {
     await updateStatus(orderId, "pending", { cancel_reason: "" });
+  }
+
+  // ── Deliver all in batch ──────────────────────────────────────────────────
+  async function handleDeliverAll(batchId: string) {
+    setDeliverAllLoading(true);
+    // Get all non-cancelled orders in this batch that are not already delivered
+    const toDeliver = orders.filter(
+      o => o.batch_id === batchId && o.status !== "cancelled" && o.status !== "delivered"
+    );
+    if (toDeliver.length > 0) {
+      const ids = toDeliver.map(o => o.id);
+      await supabase.from("orders").update({ status: "delivered" }).in("id", ids);
+      setOrders(prev =>
+        prev.map(o => ids.includes(o.id) ? { ...o, status: "delivered" } : o)
+      );
+    }
+    setDeliverAllLoading(false);
+    setDeliverAllBatchId(null);
   }
 
   // ── Add expense ──────────────────────────────────────────────────────────
@@ -1033,6 +1055,40 @@ export default function DashboardPage() {
                         )}
                       </div>
                     </div>
+
+                    {/* Selesai Semua — only show if there are non-cancelled, non-delivered orders */}
+                    {(() => {
+                      const toDeliver = orders.filter(
+                        o => o.batch_id === batch.id && o.status !== "cancelled" && o.status !== "delivered"
+                      );
+                      if (toDeliver.length === 0) return null;
+                      const isConfirming = deliverAllBatchId === batch.id;
+                      return (
+                        <div className="border-t border-[#f0e8de] pt-3 mt-1">
+                          {isConfirming ? (
+                            <div className="flex items-center gap-3 bg-green-50 border border-green-100 rounded-xl px-3 py-2">
+                              <p className="text-xs text-green-700 flex-1">
+                                Set {toDeliver.length} pesanan jadi Selesai?
+                              </p>
+                              <button
+                                onClick={() => handleDeliverAll(batch.id)}
+                                disabled={deliverAllLoading}
+                                className="text-xs font-bold text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-lg disabled:opacity-50 transition">
+                                {deliverAllLoading ? "..." : "Ya, Selesai"}
+                              </button>
+                              <button onClick={() => setDeliverAllBatchId(null)}
+                                className="text-xs text-[#8a7060] hover:text-[#1c1208] transition">Batal</button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setDeliverAllBatchId(batch.id)}
+                              className="w-full text-xs font-bold text-green-700 bg-green-50 border border-green-200 hover:bg-green-100 rounded-xl py-2 transition">
+                              ✓ Selesai Semua ({toDeliver.length} pesanan)
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
