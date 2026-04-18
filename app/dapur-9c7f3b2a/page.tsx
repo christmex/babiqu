@@ -28,8 +28,6 @@ type Batch = {
 };
 
 const EXPENSE_CATEGORIES = ["Bahan Baku", "Operasional", "Kemasan", "Transportasi", "Lainnya"];
-const PERIOD_LABELS = { today: "Hari Ini", week: "7 Hari", month: "30 Hari", all: "Semua" } as const;
-type Period = keyof typeof PERIOD_LABELS;
 
 function formatBatchDate(d: string) {
   return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(new Date(d + "T00:00:00"));
@@ -62,16 +60,6 @@ function formatDate(iso: string) {
 }
 function formatDateShort(iso: string) {
   return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", timeZone: "Asia/Jakarta" }).format(new Date(iso));
-}
-function isInPeriod(iso: string, period: Period) {
-  const d = new Date(iso);
-  const now = new Date();
-  if (period === "today") return d.toDateString() === now.toDateString();
-  const cutoff = new Date(now);
-  if (period === "week") cutoff.setDate(now.getDate() - 7);
-  else if (period === "month") cutoff.setDate(now.getDate() - 30);
-  else return true;
-  return d >= cutoff;
 }
 function isToday(iso: string) { return new Date(iso).toDateString() === new Date().toDateString(); }
 
@@ -183,9 +171,14 @@ export default function DashboardPage() {
   const [editLoading, setEditLoading] = useState(false);
 
   // Filters
-  const [orderFilter, setOrderFilter] = useState<"today" | "all">("today");
-  const [jamFilter, setJamFilter] = useState<"all" | "siang" | "malam">("all");
-  const [period, setPeriod] = useState<Period>("today");
+  const [filterBatchId, setFilterBatchId] = useState<string>("auto");
+  const [filterStatus, setFilterStatus] = useState<"all" | OrderStatus>("all");
+  const [filterJam, setFilterJam] = useState<"all" | "siang" | "malam">("all");
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  // Temp state for modal (applied on confirm)
+  const [tmpBatch, setTmpBatch] = useState<string>("auto");
+  const [tmpStatus, setTmpStatus] = useState<"all" | OrderStatus>("all");
+  const [tmpJam, setTmpJam] = useState<"all" | "siang" | "malam">("all");
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -403,55 +396,76 @@ export default function DashboardPage() {
 
   const isPending = (s: OrderStatus) => s === "active" || s === "pending";
 
-  const todayOrders = orders.filter((o) => isToday(o.created_at));
-  const todayPending = todayOrders.filter((o) => isPending(o.status));
-  const todayConfirmed = todayOrders.filter((o) => o.status === "confirmed");
-  const todayDelivered = todayOrders.filter((o) => o.status === "delivered");
+  // Current open batch
+  const currentBatch = batches.find(b => isBatchActive(b, orders.filter(o => o.batch_id === b.id && o.status !== "cancelled").length));
 
-  const periodOrders = orders.filter((o) => isInPeriod(o.created_at, period) && o.status !== "cancelled" && !isPending(o.status));
-  const periodExpenses = expenses.filter((e) => isInPeriod(e.date, period));
-  const periodRevenue = periodOrders.reduce((s, o) => s + o.total, 0);
-  const periodExpTotal = periodExpenses.reduce((s, e) => s + e.amount, 0);
-  const periodProfit = periodRevenue - periodExpTotal;
+  // Quick stats — based on current/active batch or today
+  const statsOrders = currentBatch
+    ? orders.filter(o => o.batch_id === currentBatch.id)
+    : orders.filter(o => isToday(o.created_at));
+  const todayPending   = statsOrders.filter(o => isPending(o.status));
+  const todayConfirmed = statsOrders.filter(o => o.status === "confirmed");
+  const todayDelivered = statsOrders.filter(o => o.status === "delivered");
+  const currentBatchRevenue = statsOrders
+    .filter(o => o.status === "confirmed" || o.status === "delivered")
+    .reduce((s, o) => s + o.total, 0);
 
-  // Hari Ini: sort Siang → Malam; Semua: keep reverse-chron from server
-  const baseOrders = orderFilter === "today"
-    ? [...todayOrders].sort((a, b) => {
-        const sa = a.jam_antar.includes("Siang") ? 0 : 1;
-        const sb = b.jam_antar.includes("Siang") ? 0 : 1;
-        return sa - sb || new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      })
-    : orders;
-  const displayedOrders = jamFilter === "all" ? baseOrders
-    : baseOrders.filter((o) => jamFilter === "siang" ? o.jam_antar.includes("Siang") : !o.jam_antar.includes("Siang"));
+  // Resolved batch for filter ("auto" → active batch or "all")
+  const resolvedFilterBatchId = filterBatchId === "auto" ? (currentBatch?.id ?? "all") : filterBatchId;
 
-  // Production summary — today's non-cancelled orders grouped by menu
+  // Filter active count for badge
+  const activeFilterCount =
+    (filterBatchId !== "auto" ? 1 : 0) +
+    (filterStatus !== "all" ? 1 : 0) +
+    (filterJam !== "all" ? 1 : 0);
+
+  // Displayed orders
+  const displayedOrders = orders.filter(order => {
+    if (resolvedFilterBatchId !== "all" && order.batch_id !== resolvedFilterBatchId) return false;
+    if (filterStatus !== "all") {
+      const match = filterStatus === "pending" ? isPending(order.status) : order.status === filterStatus;
+      if (!match) return false;
+    }
+    if (filterJam === "siang" && !order.jam_antar.includes("Siang")) return false;
+    if (filterJam === "malam" && order.jam_antar.includes("Siang")) return false;
+    return true;
+  });
+
+  // Production summary — active/current batch non-cancelled, grouped by menu
+  const productionOrders = currentBatch
+    ? orders.filter(o => o.batch_id === currentBatch.id && o.status !== "cancelled")
+    : orders.filter(o => isToday(o.created_at) && o.status !== "cancelled");
   const productionSummary = (() => {
-    const map: Record<string, { name: string; portions: Array<{ opts: string; notes: string }> }> = {};
-    todayOrders.filter(o => o.status !== "cancelled").forEach(order => {
+    const map: Record<string, { name: string; qty: number }> = {};
+    productionOrders.forEach(order => {
       order.items?.forEach(item => {
-        if (!map[item.menu_id]) map[item.menu_id] = { name: item.menu_name, portions: [] };
-        item.portions?.forEach(p => map[item.menu_id].portions.push({
-          opts: Object.values(p.options).filter(Boolean).join(" · "),
-          notes: p.notes?.trim() || "",
-        }));
+        if (!map[item.menu_id]) map[item.menu_id] = { name: item.menu_name, qty: 0 };
+        map[item.menu_id].qty += item.qty;
       });
     });
-    return Object.values(map);
+    return Object.values(map).sort((a, b) => b.qty - a.qty);
   })();
 
-  // Current open batch (for labeling filters)
-  const currentBatch = batches.find(b => isBatchActive(b, orders.filter(o => o.batch_id === b.id && o.status !== "cancelled").length));
-  const poFilterLabel = currentBatch ? currentBatch.label.split(/[—–-]/)[0].trim() : "PO Ini";
+  // Keuangan — grouped by batch
+  const batchKeuangan = batches.map(batch => {
+    const bOrders = orders.filter(o => o.batch_id === batch.id);
+    const bConfirmed = bOrders.filter(o => o.status === "confirmed" || o.status === "delivered");
+    const bExps = expenses.filter(e => e.batch_id === batch.id);
+    const revenue = bConfirmed.reduce((s, o) => s + o.total, 0);
+    const expTotal = bExps.reduce((s, e) => s + e.amount, 0);
+    return {
+      batch,
+      revenue,
+      expTotal,
+      profit: revenue - expTotal,
+      orderCount: bConfirmed.length,
+      pendingCount: bOrders.filter(o => isPending(o.status)).length,
+      expItems: bExps,
+    };
+  }).filter(b => orders.some(o => o.batch_id === b.batch.id) || b.expTotal > 0);
 
-  // Omzet for current batch (active + delivered, not cancelled)
-  const currentBatchRevenue = currentBatch
-    ? orders.filter(o => o.batch_id === currentBatch.id && (o.status === "confirmed" || o.status === "delivered")).reduce((s, o) => s + o.total, 0)
-    : orders.filter(o => isToday(o.created_at) && (o.status === "confirmed" || o.status === "delivered")).reduce((s, o) => s + o.total, 0);
-
-  const expByCategory = EXPENSE_CATEGORIES.map((cat) => ({
-    cat, total: periodExpenses.filter((e) => e.category === cat).reduce((s, e) => s + e.amount, 0),
-  })).filter((x) => x.total > 0);
+  const nonBatchExps = expenses.filter(e => !e.batch_id);
+  const nonBatchExpTotal = nonBatchExps.reduce((s, e) => s + e.amount, 0);
 
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -507,31 +521,36 @@ export default function DashboardPage() {
         {tab === "pesanan" && (
           <div className="space-y-3">
 
-            {/* Filters: two segmented controls */}
-            <div className="flex gap-2">
-              {/* Date range */}
-              <div className="flex bg-[#f0e8de] rounded-xl p-0.5 gap-0.5 flex-1">
-                {(["today", "all"] as const).map((f) => (
-                  <button key={f} onClick={() => setOrderFilter(f)}
-                    className={`flex-1 py-1.5 rounded-[10px] text-xs font-semibold transition ${
-                      orderFilter === f ? "bg-white text-[#7b1d1d] shadow-sm" : "text-[#8a7060]"
-                    }`}>
-                    {f === "today" ? `${poFilterLabel} (${todayOrders.length})` : `Semua (${orders.length})`}
-                  </button>
-                ))}
-              </div>
-              {/* Time of day */}
-              <div className="flex bg-[#f0e8de] rounded-xl p-0.5 gap-0.5">
-                {([["all", "🕐"], ["siang", "☀️"], ["malam", "🌙"]] as const).map(([f, icon]) => (
-                  <button key={f} onClick={() => setJamFilter(f)}
-                    title={f === "all" ? "Semua waktu" : f === "siang" ? "Siang" : "Malam"}
-                    className={`w-9 py-1.5 rounded-[10px] text-sm transition ${
-                      jamFilter === f ? "bg-white shadow-sm" : "opacity-50"
-                    }`}>
-                    {icon}
-                  </button>
-                ))}
-              </div>
+            {/* Filter button */}
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-[#8a7060]">
+                {displayedOrders.length} pesanan
+                {resolvedFilterBatchId !== "all" && currentBatch && filterBatchId === "auto"
+                  ? ` · ${currentBatch.label.split(/[—–-]/)[0].trim()}`
+                  : resolvedFilterBatchId !== "all"
+                  ? ` · ${batches.find(b => b.id === resolvedFilterBatchId)?.label.split(/[—–-]/)[0].trim() ?? ""}`
+                  : " · Semua batch"}
+              </p>
+              <button
+                onClick={() => {
+                  setTmpBatch(filterBatchId);
+                  setTmpStatus(filterStatus);
+                  setTmpJam(filterJam);
+                  setFilterModalOpen(true);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                  activeFilterCount > 0
+                    ? "bg-[#7b1d1d] text-white border-[#7b1d1d]"
+                    : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"
+                }`}
+              >
+                <span>⚙ Filter</span>
+                {activeFilterCount > 0 && (
+                  <span className="bg-white text-[#7b1d1d] rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-black">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
             </div>
 
             {/* Ringkasan Produksi */}
@@ -547,22 +566,11 @@ export default function DashboardPage() {
                 {showSummary && (
                   <div className="border-t border-[#f0e8de] divide-y divide-[#f0e8de]">
                     {productionSummary.map((menu) => (
-                      <div key={menu.name} className="px-4 py-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <p className="text-sm font-bold text-[#1c1208]">{menu.name}</p>
-                          <span className="text-[10px] font-bold bg-[#7b1d1d] text-white px-2 py-0.5 rounded-full">
-                            {menu.portions.length} porsi
-                          </span>
-                        </div>
-                        <div className="space-y-1">
-                          {menu.portions.map((p, pi) => (
-                            <div key={pi} className="flex items-baseline gap-2">
-                              <span className="text-[10px] font-bold text-[#a07850] w-6 shrink-0">P{pi + 1}</span>
-                              <span className="text-xs text-[#5a3e2b]">{p.opts}</span>
-                              {p.notes && <span className="text-xs text-[#a07850] italic">· {p.notes}</span>}
-                            </div>
-                          ))}
-                        </div>
+                      <div key={menu.name} className="px-4 py-3 flex items-center justify-between">
+                        <p className="text-sm text-[#1c1208]">{menu.name}</p>
+                        <span className="text-sm font-bold bg-[#7b1d1d] text-white px-2.5 py-0.5 rounded-full">
+                          {menu.qty}×
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -573,17 +581,13 @@ export default function DashboardPage() {
             {loading && <p className="text-center text-[#8a7060] py-12">Memuat...</p>}
             {!loading && displayedOrders.length === 0 && (
               <p className="text-center text-[#b8a898] py-12">
-                {jamFilter !== "all"
-                  ? `Tidak ada pesanan ${jamFilter === "siang" ? "Siang" : "Malam"} untuk filter ini.`
-                  : orderFilter === "today" ? "Belum ada pesanan hari ini." : "Belum ada pesanan."}
+                Tidak ada pesanan untuk filter ini.
               </p>
             )}
 
             {displayedOrders.map((order, idx) => {
               const prev = displayedOrders[idx - 1];
-              const showDate = orderFilter === "all" && (
-                idx === 0 || new Date(order.created_at).toDateString() !== new Date(prev.created_at).toDateString()
-              );
+              const showDate = idx === 0 || new Date(order.created_at).toDateString() !== new Date(prev.created_at).toDateString();
               const isCancelled = order.status === "cancelled";
               const isDelivered = order.status === "delivered";
               const isConfirmed = order.status === "confirmed";
@@ -656,84 +660,87 @@ export default function DashboardPage() {
         {/* ── TAB: KEUANGAN ───────────────────────────────────────────────── */}
         {tab === "keuangan" && (
           <div className="space-y-4">
-            {/* Period segmented control */}
-            <div className="flex bg-[#f0e8de] rounded-xl p-0.5 gap-0.5">
-              {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
-                <button key={p} onClick={() => setPeriod(p)}
-                  className={`flex-1 py-1.5 rounded-[10px] text-xs font-semibold transition ${
-                    period === p ? "bg-white text-[#7b1d1d] shadow-sm" : "text-[#8a7060]"
-                  }`}>
-                  {PERIOD_LABELS[p]}
-                </button>
-              ))}
-            </div>
-
-            {/* P&L summary card */}
-            <div className="bg-white rounded-2xl border border-[#e8ddd0] divide-y divide-[#f0e8de]">
-              <div className="flex items-center justify-between px-4 py-3">
-                <div>
-                  <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold">Pemasukan</p>
-                  <p className="text-lg font-bold text-[#1c1208] mt-0.5">{formatRupiah(periodRevenue)}</p>
-                </div>
-                <p className="text-xs text-[#8a7060]">{periodOrders.length} pesanan</p>
-              </div>
-              <div className="flex items-center justify-between px-4 py-3">
-                <div>
-                  <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold">Pengeluaran</p>
-                  <p className="text-lg font-bold text-[#1c1208] mt-0.5">{formatRupiah(periodExpTotal)}</p>
-                </div>
-                <p className="text-xs text-[#8a7060]">{periodExpenses.length} item</p>
-              </div>
-              <div className={`flex items-center justify-between px-4 py-3 rounded-b-2xl ${periodProfit >= 0 ? "bg-green-50" : "bg-red-50"}`}>
-                <div>
-                  <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold">Keuntungan</p>
-                  <p className={`text-lg font-bold mt-0.5 ${periodProfit >= 0 ? "text-green-700" : "text-red-600"}`}>
-                    {formatRupiah(periodProfit)}
-                  </p>
-                </div>
-                <p className={`text-xs font-bold ${periodProfit >= 0 ? "text-green-600" : "text-red-500"}`}>
-                  {periodRevenue > 0 ? `${Math.round((periodProfit / periodRevenue) * 100)}%` : "—"}
-                </p>
-              </div>
-            </div>
-
-            {expByCategory.length > 0 && (
-              <div className="bg-white rounded-2xl border border-[#e8ddd0] p-5">
-                <p className="text-xs font-bold text-[#5a3e2b] uppercase tracking-wider mb-3">Pengeluaran per Kategori</p>
-                <div className="space-y-2.5">
-                  {expByCategory.map(({ cat, total }) => (
-                    <div key={cat} className="flex items-center gap-3">
-                      <span className="text-xs text-[#5a3e2b] w-24 shrink-0">{cat}</span>
-                      <div className="flex-1 bg-[#f0e8de] rounded-full h-1.5">
-                        <div className="bg-[#7b1d1d] h-1.5 rounded-full transition-all"
-                          style={{ width: `${periodExpTotal > 0 ? (total / periodExpTotal) * 100 : 0}%` }} />
-                      </div>
-                      <span className="text-xs font-semibold text-[#1c1208] w-24 text-right shrink-0">{formatRupiah(total)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {batchKeuangan.length === 0 && !loading && (
+              <p className="text-center text-[#b8a898] py-8">Belum ada data keuangan per batch.</p>
             )}
 
-            {periodExpenses.length > 0 && (
-              <div className="bg-white rounded-2xl border border-[#e8ddd0] p-5">
-                <p className="text-xs font-bold text-[#5a3e2b] uppercase tracking-wider mb-3">Detail Pengeluaran</p>
-                <div className="space-y-2">
-                  {periodExpenses.map((exp) => (
-                    <div key={exp.id} className="flex items-center justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-[#1c1208] truncate">{exp.description}</p>
-                        <p className="text-[11px] text-[#8a7060]">{exp.category} · {formatDateShort(exp.date)}</p>
-                      </div>
-                      <span className="text-sm font-semibold text-[#1c1208] shrink-0">{formatRupiah(exp.amount)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {batchKeuangan.map(({ batch, revenue, expTotal, profit, orderCount, pendingCount, expItems }) => {
+              const isActiveBatch = batch.id === currentBatch?.id;
+              const expByCategory = EXPENSE_CATEGORIES.map(cat => ({
+                cat, total: expItems.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0),
+              })).filter(x => x.total > 0);
 
-            {periodExpenses.length === 0 && periodOrders.length === 0 && !loading && (
-              <p className="text-center text-[#b8a898] py-8">Belum ada data untuk periode ini.</p>
+              return (
+                <div key={batch.id} className={`bg-white rounded-2xl border overflow-hidden ${isActiveBatch ? "border-[#7b1d1d]" : "border-[#e8ddd0]"}`}>
+                  {/* Batch header */}
+                  <div className={`px-4 py-3 flex items-center justify-between ${isActiveBatch ? "bg-[#7b1d1d]" : "bg-[#fdf8f2]"}`}>
+                    <div>
+                      <p className={`text-xs font-bold uppercase tracking-wider ${isActiveBatch ? "text-red-200" : "text-[#8a7060]"}`}>
+                        {isActiveBatch ? "● AKTIF" : "Batch"}
+                      </p>
+                      <p className={`font-bold text-sm ${isActiveBatch ? "text-white" : "text-[#1c1208]"}`}>{batch.label}</p>
+                      <p className={`text-[11px] ${isActiveBatch ? "text-red-200" : "text-[#8a7060]"}`}>
+                        Antar: {formatBatchDate(batch.delivery_date)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      {pendingCount > 0 && (
+                        <p className={`text-[10px] font-bold mb-1 ${isActiveBatch ? "text-amber-200" : "text-amber-600"}`}>
+                          {pendingCount} menunggu
+                        </p>
+                      )}
+                      <p className={`text-xs ${isActiveBatch ? "text-red-200" : "text-[#8a7060]"}`}>{orderCount} pesanan konfirmasi</p>
+                    </div>
+                  </div>
+
+                  {/* P&L */}
+                  <div className="divide-y divide-[#f0e8de]">
+                    <div className="flex items-center justify-between px-4 py-2.5">
+                      <p className="text-xs text-[#8a7060]">Pemasukan</p>
+                      <p className="text-sm font-bold text-[#1c1208]">{formatRupiah(revenue)}</p>
+                    </div>
+                    <div className="flex items-center justify-between px-4 py-2.5">
+                      <p className="text-xs text-[#8a7060]">Pengeluaran</p>
+                      <p className="text-sm font-bold text-[#1c1208]">{formatRupiah(expTotal)}</p>
+                    </div>
+                    <div className={`flex items-center justify-between px-4 py-2.5 ${profit >= 0 ? "bg-green-50" : "bg-red-50"}`}>
+                      <p className="text-xs font-bold text-[#5a3e2b]">Keuntungan</p>
+                      <div className="text-right">
+                        <p className={`text-sm font-bold ${profit >= 0 ? "text-green-700" : "text-red-600"}`}>
+                          {profit >= 0 ? "+" : ""}{formatRupiah(profit)}
+                        </p>
+                        {revenue > 0 && (
+                          <p className="text-[10px] text-[#8a7060]">{Math.round((profit / revenue) * 100)}%</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Expense breakdown */}
+                  {expByCategory.length > 0 && (
+                    <div className="px-4 py-3 border-t border-[#f0e8de] space-y-1.5">
+                      <p className="text-[10px] text-[#8a7060] uppercase tracking-wider font-semibold mb-2">Pengeluaran</p>
+                      {expByCategory.map(({ cat, total }) => (
+                        <div key={cat} className="flex items-center gap-2">
+                          <span className="text-xs text-[#5a3e2b] w-20 shrink-0">{cat}</span>
+                          <div className="flex-1 bg-[#f0e8de] rounded-full h-1">
+                            <div className="bg-[#7b1d1d] h-1 rounded-full" style={{ width: `${expTotal > 0 ? (total / expTotal) * 100 : 0}%` }} />
+                          </div>
+                          <span className="text-xs font-semibold text-[#1c1208] w-20 text-right shrink-0">{formatRupiah(total)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Non-batch expenses */}
+            {nonBatchExpTotal > 0 && (
+              <div className="bg-white rounded-2xl border border-[#e8ddd0] p-4">
+                <p className="text-xs font-bold text-[#5a3e2b] uppercase tracking-wider mb-2">Pengeluaran Lainnya (Tanpa Batch)</p>
+                <p className="text-sm font-bold text-[#1c1208]">{formatRupiah(nonBatchExpTotal)}</p>
+              </div>
             )}
           </div>
         )}
@@ -1235,6 +1242,105 @@ export default function DashboardPage() {
           </div>
         );
       })()}
+
+      {/* ── Filter Modal (bottom sheet) ─────────────────────────────────── */}
+      {filterModalOpen && (
+        <div className="fixed inset-0 z-[65] flex flex-col justify-end">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/40" onClick={() => setFilterModalOpen(false)} />
+          {/* Sheet */}
+          <div className="relative bg-white rounded-t-2xl px-4 pt-4 pb-8 space-y-5 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <p className="font-bold text-[#1c1208]">Filter Pesanan</p>
+              <button onClick={() => setFilterModalOpen(false)} className="text-[#8a7060] text-xl leading-none">×</button>
+            </div>
+
+            {/* Batch */}
+            <div>
+              <p className="text-xs font-bold text-[#5a3e2b] uppercase tracking-wider mb-2">Batch</p>
+              <div className="space-y-1.5">
+                <button
+                  onClick={() => setTmpBatch("auto")}
+                  className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm font-medium transition ${
+                    tmpBatch === "auto" ? "border-[#7b1d1d] bg-[#fdf5f0] text-[#7b1d1d]" : "border-[#e8ddd0] text-[#5a3e2b] hover:border-[#c8b8a8]"
+                  }`}
+                >
+                  {currentBatch ? `● ${currentBatch.label.split(/[—–-]/)[0].trim()} (aktif)` : "Batch Aktif (kosong)"}
+                </button>
+                <button
+                  onClick={() => setTmpBatch("all")}
+                  className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm font-medium transition ${
+                    tmpBatch === "all" ? "border-[#7b1d1d] bg-[#fdf5f0] text-[#7b1d1d]" : "border-[#e8ddd0] text-[#5a3e2b] hover:border-[#c8b8a8]"
+                  }`}
+                >
+                  Semua Batch
+                </button>
+                {batches.filter(b => b.id !== currentBatch?.id).map(b => (
+                  <button key={b.id}
+                    onClick={() => setTmpBatch(b.id)}
+                    className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm font-medium transition ${
+                      tmpBatch === b.id ? "border-[#7b1d1d] bg-[#fdf5f0] text-[#7b1d1d]" : "border-[#e8ddd0] text-[#5a3e2b] hover:border-[#c8b8a8]"
+                    }`}
+                  >
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Status */}
+            <div>
+              <p className="text-xs font-bold text-[#5a3e2b] uppercase tracking-wider mb-2">Status</p>
+              <div className="flex flex-wrap gap-2">
+                {([
+                  ["all",       "Semua"],
+                  ["pending",   "Menunggu"],
+                  ["confirmed", "Konfirmasi"],
+                  ["delivered", "Selesai"],
+                  ["cancelled", "Batal"],
+                ] as const).map(([val, label]) => (
+                  <button key={val} onClick={() => setTmpStatus(val as typeof tmpStatus)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                      tmpStatus === val ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"
+                    }`}
+                  >{label}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Jam Antar */}
+            <div>
+              <p className="text-xs font-bold text-[#5a3e2b] uppercase tracking-wider mb-2">Jam Antar</p>
+              <div className="flex gap-2">
+                {([["all", "🕐 Semua"], ["siang", "☀️ Siang"], ["malam", "🌙 Malam"]] as const).map(([val, label]) => (
+                  <button key={val} onClick={() => setTmpJam(val)}
+                    className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition ${
+                      tmpJam === val ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"
+                    }`}
+                  >{label}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => { setTmpBatch("auto"); setTmpStatus("all"); setTmpJam("all"); }}
+                className="px-4 py-3 rounded-xl border border-[#d9cfc5] text-sm text-[#8a7060] hover:border-[#7b1d1d] transition"
+              >Reset</button>
+              <button
+                onClick={() => {
+                  setFilterBatchId(tmpBatch);
+                  setFilterStatus(tmpStatus);
+                  setFilterJam(tmpJam);
+                  setFilterModalOpen(false);
+                }}
+                className="flex-1 py-3 rounded-xl bg-[#7b1d1d] text-white font-bold text-sm hover:bg-[#6a1717] transition"
+              >Terapkan Filter</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Proof image lightbox ────────────────────────────────────────── */}
       {proofLightbox && (
