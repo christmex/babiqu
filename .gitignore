@@ -42,3 +42,5 @@ next-env.d.ts
 
 # Local backups (contains personal data)
 backup/
+# Playwright MCP snapshots
+.playwright-mcp/

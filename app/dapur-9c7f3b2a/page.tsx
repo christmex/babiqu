@@ -179,6 +179,8 @@ export default function DashboardPage() {
   const [tmpBatch, setTmpBatch] = useState<string>("auto");
   const [tmpStatus, setTmpStatus] = useState<"all" | OrderStatus>("all");
   const [tmpJam, setTmpJam] = useState<"all" | "siang" | "malam">("all");
+  const [filterMenu, setFilterMenu] = useState<string>("all");
+  const [tmpMenu, setTmpMenu] = useState<string>("all");
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -417,7 +419,8 @@ export default function DashboardPage() {
   const activeFilterCount =
     (filterBatchId !== "auto" ? 1 : 0) +
     (filterStatus !== "all" ? 1 : 0) +
-    (filterJam !== "all" ? 1 : 0);
+    (filterJam !== "all" ? 1 : 0) +
+    (filterMenu !== "all" ? 1 : 0);
 
   // Displayed orders
   const displayedOrders = orders.filter(order => {
@@ -428,6 +431,7 @@ export default function DashboardPage() {
     }
     if (filterJam === "siang" && !order.jam_antar.includes("Siang")) return false;
     if (filterJam === "malam" && order.jam_antar.includes("Siang")) return false;
+    if (filterMenu !== "all" && !order.items?.some(it => it.menu_id === filterMenu)) return false;
     return true;
   });
 
@@ -1249,7 +1253,7 @@ export default function DashboardPage() {
           {/* Backdrop */}
           <div className="absolute inset-0 bg-black/40" onClick={() => setFilterModalOpen(false)} />
           {/* Sheet */}
-          <div className="relative bg-white rounded-t-2xl px-4 pt-4 pb-8 space-y-5 max-h-[85vh] overflow-y-auto">
+          <div className="relative bg-white rounded-t-2xl px-4 pt-4 pb-8 space-y-4 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <p className="font-bold text-[#1c1208]">Filter Pesanan</p>
               <button onClick={() => setFilterModalOpen(false)} className="text-[#8a7060] text-xl leading-none">×</button>
@@ -1257,75 +1261,74 @@ export default function DashboardPage() {
 
             {/* Batch */}
             <div>
-              <p className="text-xs font-bold text-[#5a3e2b] uppercase tracking-wider mb-2">Batch</p>
-              <div className="space-y-1.5">
-                <button
-                  onClick={() => setTmpBatch("auto")}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm font-medium transition ${
-                    tmpBatch === "auto" ? "border-[#7b1d1d] bg-[#fdf5f0] text-[#7b1d1d]" : "border-[#e8ddd0] text-[#5a3e2b] hover:border-[#c8b8a8]"
-                  }`}
-                >
-                  {currentBatch ? `● ${currentBatch.label.split(/[—–-]/)[0].trim()} (aktif)` : "Batch Aktif (kosong)"}
-                </button>
-                <button
-                  onClick={() => setTmpBatch("all")}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm font-medium transition ${
-                    tmpBatch === "all" ? "border-[#7b1d1d] bg-[#fdf5f0] text-[#7b1d1d]" : "border-[#e8ddd0] text-[#5a3e2b] hover:border-[#c8b8a8]"
-                  }`}
-                >
-                  Semua Batch
-                </button>
+              <label className="block text-xs font-bold text-[#5a3e2b] uppercase tracking-wider mb-1.5">Batch</label>
+              <select
+                value={tmpBatch}
+                onChange={e => setTmpBatch(e.target.value)}
+                className="w-full border border-[#d9cfc5] rounded-xl px-3 py-2.5 text-sm text-[#1c1208] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition"
+              >
+                <option value="auto">
+                  {currentBatch ? `● ${currentBatch.label} (aktif)` : "Batch Aktif (tidak ada)"}
+                </option>
+                <option value="all">Semua Batch</option>
                 {batches.filter(b => b.id !== currentBatch?.id).map(b => (
-                  <button key={b.id}
-                    onClick={() => setTmpBatch(b.id)}
-                    className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm font-medium transition ${
-                      tmpBatch === b.id ? "border-[#7b1d1d] bg-[#fdf5f0] text-[#7b1d1d]" : "border-[#e8ddd0] text-[#5a3e2b] hover:border-[#c8b8a8]"
-                    }`}
-                  >
-                    {b.label}
-                  </button>
+                  <option key={b.id} value={b.id}>{b.label}</option>
                 ))}
-              </div>
+              </select>
             </div>
 
             {/* Status */}
             <div>
-              <p className="text-xs font-bold text-[#5a3e2b] uppercase tracking-wider mb-2">Status</p>
-              <div className="flex flex-wrap gap-2">
-                {([
-                  ["all",       "Semua"],
-                  ["pending",   "Menunggu"],
-                  ["confirmed", "Konfirmasi"],
-                  ["delivered", "Selesai"],
-                  ["cancelled", "Batal"],
-                ] as const).map(([val, label]) => (
-                  <button key={val} onClick={() => setTmpStatus(val as typeof tmpStatus)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
-                      tmpStatus === val ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"
-                    }`}
-                  >{label}</button>
-                ))}
-              </div>
+              <label className="block text-xs font-bold text-[#5a3e2b] uppercase tracking-wider mb-1.5">Status</label>
+              <select
+                value={tmpStatus}
+                onChange={e => setTmpStatus(e.target.value as typeof tmpStatus)}
+                className="w-full border border-[#d9cfc5] rounded-xl px-3 py-2.5 text-sm text-[#1c1208] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition"
+              >
+                <option value="all">Semua Status</option>
+                <option value="pending">Menunggu</option>
+                <option value="confirmed">Konfirmasi</option>
+                <option value="delivered">Selesai</option>
+                <option value="cancelled">Batal</option>
+              </select>
             </div>
 
             {/* Jam Antar */}
             <div>
-              <p className="text-xs font-bold text-[#5a3e2b] uppercase tracking-wider mb-2">Jam Antar</p>
-              <div className="flex gap-2">
-                {([["all", "🕐 Semua"], ["siang", "☀️ Siang"], ["malam", "🌙 Malam"]] as const).map(([val, label]) => (
-                  <button key={val} onClick={() => setTmpJam(val)}
-                    className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition ${
-                      tmpJam === val ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"
-                    }`}
-                  >{label}</button>
-                ))}
-              </div>
+              <label className="block text-xs font-bold text-[#5a3e2b] uppercase tracking-wider mb-1.5">Jam Antar</label>
+              <select
+                value={tmpJam}
+                onChange={e => setTmpJam(e.target.value as typeof tmpJam)}
+                className="w-full border border-[#d9cfc5] rounded-xl px-3 py-2.5 text-sm text-[#1c1208] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition"
+              >
+                <option value="all">Semua Waktu</option>
+                <option value="siang">☀️ Siang (11.00–13.00)</option>
+                <option value="malam">🌙 Malam (17.00–19.00)</option>
+              </select>
+            </div>
+
+            {/* Menu */}
+            <div>
+              <label className="block text-xs font-bold text-[#5a3e2b] uppercase tracking-wider mb-1.5">Menu</label>
+              <select
+                value={tmpMenu}
+                onChange={e => setTmpMenu(e.target.value)}
+                className="w-full border border-[#d9cfc5] rounded-xl px-3 py-2.5 text-sm text-[#1c1208] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition"
+              >
+                <option value="all">Semua Menu</option>
+                <optgroup label="Paket">
+                  {MENUS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </optgroup>
+                <optgroup label="À La Carte">
+                  {ALA_CARTE.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </optgroup>
+              </select>
             </div>
 
             {/* Actions */}
             <div className="flex gap-2 pt-1">
               <button
-                onClick={() => { setTmpBatch("auto"); setTmpStatus("all"); setTmpJam("all"); }}
+                onClick={() => { setTmpBatch("auto"); setTmpStatus("all"); setTmpJam("all"); setTmpMenu("all"); }}
                 className="px-4 py-3 rounded-xl border border-[#d9cfc5] text-sm text-[#8a7060] hover:border-[#7b1d1d] transition"
               >Reset</button>
               <button
@@ -1333,6 +1336,7 @@ export default function DashboardPage() {
                   setFilterBatchId(tmpBatch);
                   setFilterStatus(tmpStatus);
                   setFilterJam(tmpJam);
+                  setFilterMenu(tmpMenu);
                   setFilterModalOpen(false);
                 }}
                 className="flex-1 py-3 rounded-xl bg-[#7b1d1d] text-white font-bold text-sm hover:bg-[#6a1717] transition"
