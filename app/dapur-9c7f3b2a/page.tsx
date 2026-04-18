@@ -185,6 +185,9 @@ export default function DashboardPage() {
   const [filterMenu, setFilterMenu] = useState<string>("all");
   const [tmpMenu, setTmpMenu] = useState<string>("all");
 
+  // Production summary drill-down
+  const [selectedProdMenuId, setSelectedProdMenuId] = useState<string | null>(null);
+
   // Deliver-all batch confirmation
   const [deliverAllBatchId, setDeliverAllBatchId] = useState<string | null>(null);
   const [deliverAllLoading, setDeliverAllLoading] = useState(false);
@@ -463,15 +466,12 @@ export default function DashboardPage() {
     return true;
   });
 
-  // Production summary — active/current batch non-cancelled, grouped by menu
-  const productionOrders = currentBatch
-    ? orders.filter(o => o.batch_id === currentBatch.id && o.status !== "cancelled")
-    : orders.filter(o => isToday(o.created_at) && o.status !== "cancelled");
+  // Production summary — derived from currently displayed (filtered) orders, non-cancelled
   const productionSummary = (() => {
-    const map: Record<string, { name: string; qty: number }> = {};
-    productionOrders.forEach(order => {
+    const map: Record<string, { name: string; qty: number; menuId: string }> = {};
+    displayedOrders.filter(o => o.status !== "cancelled").forEach(order => {
       order.items?.forEach(item => {
-        if (!map[item.menu_id]) map[item.menu_id] = { name: item.menu_name, qty: 0 };
+        if (!map[item.menu_id]) map[item.menu_id] = { name: item.menu_name, qty: 0, menuId: item.menu_id };
         map[item.menu_id].qty += item.qty;
       });
     });
@@ -588,7 +588,7 @@ export default function DashboardPage() {
             {/* Ringkasan Produksi */}
             {productionSummary.length > 0 && (
               <div className="bg-white rounded-xl border border-[#e8ddd0] overflow-hidden">
-                <button onClick={() => setShowSummary(v => !v)}
+                <button onClick={() => { setShowSummary(v => !v); setSelectedProdMenuId(null); }}
                   className="w-full flex items-center justify-between px-4 py-3">
                   <p className="text-xs font-bold text-[#7b1d1d] uppercase tracking-wider">
                     Ringkasan Produksi
@@ -596,15 +596,62 @@ export default function DashboardPage() {
                   <span className="text-[#a07850] text-sm">{showSummary ? "−" : "+"}</span>
                 </button>
                 {showSummary && (
-                  <div className="border-t border-[#f0e8de] divide-y divide-[#f0e8de]">
-                    {productionSummary.map((menu) => (
-                      <div key={menu.name} className="px-4 py-3 flex items-center justify-between">
-                        <p className="text-sm text-[#1c1208]">{menu.name}</p>
-                        <span className="text-sm font-bold bg-[#7b1d1d] text-white px-2.5 py-0.5 rounded-full">
-                          {menu.qty}×
-                        </span>
-                      </div>
-                    ))}
+                  <div className="border-t border-[#f0e8de]">
+                    {productionSummary.map((menu) => {
+                      const isSelected = selectedProdMenuId === menu.menuId;
+                      // Orders that contain this menu item
+                      const ordersWithMenu = displayedOrders.filter(
+                        o => o.status !== "cancelled" && o.items?.some(it => it.menu_id === menu.menuId)
+                      );
+                      return (
+                        <div key={menu.menuId}>
+                          {/* Menu row — tap to toggle drill-down */}
+                          <button
+                            onClick={() => setSelectedProdMenuId(isSelected ? null : menu.menuId)}
+                            className={`w-full px-4 py-3 flex items-center justify-between transition ${
+                              isSelected ? "bg-[#fdf5f0]" : "hover:bg-[#fdf8f2]"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`text-[9px] transition ${isSelected ? "rotate-90" : ""} text-[#a07850]`}>▶</span>
+                              <p className="text-sm text-[#1c1208] truncate">{menu.name}</p>
+                            </div>
+                            <span className="text-sm font-bold bg-[#7b1d1d] text-white px-2.5 py-0.5 rounded-full shrink-0 ml-2">
+                              {menu.qty}×
+                            </span>
+                          </button>
+
+                          {/* Drill-down: list of who ordered this */}
+                          {isSelected && (
+                            <div className="bg-[#fdf5f0] border-t border-[#f0e8de] divide-y divide-[#f0e8de]">
+                              {ordersWithMenu.map(o => {
+                                const thisItem = o.items?.find(it => it.menu_id === menu.menuId);
+                                return (
+                                  <button
+                                    key={o.id}
+                                    onClick={() => setSelectedOrder(o)}
+                                    className="w-full text-left px-5 py-2.5 hover:bg-[#fdeee6] transition"
+                                  >
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-[#1c1208] truncate">{o.name}</p>
+                                        <p className="text-xs text-[#8a7060] truncate">{o.alamat}</p>
+                                      </div>
+                                      <div className="text-right shrink-0">
+                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                                          o.jam_antar.includes("Siang") ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700"
+                                        }`}>{o.jam_antar.includes("Siang") ? "Siang" : "Malam"}</span>
+                                        <p className="text-xs font-bold text-[#7b1d1d] mt-0.5">{thisItem?.qty}×</p>
+                                      </div>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

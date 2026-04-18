@@ -2,15 +2,25 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { AlertCircle, Loader2, Send } from "lucide-react";
+import { AlertCircle, Loader2, MessageCircle, Send } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
-  MENUS, ALA_CARTE, BANK_INFO, ONGKIR,
+  MENUS, ALA_CARTE, BANK_INFO, ONGKIR, WA_NUMBER,
   formatRupiah, formatBatchDate,
   emptyPortion, calculateTotal, buildOrderItems,
   isFormComplete as checkFormComplete,
   type MenuOrder, type FormData, type PaymentMethod,
 } from "@/lib/order-utils";
+
+/** Normalise phone to +62… on blur */
+function normalizePhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("62")) return "+" + digits;
+  if (digits.startsWith("0"))  return "+62" + digits.slice(1);
+  if (digits.length >= 8)      return "+62" + digits;
+  return raw;
+}
 
 async function compressImage(file: File, maxMB = 2): Promise<File> {
   const maxBytes = maxMB * 1024 * 1024;
@@ -69,6 +79,8 @@ type SuccessData = {
   name: string;
   jam_antar: string;
   total: number;
+  items: { name: string; qty: number; price: number }[];
+  paymentMethod: PaymentMethod;
 };
 
 export default function OrderPage() {
@@ -114,12 +126,14 @@ export default function OrderPage() {
         .order("open_date", { ascending: false }).limit(1).maybeSingle();
 
       if (active) {
-        const { count } = await supabase
-          .from("orders").select("*", { count: "exact", head: true })
+        // Count total portions (sum of item qty) instead of order count
+        const { data: batchOrders } = await supabase
+          .from("orders").select("items")
           .eq("batch_id", active.id).neq("status", "cancelled");
-        const cnt = count ?? 0;
-        setBatchOrderCount(cnt);
-        const isFull = active.max_orders != null && cnt >= active.max_orders;
+        const portionCount = (batchOrders ?? []).reduce((sum: number, o: { items: { qty: number }[] | null }) =>
+          sum + (o.items ?? []).reduce((s, it) => s + it.qty, 0), 0);
+        setBatchOrderCount(portionCount);
+        const isFull = active.max_orders != null && portionCount >= active.max_orders;
         if (active.is_closed || isFull) {
           setActiveBatch(null);
           setBatchClosedFull(isFull && !active.is_closed);
@@ -156,8 +170,17 @@ export default function OrderPage() {
   };
 
   const handleWaInput = (raw: string) => {
+    // Allow digits, +, -, spaces while typing
     const cleaned = raw.replace(/[^\d+\-\s]/g, "");
     setForm((prev) => ({ ...prev, nomor_wa: cleaned }));
+  };
+
+  const handleWaBlur = () => {
+    touch("nomor_wa");
+    const normalized = normalizePhone(form.nomor_wa);
+    if (normalized !== form.nomor_wa) {
+      setForm((prev) => ({ ...prev, nomor_wa: normalized }));
+    }
   };
 
   const scrollToFirstError = () => {
@@ -303,7 +326,11 @@ export default function OrderPage() {
       return;
     }
 
-    setOrderSuccess({ name: form.name, jam_antar: form.jam_antar, total });
+    const successItems = [
+      ...MENUS.filter(m => orders[m.id].qty > 0).map(m => ({ name: m.name, qty: orders[m.id].qty, price: m.price })),
+      ...ALA_CARTE.filter(m => alcOrders[m.id].qty > 0).map(m => ({ name: m.name, qty: alcOrders[m.id].qty, price: m.price })),
+    ];
+    setOrderSuccess({ name: form.name, jam_antar: form.jam_antar, total, items: successItems, paymentMethod });
     setLoading(false);
   };
 
@@ -383,23 +410,68 @@ export default function OrderPage() {
     return (
       <div className="min-h-screen bg-[#fdf8f2]">
         {hero}
-        <main className="max-w-xl mx-auto px-4 py-10">
-          <div className="bg-white rounded-2xl border border-[#e8ddd0] shadow-sm p-8 text-center">
+        <main className="max-w-xl mx-auto px-4 py-10 space-y-4">
+          {/* Confirmation card */}
+          <div className="bg-white rounded-2xl border border-[#e8ddd0] shadow-sm p-7 text-center">
             <p className="text-5xl mb-4">✅</p>
             <h2 className="text-xl font-bold text-[#1c1208] mb-2">Pesanan Berhasil Diterima!</h2>
-            <p className="text-sm text-[#8a7060] leading-relaxed mb-5">
+            <p className="text-sm text-[#8a7060] leading-relaxed">
               Tim kami akan segera menghubungi kamu via WhatsApp untuk konfirmasi pesanan.
             </p>
-            <div className="bg-[#fdf8f2] rounded-xl border border-[#e8ddd0] p-4 text-left mb-6">
-              <p className="font-semibold text-[#1c1208]">{orderSuccess.name}</p>
-              <p className="text-sm text-[#5a3e2b] mt-1">{orderSuccess.jam_antar}</p>
-              <p className="text-sm font-bold text-[#7b1d1d] mt-1">
-                Total: {formatRupiah(orderSuccess.total)} <span className="text-xs font-normal text-[#8a7060]">(incl. ongkir)</span>
-              </p>
+          </div>
+
+          {/* Order summary card */}
+          <div className="bg-white rounded-2xl border border-[#e8ddd0] shadow-sm p-5">
+            <p className="text-[10px] text-[#7b1d1d] font-bold uppercase tracking-widest mb-3">Detail Pesanan</p>
+
+            <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#f0e8de]">
+              <div>
+                <p className="font-bold text-[#1c1208]">{orderSuccess.name}</p>
+                <p className="text-xs text-[#8a7060] mt-0.5">{orderSuccess.jam_antar}</p>
+              </div>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                orderSuccess.paymentMethod === "cash"
+                  ? "bg-amber-100 text-amber-700"
+                  : "bg-green-100 text-green-700"
+              }`}>
+                {orderSuccess.paymentMethod === "cash" ? "TUNAI" : orderSuccess.paymentMethod === "transfer_mandiri" ? "MANDIRI" : "BCA"}
+              </span>
             </div>
+
+            <div className="space-y-2">
+              {orderSuccess.items.map((it) => (
+                <div key={it.name} className="flex items-center justify-between gap-2">
+                  <p className="text-sm text-[#1c1208]">{it.qty}× {it.name}</p>
+                  <p className="text-sm font-semibold text-[#5a3e2b] shrink-0">{formatRupiah(it.price * it.qty)}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-[#f0e8de] space-y-1.5">
+              <div className="flex justify-between text-sm text-[#8a7060]">
+                <span>Ongkos Kirim</span>
+                <span>{formatRupiah(ONGKIR)}</span>
+              </div>
+              <div className="flex justify-between items-center border-t border-[#f0e8de] pt-1.5">
+                <span className="text-sm font-bold text-[#1c1208]">Total</span>
+                <span className="text-lg font-bold text-[#7b1d1d]">{formatRupiah(orderSuccess.total)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="space-y-2">
+            <a
+              href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Halo Babiqu! Saya baru saja memasukkan pesanan atas nama " + orderSuccess.name + ". Bisa dibantu konfirmasi?")}`}
+              target="_blank" rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-3.5 rounded-xl hover:bg-green-700 transition text-[15px]"
+            >
+              <MessageCircle className="w-5 h-5" />
+              Chat WhatsApp Kami
+            </a>
             <button
               onClick={resetForm}
-              className="w-full bg-[#7b1d1d] text-white font-bold py-4 rounded-xl hover:bg-[#6a1717] transition text-[15px]"
+              className="w-full bg-[#7b1d1d] text-white font-bold py-3.5 rounded-xl hover:bg-[#6a1717] transition text-[15px]"
             >
               Kembali &amp; Pesan Lagi
             </button>
@@ -424,7 +496,7 @@ export default function OrderPage() {
             <span>PO tutup: <span className="font-semibold text-white">{formatBatchDate(activeBatch.close_date)}</span></span>
             <span>Antar: <span className="font-semibold text-white">{formatBatchDate(activeBatch.delivery_date)}</span></span>
             {activeBatch.max_orders != null && (
-              <span>Sisa kuota: <span className="font-semibold text-white">{Math.max(0, activeBatch.max_orders - batchOrderCount)}/{activeBatch.max_orders}</span></span>
+              <span>Sisa kuota: <span className="font-semibold text-white">{Math.max(0, activeBatch.max_orders - batchOrderCount)}/{activeBatch.max_orders} porsi</span></span>
             )}
           </div>
           {activeBatch.notes && <p className="text-xs text-red-200 mt-1.5 italic">{activeBatch.notes}</p>}
@@ -457,7 +529,7 @@ export default function OrderPage() {
                       ? handleWaInput(e.target.value)
                       : setForm((prev) => ({ ...prev, [key]: e.target.value }))
                   }
-                  onBlur={() => touch(key)}
+                  onBlur={key === "nomor_wa" ? handleWaBlur : () => touch(key)}
                   placeholder={meta.placeholder}
                   className={`w-full border rounded-lg px-4 py-2.5 text-[15px] text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none transition ${
                     err
@@ -841,6 +913,16 @@ export default function OrderPage() {
       <footer className="text-center py-8 text-xs text-[#b8a898]">
         © 2026 Babiqu · Signature Roast Pork
       </footer>
+
+      {/* Floating WA help button */}
+      <a
+        href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Halo Babiqu, saya butuh bantuan dengan pesanan saya.")}`}
+        target="_blank" rel="noopener noreferrer"
+        className="fixed bottom-6 right-4 z-50 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg flex items-center gap-2 px-4 py-3 text-sm font-bold transition active:scale-95"
+      >
+        <MessageCircle className="w-4 h-4 shrink-0" />
+        Bantuan
+      </a>
 
       {/* Proof image lightbox */}
       {proofLightbox && proofPreview && (
