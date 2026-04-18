@@ -624,7 +624,7 @@ export default function DashboardPage() {
             { label: "MENUNGGU",   value: todayPending.length,   Icon: Clock,         iconBg: "bg-amber-50",  iconColor: "text-amber-500", numColor: "text-amber-600" },
             { label: "KONFIRMASI", value: todayConfirmed.length, Icon: CheckCircle2,  iconBg: "bg-blue-50",   iconColor: "text-blue-500",  numColor: "text-blue-600" },
             { label: "SELESAI",    value: todayDelivered.length, Icon: CheckCheck,    iconBg: "bg-green-50",  iconColor: "text-green-500", numColor: "text-green-700" },
-            { label: "OMZET",      value: formatRupiah(currentBatchRevenue), Icon: Wallet, iconBg: "bg-red-50", iconColor: "text-[#7b1d1d]", numColor: "text-[#7b1d1d]", small: true },
+            { label: "OMZET BATCH", value: formatRupiah(currentBatchRevenue), Icon: Wallet, iconBg: "bg-red-50", iconColor: "text-[#7b1d1d]", numColor: "text-[#7b1d1d]", small: true },
           ] as const).map((s) => (
             <div key={s.label} className="bg-white rounded-2xl shadow-sm px-4 py-3.5">
               <span className={`inline-flex items-center justify-center w-7 h-7 rounded-xl ${s.iconBg} mb-2`}>
@@ -1258,10 +1258,10 @@ export default function DashboardPage() {
             {/* Overview stats — 2×2 */}
             <div className="grid grid-cols-2 gap-3">
               {([
-                { label: "TOTAL OMZET",    value: formatRupiah(totalRevenue),  Icon: Wallet,       iconBg: "bg-emerald-50", iconColor: "text-emerald-600", numColor: "text-emerald-700", small: true },
-                { label: "KEUNTUNGAN",     value: formatRupiah(totalProfit),   Icon: totalProfit >= 0 ? TrendingUp : TrendingDown, iconBg: totalProfit >= 0 ? "bg-green-50" : "bg-red-50", iconColor: totalProfit >= 0 ? "text-green-600" : "text-red-500", numColor: totalProfit >= 0 ? "text-green-700" : "text-red-600", small: true },
-                { label: "TINGKAT SELESAI", value: `${completionRate}%`,       Icon: CheckCheck,   iconBg: "bg-blue-50",    iconColor: "text-blue-500",   numColor: "text-blue-700",    small: false },
-                { label: "RATA-RATA ORDER", value: formatRupiah(avgOrderValue), Icon: Receipt,     iconBg: "bg-violet-50",  iconColor: "text-violet-500", numColor: "text-violet-700",  small: true },
+                { label: "PEMASUKAN",     value: formatRupiah(totalRevenue),  Icon: Wallet,       iconBg: "bg-emerald-50", iconColor: "text-emerald-600", numColor: "text-emerald-700", small: true },
+                { label: "KEUNTUNGAN",    value: formatRupiah(totalProfit),   Icon: totalProfit >= 0 ? TrendingUp : TrendingDown, iconBg: totalProfit >= 0 ? "bg-green-50" : "bg-red-50", iconColor: totalProfit >= 0 ? "text-green-600" : "text-red-500", numColor: totalProfit >= 0 ? "text-green-700" : "text-red-600", small: true },
+                { label: "TOTAL PESANAN", value: anActive.length,             Icon: ClipboardList, iconBg: "bg-blue-50",   iconColor: "text-blue-500",   numColor: "text-blue-700",    small: false },
+                { label: "TOTAL PORSI",   value: totalPortions(anActive),     Icon: CheckCheck,   iconBg: "bg-amber-50",   iconColor: "text-amber-500",  numColor: "text-amber-600",   small: false },
               ] as const).map((s) => (
                 <div key={s.label} className="bg-white rounded-2xl shadow-sm px-4 py-3.5">
                   <span className={`inline-flex items-center justify-center w-7 h-7 rounded-xl ${s.iconBg} mb-2`}>
@@ -1760,8 +1760,6 @@ export default function DashboardPage() {
             return (
               <button key={key} onClick={() => { setTab(key as typeof tab); closeModal(); }}
                 className="relative flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors">
-                {/* Active top bar */}
-                <span className={`absolute top-0 left-2 right-2 h-[2px] rounded-b-full transition-all ${isActive ? "bg-[#7b1d1d]" : "bg-transparent"}`} />
                 <Icon
                   size={20}
                   strokeWidth={isActive ? 2.2 : 1.6}
