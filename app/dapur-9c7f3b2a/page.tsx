@@ -403,29 +403,32 @@ export default function DashboardPage() {
 
     const subtotal = newItems.reduce((s, it) => s + it.subtotal, 0);
     const newTotal = subtotal > 0 ? subtotal + ONGKIR : 0;
-    const totalChanged = newTotal !== order.total;
     const diff = newTotal - order.total;
     const isTransfer = order.payment_method !== "cash";
 
-    // If transfer order and total changed → revert to pending so admin re-confirms payment
-    const newStatus: OrderStatus = (totalChanged && isTransfer && order.status === "confirmed")
+    // Rule: any addition after order placed = pay cash at delivery
+    // Only revert to pending if total DECREASES on a transfer (overpayment needs resolution)
+    const newStatus: OrderStatus = (diff < 0 && isTransfer && order.status === "confirmed")
       ? "pending"
       : order.status;
 
-    // Build logs
-    const editLog: OrderLog = {
-      at: new Date().toISOString(),
-      action: "edited",
-      detail: totalChanged
-        ? `Item diubah: ${formatRupiah(order.total)} → ${formatRupiah(newTotal)} (${diff > 0 ? "+" : ""}${formatRupiah(diff)})`
-        : "Item diubah (total sama)",
-    };
+    // Build log entry
+    let logDetail: string;
+    if (diff > 0) {
+      logDetail = `Item ditambah (+${formatRupiah(diff)}) — kekurangan bayar tunai saat antar`;
+    } else if (diff < 0) {
+      logDetail = `Item dikurangi (${formatRupiah(diff)}) — total baru ${formatRupiah(newTotal)}`;
+    } else {
+      logDetail = "Item diubah (total sama)";
+    }
+
+    const editLog: OrderLog = { at: new Date().toISOString(), action: "edited", detail: logDetail };
     let updatedLogs = [...(order.logs ?? []), editLog];
     if (newStatus !== order.status) {
       updatedLogs = [...updatedLogs, {
         at: new Date().toISOString(),
         action: newStatus,
-        detail: "Status kembali ke Menunggu — konfirmasi ulang pembayaran",
+        detail: `Status kembali ke Menunggu — ada kelebihan bayar ${formatRupiah(Math.abs(diff))}`,
       }];
     }
 
@@ -1576,6 +1579,27 @@ export default function DashboardPage() {
                   </div>
                 )}
 
+                {/* Cash due banner — shown if order was edited with additions */}
+                {(() => {
+                  const cashDue = (o.logs ?? [])
+                    .filter(l => l.action === "edited" && l.detail.includes("tunai saat antar"))
+                    .reduce((sum, l) => {
+                      const match = l.detail.match(/\+Rp\s?([\d.]+)/);
+                      if (!match) return sum;
+                      return sum + parseInt(match[1].replace(/\./g, ""));
+                    }, 0);
+                  if (cashDue <= 0) return null;
+                  return (
+                    <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+                      <Banknote size={18} className="text-amber-500 shrink-0" />
+                      <div>
+                        <p className="text-sm font-bold text-amber-700">Kekurangan tunai: {formatRupiah(cashDue)}</p>
+                        <p className="text-xs text-amber-600 mt-0.5">Bayar saat antar (dari penambahan item)</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Customer info */}
                 <div className="bg-white rounded-2xl border border-[#e8ddd0] divide-y divide-[#f0e8de]">
                   <div className="px-4 py-3">
@@ -1753,20 +1777,23 @@ export default function DashboardPage() {
                       const isTransfer = o.payment_method !== "cash";
                       return (
                         <div className="border-t border-[#f0e8de]">
-                          {/* Payment warning for transfer orders */}
-                          {totalChanged && isTransfer && (
-                            <div className={`px-4 py-2.5 flex items-start gap-2 ${diff > 0 ? "bg-amber-50" : "bg-blue-50"}`}>
-                              <span className="text-sm mt-0.5">{diff > 0 ? "⚠️" : "ℹ️"}</span>
-                              <div className="text-xs">
-                                <p className={`font-bold ${diff > 0 ? "text-amber-700" : "text-blue-700"}`}>
-                                  {diff > 0
-                                    ? `Total naik ${formatRupiah(diff)} — minta pelanggan transfer kekurangan`
-                                    : `Total turun ${formatRupiah(Math.abs(diff))} — ada kelebihan bayar`}
-                                </p>
-                                {o.status === "confirmed" && (
-                                  <p className={`mt-0.5 ${diff > 0 ? "text-amber-600" : "text-blue-600"}`}>
-                                    Status akan kembali ke "Menunggu" setelah disimpan
+                          {/* Payment note */}
+                          {diff !== 0 && (
+                            <div className={`px-4 py-2.5 flex items-start gap-2.5 ${diff > 0 ? "bg-amber-50" : "bg-blue-50"}`}>
+                              <div className="text-xs leading-relaxed">
+                                {diff > 0 ? (
+                                  <p className="font-bold text-amber-700">
+                                    +{formatRupiah(diff)} — bayar tunai saat antar
                                   </p>
+                                ) : (
+                                  <>
+                                    <p className="font-bold text-blue-700">
+                                      Total turun {formatRupiah(Math.abs(diff))}
+                                    </p>
+                                    {isTransfer && o.status === "confirmed" && (
+                                      <p className="text-blue-600 mt-0.5">Status akan kembali ke "Menunggu"</p>
+                                    )}
+                                  </>
                                 )}
                               </div>
                             </div>
