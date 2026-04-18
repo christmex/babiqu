@@ -460,22 +460,12 @@ export default function OrderPage() {
           </div>
 
           {/* Actions */}
-          <div className="space-y-2">
-            <a
-              href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Halo Babiqu! Saya baru saja memasukkan pesanan atas nama " + orderSuccess.name + ". Bisa dibantu konfirmasi?")}`}
-              target="_blank" rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-3.5 rounded-xl hover:bg-green-700 transition text-[15px]"
-            >
-              <MessageCircle className="w-5 h-5" />
-              Chat WhatsApp Kami
-            </a>
-            <button
-              onClick={resetForm}
-              className="w-full bg-[#7b1d1d] text-white font-bold py-3.5 rounded-xl hover:bg-[#6a1717] transition text-[15px]"
-            >
-              Kembali &amp; Pesan Lagi
-            </button>
-          </div>
+          <button
+            onClick={resetForm}
+            className="w-full bg-[#7b1d1d] text-white font-bold py-4 rounded-xl hover:bg-[#6a1717] transition text-[15px]"
+          >
+            Kembali &amp; Pesan Lagi
+          </button>
         </main>
         <footer className="text-center py-8 text-xs text-[#b8a898]">© 2026 Babiqu · Signature Roast Pork</footer>
       </div>
