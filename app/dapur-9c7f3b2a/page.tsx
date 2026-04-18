@@ -36,11 +36,14 @@ function isBatchDateActive(b: Batch) {
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
   return b.open_date <= today && b.close_date >= today;
 }
-function isBatchActive(b: Batch, orderCount: number) {
-  return isBatchDateActive(b) && !b.is_closed && (b.max_orders == null || orderCount < b.max_orders);
+function isBatchActive(b: Batch, portionCount: number) {
+  return isBatchDateActive(b) && !b.is_closed && (b.max_orders == null || portionCount < b.max_orders);
 }
-function isBatchFull(b: Batch, orderCount: number) {
-  return b.max_orders != null && orderCount >= b.max_orders;
+function isBatchFull(b: Batch, portionCount: number) {
+  return b.max_orders != null && portionCount >= b.max_orders;
+}
+function totalPortions(orderList: Order[]) {
+  return orderList.reduce((sum, o) => sum + (o.items?.reduce((s, it) => s + it.qty, 0) ?? 0), 0);
 }
 function isBatchUpcoming(b: Batch) {
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
@@ -420,8 +423,11 @@ export default function DashboardPage() {
 
   const isPending = (s: OrderStatus) => s === "active" || s === "pending";
 
-  // Current open batch
-  const currentBatch = batches.find(b => isBatchActive(b, orders.filter(o => o.batch_id === b.id && o.status !== "cancelled").length));
+  // Current open batch — capacity counted in portions
+  const currentBatch = batches.find(b => {
+    const nonCancelled = orders.filter(o => o.batch_id === b.id && o.status !== "cancelled");
+    return isBatchActive(b, totalPortions(nonCancelled));
+  });
 
   // Quick stats — based on current/active batch or today
   const statsOrders = currentBatch
@@ -484,8 +490,8 @@ export default function DashboardPage() {
       revenue,
       expTotal,
       profit: revenue - expTotal,
-      orderCount: bConfirmed.length,
-      pendingCount: bOrders.filter(o => isPending(o.status)).length,
+      portionCount: totalPortions(bConfirmed),
+      pendingPortions: totalPortions(bOrders.filter(o => isPending(o.status))),
       expItems: bExps,
     };
   }).filter(b => orders.some(o => o.batch_id === b.batch.id) || b.expTotal > 0);
@@ -690,7 +696,7 @@ export default function DashboardPage() {
               <p className="text-center text-[#b8a898] py-8">Belum ada data keuangan per batch.</p>
             )}
 
-            {batchKeuangan.map(({ batch, revenue, expTotal, profit, orderCount, pendingCount, expItems }) => {
+            {batchKeuangan.map(({ batch, revenue, expTotal, profit, portionCount, pendingPortions, expItems }) => {
               const isActiveBatch = batch.id === currentBatch?.id;
               const expByCategory = EXPENSE_CATEGORIES.map(cat => ({
                 cat, total: expItems.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0),
@@ -710,12 +716,12 @@ export default function DashboardPage() {
                       </p>
                     </div>
                     <div className="text-right">
-                      {pendingCount > 0 && (
+                      {pendingPortions > 0 && (
                         <p className={`text-[10px] font-bold mb-1 ${isActiveBatch ? "text-amber-200" : "text-amber-600"}`}>
-                          {pendingCount} menunggu
+                          {pendingPortions} porsi menunggu
                         </p>
                       )}
-                      <p className={`text-xs ${isActiveBatch ? "text-red-200" : "text-[#8a7060]"}`}>{orderCount} pesanan konfirmasi</p>
+                      <p className={`text-xs ${isActiveBatch ? "text-red-200" : "text-[#8a7060]"}`}>{portionCount} porsi konfirmasi</p>
                     </div>
                   </div>
 
@@ -879,7 +885,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-2 overflow-hidden">
                   <div className="min-w-0">
-                    <label className="block text-[11px] text-[#8a7060] mb-1">Maks. Pesanan</label>
+                    <label className="block text-[11px] text-[#8a7060] mb-1">Maks. Porsi</label>
                     <input value={batchForm.max_orders} onChange={(e) => setBatchForm((p) => ({ ...p, max_orders: e.target.value.replace(/\D/g, "") }))}
                       placeholder="Tak terbatas" inputMode="numeric"
                       className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
@@ -914,9 +920,9 @@ export default function DashboardPage() {
                 const batchExp = expenses.filter((e) => e.batch_id === batch.id);
                 const batchExpTotal = batchExp.reduce((s, e) => s + e.amount, 0);
                 const batchProfit = batchRevenue - batchExpTotal;
-                const orderCount = batchOrders.length;
-                const isActive = isBatchActive(batch, orderCount);
-                const isFull = isBatchFull(batch, orderCount);
+                const portionCount = totalPortions(batchOrders);
+                const isActive = isBatchActive(batch, portionCount);
+                const isFull = isBatchFull(batch, portionCount);
                 const isUpcoming = isBatchUpcoming(batch);
 
                 return (
@@ -951,7 +957,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-2 overflow-hidden">
                           <div className="min-w-0">
-                            <label className="block text-[11px] text-[#8a7060] mb-1">Maks. Pesanan</label>
+                            <label className="block text-[11px] text-[#8a7060] mb-1">Maks. Porsi</label>
                             <input value={editForm.max_orders} onChange={(e) => setEditForm((p) => ({ ...p, max_orders: e.target.value.replace(/\D/g, "") }))}
                               placeholder="Tak terbatas" inputMode="numeric"
                               className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition" />
@@ -985,7 +991,7 @@ export default function DashboardPage() {
                               <span>Antar: {formatBatchDate(batch.delivery_date)}</span>
                               {batch.max_orders != null && (
                                 <span className={`font-semibold ${isFull ? "text-orange-600" : "text-[#8a7060]"}`}>
-                                  Terisi: {orderCount}/{batch.max_orders}
+                                  Terisi: {portionCount}/{batch.max_orders} porsi
                                 </span>
                               )}
                             </div>
@@ -1028,8 +1034,8 @@ export default function DashboardPage() {
                     {/* Stats grid */}
                     <div className="grid grid-cols-4 gap-2 mb-3">
                       {[
-                        { label: "Pesanan", value: batchOrders.length },
-                        { label: "Selesai", value: batchDelivered.length },
+                        { label: "Porsi", value: portionCount },
+                        { label: "Selesai", value: totalPortions(batchDelivered) },
                         { label: "Batal", value: batchCancelled.length },
                         { label: "Pemasukan", value: formatRupiah(batchRevenue), small: true },
                       ].map((s) => (
@@ -1062,13 +1068,14 @@ export default function DashboardPage() {
                         o => o.batch_id === batch.id && o.status !== "cancelled" && o.status !== "delivered"
                       );
                       if (toDeliver.length === 0) return null;
+                      const toDeliverPortions = totalPortions(toDeliver);
                       const isConfirming = deliverAllBatchId === batch.id;
                       return (
                         <div className="border-t border-[#f0e8de] pt-3 mt-1">
                           {isConfirming ? (
                             <div className="flex items-center gap-3 bg-green-50 border border-green-100 rounded-xl px-3 py-2">
                               <p className="text-xs text-green-700 flex-1">
-                                Set {toDeliver.length} pesanan jadi Selesai?
+                                Set {toDeliver.length} pesanan ({toDeliverPortions} porsi) jadi Selesai?
                               </p>
                               <button
                                 onClick={() => handleDeliverAll(batch.id)}
@@ -1083,7 +1090,7 @@ export default function DashboardPage() {
                             <button
                               onClick={() => setDeliverAllBatchId(batch.id)}
                               className="w-full text-xs font-bold text-green-700 bg-green-50 border border-green-200 hover:bg-green-100 rounded-xl py-2 transition">
-                              ✓ Selesai Semua ({toDeliver.length} pesanan)
+                              ✓ Selesai Semua ({toDeliverPortions} porsi)
                             </button>
                           )}
                         </div>
