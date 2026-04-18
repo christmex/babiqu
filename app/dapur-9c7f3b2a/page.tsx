@@ -114,7 +114,7 @@ function avatarColor(name: string) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const ADMIN_PASSWORD = "iniL@hB!bi";
+const ADMIN_PASSWORD = "M@ntapjiwa00";
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
 
