@@ -283,11 +283,17 @@ export default function DashboardPage() {
           <form onSubmit={handleLogin} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Password</label>
-              <input
-                type="password" value={pwInput} onChange={(e) => { setPwInput(e.target.value); setPwError(""); }}
-                placeholder="••••••••••" disabled={isLocked} autoFocus
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition disabled:opacity-50"
-              />
+              <div className="relative">
+                <input
+                  type={showPw ? "text" : "password"} value={pwInput} onChange={(e) => { setPwInput(e.target.value); setPwError(""); }}
+                  placeholder="••••••••••" disabled={isLocked} autoFocus
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-gray-900 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition disabled:opacity-50"
+                />
+                <button type="button" onClick={() => setShowPw(v => !v)} tabIndex={-1}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+                  {showPw ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
             </div>
             {pwError && (
               <div className={`text-sm rounded-xl px-4 py-3 ${isLocked ? "bg-red-50 border border-red-200 text-red-600" : "bg-amber-50 border border-amber-200 text-amber-700"}`}>
