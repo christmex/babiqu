@@ -2,7 +2,12 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { ClipboardList, BarChart2, Receipt, CalendarDays, ExternalLink, RefreshCw, MessageCircle, TrendingUp } from "lucide-react";
+import {
+  ClipboardList, BarChart2, Receipt, CalendarDays, ExternalLink, RefreshCw,
+  MessageCircle, TrendingUp, TrendingDown, Clock, CheckCircle2, Wallet,
+  Sun, Moon, Banknote, Landmark, FileText, XCircle, CheckCheck, ChevronDown,
+  ChevronUp, Plus, Minus,
+} from "lucide-react";
 import { buildWAMessage, MENUS, ALA_CARTE, ONGKIR, type PaymentMethod } from "@/lib/order-utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -615,15 +620,17 @@ export default function DashboardPage() {
 
         {/* Quick stats — 2×2 grid */}
         <div className="grid grid-cols-2 gap-3 mb-5">
-          {[
-            { label: "MENUNGGU",   value: todayPending.length,   icon: "⏳", iconBg: "bg-amber-50",  numColor: "text-amber-600" },
-            { label: "KONFIRMASI", value: todayConfirmed.length, icon: "✓",  iconBg: "bg-blue-50",   numColor: "text-blue-600" },
-            { label: "SELESAI",    value: todayDelivered.length, icon: "✓",  iconBg: "bg-green-50",  numColor: "text-green-700" },
-            { label: "OMZET",      value: formatRupiah(currentBatchRevenue), icon: "💰", iconBg: "bg-red-50", numColor: "text-[#7b1d1d]", small: true },
-          ].map((s) => (
+          {([
+            { label: "MENUNGGU",   value: todayPending.length,   Icon: Clock,         iconBg: "bg-amber-50",  iconColor: "text-amber-500", numColor: "text-amber-600" },
+            { label: "KONFIRMASI", value: todayConfirmed.length, Icon: CheckCircle2,  iconBg: "bg-blue-50",   iconColor: "text-blue-500",  numColor: "text-blue-600" },
+            { label: "SELESAI",    value: todayDelivered.length, Icon: CheckCheck,    iconBg: "bg-green-50",  iconColor: "text-green-500", numColor: "text-green-700" },
+            { label: "OMZET",      value: formatRupiah(currentBatchRevenue), Icon: Wallet, iconBg: "bg-red-50", iconColor: "text-[#7b1d1d]", numColor: "text-[#7b1d1d]", small: true },
+          ] as const).map((s) => (
             <div key={s.label} className="bg-white rounded-2xl shadow-sm px-4 py-3.5">
-              <span className={`inline-flex items-center justify-center w-7 h-7 rounded-xl ${s.iconBg} text-sm mb-2`}>{s.icon}</span>
-              <p className={`font-black leading-none ${s.numColor} ${s.small ? "text-lg" : "text-3xl"}`}>{s.value}</p>
+              <span className={`inline-flex items-center justify-center w-7 h-7 rounded-xl ${s.iconBg} mb-2`}>
+                <s.Icon size={15} className={s.iconColor} />
+              </span>
+              <p className={`font-black leading-none ${s.numColor} ${"small" in s ? "text-lg" : "text-3xl"}`}>{s.value}</p>
               <p className="text-[9px] text-[#a09080] uppercase tracking-widest font-semibold mt-1.5">{s.label}</p>
             </div>
           ))}
@@ -675,7 +682,7 @@ export default function DashboardPage() {
                   <p className="text-xs font-bold text-white uppercase tracking-widest">
                     Ringkasan Produksi
                   </p>
-                  <span className="text-red-200 text-base font-bold">{showSummary ? "−" : "+"}</span>
+                  {showSummary ? <ChevronUp size={16} className="text-red-200" /> : <ChevronDown size={16} className="text-red-200" />}
                 </button>
                 {showSummary && (
                   <div className="border-t border-[#f0e8de]">
@@ -848,8 +855,8 @@ export default function DashboardPage() {
                   {/* Batch header */}
                   <div className={`px-4 py-3 flex items-center justify-between ${isActiveBatch ? "bg-[#7b1d1d]" : "bg-[#fdf8f2]"}`}>
                     <div>
-                      <p className={`text-xs font-bold uppercase tracking-wider ${isActiveBatch ? "text-red-200" : "text-[#8a7060]"}`}>
-                        {isActiveBatch ? "● AKTIF" : "Batch"}
+                      <p className={`flex items-center gap-1 text-xs font-bold uppercase tracking-wider ${isActiveBatch ? "text-red-200" : "text-[#8a7060]"}`}>
+                        {isActiveBatch && <CheckCircle2 size={11} />}{isActiveBatch ? "AKTIF" : "Batch"}
                       </p>
                       <p className={`font-bold text-sm ${isActiveBatch ? "text-white" : "text-[#1c1208]"}`}>{batch.label}</p>
                       <p className={`text-[11px] ${isActiveBatch ? "text-red-200" : "text-[#8a7060]"}`}>
@@ -1250,15 +1257,17 @@ export default function DashboardPage() {
 
             {/* Overview stats — 2×2 */}
             <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: "TOTAL OMZET", value: formatRupiah(totalRevenue), icon: "💰", iconBg: "bg-emerald-50", numColor: "text-emerald-700", small: true },
-                { label: "KEUNTUNGAN", value: formatRupiah(totalProfit), icon: totalProfit >= 0 ? "📈" : "📉", iconBg: totalProfit >= 0 ? "bg-green-50" : "bg-red-50", numColor: totalProfit >= 0 ? "text-green-700" : "text-red-600", small: true },
-                { label: "TINGKAT SELESAI", value: `${completionRate}%`, icon: "✓", iconBg: "bg-blue-50", numColor: "text-blue-700", small: false },
-                { label: "RATA-RATA ORDER", value: formatRupiah(avgOrderValue), icon: "🧾", iconBg: "bg-violet-50", numColor: "text-violet-700", small: true },
-              ].map((s) => (
+              {([
+                { label: "TOTAL OMZET",    value: formatRupiah(totalRevenue),  Icon: Wallet,       iconBg: "bg-emerald-50", iconColor: "text-emerald-600", numColor: "text-emerald-700", small: true },
+                { label: "KEUNTUNGAN",     value: formatRupiah(totalProfit),   Icon: totalProfit >= 0 ? TrendingUp : TrendingDown, iconBg: totalProfit >= 0 ? "bg-green-50" : "bg-red-50", iconColor: totalProfit >= 0 ? "text-green-600" : "text-red-500", numColor: totalProfit >= 0 ? "text-green-700" : "text-red-600", small: true },
+                { label: "TINGKAT SELESAI", value: `${completionRate}%`,       Icon: CheckCheck,   iconBg: "bg-blue-50",    iconColor: "text-blue-500",   numColor: "text-blue-700",    small: false },
+                { label: "RATA-RATA ORDER", value: formatRupiah(avgOrderValue), Icon: Receipt,     iconBg: "bg-violet-50",  iconColor: "text-violet-500", numColor: "text-violet-700",  small: true },
+              ] as const).map((s) => (
                 <div key={s.label} className="bg-white rounded-2xl shadow-sm px-4 py-3.5">
-                  <span className={`inline-flex items-center justify-center w-7 h-7 rounded-xl ${s.iconBg} text-sm mb-2`}>{s.icon}</span>
-                  <p className={`font-black leading-none ${s.numColor} ${s.small ? "text-lg" : "text-3xl"}`}>{s.value}</p>
+                  <span className={`inline-flex items-center justify-center w-7 h-7 rounded-xl ${s.iconBg} mb-2`}>
+                    <s.Icon size={15} className={s.iconColor} />
+                  </span>
+                  <p className={`font-black leading-none ${s.numColor} ${"small" in s ? "text-lg" : "text-3xl"}`}>{s.value}</p>
                   <p className="text-[9px] text-[#a09080] uppercase tracking-widest font-semibold mt-1.5">{s.label}</p>
                 </div>
               ))}
@@ -1268,13 +1277,14 @@ export default function DashboardPage() {
             <div className="bg-white rounded-2xl shadow-sm p-4">
               <p className="text-[10px] font-bold text-[#8a7060] uppercase tracking-widest mb-3">Status Pesanan</p>
               <div className="grid grid-cols-4 gap-2">
-                {[
-                  { label: "Menunggu", value: orders.filter(o => o.status === "pending" || o.status === "active").length, color: "text-amber-600", bg: "bg-amber-50" },
-                  { label: "Konfirmasi", value: orders.filter(o => o.status === "confirmed").length, color: "text-blue-600", bg: "bg-blue-50" },
-                  { label: "Selesai", value: anDelivered.length, color: "text-green-700", bg: "bg-green-50" },
-                  { label: "Batal", value: anCancelled.length, color: "text-red-500", bg: "bg-red-50" },
-                ].map(s => (
+                {([
+                  { label: "Menunggu",   value: orders.filter(o => o.status === "pending" || o.status === "active").length, Icon: Clock,         color: "text-amber-600", bg: "bg-amber-50" },
+                  { label: "Konfirmasi", value: orders.filter(o => o.status === "confirmed").length,                        Icon: CheckCircle2,  color: "text-blue-600",  bg: "bg-blue-50" },
+                  { label: "Selesai",    value: anDelivered.length,                                                          Icon: CheckCheck,    color: "text-green-700", bg: "bg-green-50" },
+                  { label: "Batal",      value: anCancelled.length,                                                          Icon: XCircle,       color: "text-red-500",   bg: "bg-red-50" },
+                ] as const).map(s => (
                   <div key={s.label} className={`${s.bg} rounded-xl p-2.5 text-center`}>
+                    <s.Icon size={14} className={`${s.color} mx-auto mb-1`} />
                     <p className={`text-xl font-black ${s.color}`}>{s.value}</p>
                     <p className="text-[9px] text-[#a09080] font-semibold mt-0.5">{s.label}</p>
                   </div>
@@ -1285,7 +1295,7 @@ export default function DashboardPage() {
               {anActive.length > 0 && (
                 <div className="mt-3">
                   <div className="flex justify-between text-[10px] text-[#8a7060] mb-1">
-                    <span>{anDelivered.length} selesai dari {anActive.length} pesanan aktif</span>
+                    <span>{anDelivered.length} selesai dari {anActive.length} pesanan valid (non-batal)</span>
                     <span className="font-bold text-green-700">{completionRate}%</span>
                   </div>
                   <div className="w-full bg-[#f0e8de] rounded-full h-2">
@@ -1304,12 +1314,14 @@ export default function DashboardPage() {
                 <p className="text-[10px] font-bold text-[#8a7060] uppercase tracking-widest mb-3">Distribusi Jam Antar</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-amber-50 rounded-xl p-3 text-center">
+                    <Sun size={16} className="text-amber-400 mx-auto mb-1" />
                     <p className="text-2xl font-black text-amber-600">{siangOrders.length}</p>
-                    <p className="text-[10px] text-amber-500 font-semibold mt-0.5">☀ Siang</p>
+                    <p className="text-[10px] text-amber-500 font-semibold mt-0.5">Siang</p>
                   </div>
                   <div className="bg-indigo-50 rounded-xl p-3 text-center">
+                    <Moon size={16} className="text-indigo-400 mx-auto mb-1" />
                     <p className="text-2xl font-black text-indigo-600">{malamOrders.length}</p>
-                    <p className="text-[10px] text-indigo-500 font-semibold mt-0.5">🌙 Malam</p>
+                    <p className="text-[10px] text-indigo-500 font-semibold mt-0.5">Malam</p>
                   </div>
                 </div>
                 {siangOrders.length + malamOrders.length > 0 && (
@@ -1515,7 +1527,7 @@ export default function DashboardPage() {
                   </div>
                   {o.notes?.trim() && (
                     <div className="px-4 py-3 bg-amber-50 border-t border-amber-100">
-                      <p className="text-xs text-[#a07850] italic">📝 {o.notes}</p>
+                      <p className="text-xs text-[#a07850] italic flex items-center gap-1.5"><FileText size={12} /> {o.notes}</p>
                     </div>
                   )}
                   <div className="flex justify-between items-center px-4 py-3 bg-[#fdf8f2] border-t border-[#f0e8de]">
@@ -1525,10 +1537,13 @@ export default function DashboardPage() {
                   {/* Payment */}
                   <div className="px-4 py-3 border-t border-[#f0e8de]">
                     <p className="text-[10px] text-[#8a7060] uppercase tracking-widest font-semibold mb-2">Pembayaran</p>
-                    <span className={`text-sm font-bold ${o.payment_method === "cash" ? "text-amber-700" : "text-green-700"}`}>
-                      {o.payment_method === "cash" ? "💵 Tunai"
-                        : o.payment_method === "transfer_mandiri" ? "🏦 Transfer Mandiri"
-                        : o.payment_method === "transfer_bca" ? "🏦 Transfer BCA"
+                    <span className={`inline-flex items-center gap-1.5 text-sm font-bold ${o.payment_method === "cash" ? "text-amber-700" : "text-green-700"}`}>
+                      {o.payment_method === "cash"
+                        ? <><Banknote size={15} /> Tunai</>
+                        : o.payment_method === "transfer_mandiri"
+                        ? <><Landmark size={15} /> Transfer Mandiri</>
+                        : o.payment_method === "transfer_bca"
+                        ? <><Landmark size={15} /> Transfer BCA</>
                         : o.payment_method}
                     </span>
                     {o.payment_proof_url && (
@@ -1680,8 +1695,8 @@ export default function DashboardPage() {
                 className="w-full border border-[#d9cfc5] rounded-xl px-3 py-2.5 text-sm text-[#1c1208] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] transition"
               >
                 <option value="all">Semua Waktu</option>
-                <option value="siang">☀️ Siang (11.00–13.00)</option>
-                <option value="malam">🌙 Malam (17.00–19.00)</option>
+                <option value="siang">Siang (11.00–13.00)</option>
+                <option value="malam">Malam (17.00–19.00)</option>
               </select>
             </div>
 
@@ -1738,21 +1753,23 @@ export default function DashboardPage() {
       )}
 
       {/* ── Bottom Nav Dock ─────────────────────────────────────────────── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur shadow-[0_-4px_24px_rgba(0,0,0,0.06)] safe-area-pb">
-        <div className="max-w-2xl mx-auto flex items-center px-2 h-16">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur shadow-[0_-1px_0_rgba(0,0,0,0.06),0_-4px_16px_rgba(0,0,0,0.04)] safe-area-pb">
+        <div className="max-w-2xl mx-auto flex items-stretch px-1 h-16">
           {NAV.map(({ key, label, Icon }) => {
             const isActive = tab === key;
             return (
               <button key={key} onClick={() => { setTab(key as typeof tab); closeModal(); }}
-                className="relative flex-1 flex flex-col items-center justify-center h-full transition-colors">
-                <div className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-full transition-all ${
-                  isActive ? "bg-[#7b1d1d]" : ""
-                }`}>
-                  <Icon size={20} strokeWidth={isActive ? 2.2 : 1.6} className={isActive ? "text-white" : "text-[#c0b0a0]"} />
-                  <span className={`text-[10px] font-bold tracking-wide ${isActive ? "text-white" : "text-[#c0b0a0]"}`}>
-                    {label}
-                  </span>
-                </div>
+                className="relative flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors">
+                {/* Active top bar */}
+                <span className={`absolute top-0 left-2 right-2 h-[2px] rounded-b-full transition-all ${isActive ? "bg-[#7b1d1d]" : "bg-transparent"}`} />
+                <Icon
+                  size={20}
+                  strokeWidth={isActive ? 2.2 : 1.6}
+                  className={`transition-colors ${isActive ? "text-[#7b1d1d]" : "text-[#c0b0a0]"}`}
+                />
+                <span className={`text-[10px] font-bold tracking-wide transition-colors ${isActive ? "text-[#7b1d1d]" : "text-[#c0b0a0]"}`}>
+                  {label}
+                </span>
               </button>
             );
           })}
