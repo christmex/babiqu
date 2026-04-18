@@ -383,7 +383,6 @@ export default function DashboardPage() {
       .map(m => {
         const qty = editOrderQty[m.id];
         const existing = order.items?.find(it => it.menu_id === m.id);
-        // Reuse existing portions if qty matches, otherwise build fresh empty ones
         const portions: Portion[] = Array.from({ length: qty }, (_, i) =>
           existing?.portions?.[i] ?? { options: {}, notes: "" }
         );
@@ -392,9 +391,21 @@ export default function DashboardPage() {
 
     const subtotal = newItems.reduce((s, it) => s + it.subtotal, 0);
     const newTotal = subtotal > 0 ? subtotal + ONGKIR : 0;
+    const totalChanged = newTotal !== order.total;
+    const isTransfer = order.payment_method !== "cash";
 
-    await supabase.from("orders").update({ items: newItems, total: newTotal }).eq("id", order.id);
-    const updated = { ...order, items: newItems, total: newTotal };
+    // If transfer order and total changed → revert to pending so admin re-confirms payment
+    const newStatus: OrderStatus = (totalChanged && isTransfer && order.status === "confirmed")
+      ? "pending"
+      : order.status;
+
+    await supabase.from("orders").update({
+      items: newItems,
+      total: newTotal,
+      ...(newStatus !== order.status ? { status: newStatus } : {}),
+    }).eq("id", order.id);
+
+    const updated = { ...order, items: newItems, total: newTotal, status: newStatus };
     setOrders(prev => prev.map(o => o.id === order.id ? updated : o));
     setSelectedOrder(updated);
     setEditingOrderItems(false);
@@ -1676,23 +1687,55 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    {/* New total preview */}
+                    {/* New total preview + payment warning */}
                     {(() => {
                       const allMenus = [...MENUS, ...ALA_CARTE];
                       const subtotal = allMenus.reduce((s, m) => s + m.price * (editOrderQty[m.id] ?? 0), 0);
                       const newTotal = subtotal > 0 ? subtotal + ONGKIR : 0;
                       const hasItems = subtotal > 0;
+                      const diff = newTotal - o.total;
+                      const totalChanged = diff !== 0;
+                      const isTransfer = o.payment_method !== "cash";
                       return (
-                        <div className="px-4 py-3 bg-[#fdf8f2] border-t border-[#f0e8de] flex items-center justify-between gap-3">
-                          <div className="text-xs text-[#8a7060]">
-                            {hasItems ? <>Subtotal + Ongkir = <span className="font-bold text-[#1c1208]">{formatRupiah(newTotal)}</span></> : <span className="text-amber-600">Belum ada item dipilih</span>}
+                        <div className="border-t border-[#f0e8de]">
+                          {/* Payment warning for transfer orders */}
+                          {totalChanged && isTransfer && (
+                            <div className={`px-4 py-2.5 flex items-start gap-2 ${diff > 0 ? "bg-amber-50" : "bg-blue-50"}`}>
+                              <span className="text-sm mt-0.5">{diff > 0 ? "⚠️" : "ℹ️"}</span>
+                              <div className="text-xs">
+                                <p className={`font-bold ${diff > 0 ? "text-amber-700" : "text-blue-700"}`}>
+                                  {diff > 0
+                                    ? `Total naik ${formatRupiah(diff)} — minta pelanggan transfer kekurangan`
+                                    : `Total turun ${formatRupiah(Math.abs(diff))} — ada kelebihan bayar`}
+                                </p>
+                                {o.status === "confirmed" && (
+                                  <p className={`mt-0.5 ${diff > 0 ? "text-amber-600" : "text-blue-600"}`}>
+                                    Status akan kembali ke "Menunggu" setelah disimpan
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          <div className="px-4 py-3 bg-[#fdf8f2] flex items-center justify-between gap-3">
+                            <div className="text-xs text-[#8a7060]">
+                              {hasItems ? (
+                                <div>
+                                  <span className="font-bold text-[#1c1208]">{formatRupiah(newTotal)}</span>
+                                  {totalChanged && (
+                                    <span className={`ml-1.5 font-semibold ${diff > 0 ? "text-amber-600" : "text-blue-600"}`}>
+                                      ({diff > 0 ? "+" : ""}{formatRupiah(diff)})
+                                    </span>
+                                  )}
+                                </div>
+                              ) : <span className="text-amber-600">Belum ada item dipilih</span>}
+                            </div>
+                            <button
+                              onClick={() => handleSaveOrderItems(o)}
+                              disabled={editOrderLoading || !hasItems}
+                              className="px-4 py-2 bg-[#7b1d1d] text-white text-xs font-bold rounded-xl hover:bg-[#6a1717] transition disabled:opacity-40">
+                              {editOrderLoading ? "Menyimpan..." : "Simpan"}
+                            </button>
                           </div>
-                          <button
-                            onClick={() => handleSaveOrderItems(o)}
-                            disabled={editOrderLoading || !hasItems}
-                            className="px-4 py-2 bg-[#7b1d1d] text-white text-xs font-bold rounded-xl hover:bg-[#6a1717] transition disabled:opacity-40">
-                            {editOrderLoading ? "Menyimpan..." : "Simpan"}
-                          </button>
                         </div>
                       );
                     })()}
