@@ -6,7 +6,7 @@ import {
   ClipboardList, BarChart2, Receipt, CalendarDays, ExternalLink, RefreshCw,
   MessageCircle, TrendingUp, TrendingDown, Clock, CheckCircle2, Wallet,
   Sun, Moon, Banknote, Landmark, FileText, XCircle, CheckCheck, ChevronDown,
-  ChevronUp, Plus, Minus,
+  ChevronUp, Plus, Minus, Eye, EyeOff,
 } from "lucide-react";
 import { buildWAMessage, MENUS, ALA_CARTE, ONGKIR, type PaymentMethod } from "@/lib/order-utils";
 
@@ -125,6 +125,7 @@ export default function DashboardPage() {
   const [pwError, setPwError] = useState("");
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
   const [attempts, setAttempts] = useState(0);
+  const [showPw, setShowPw] = useState(false);
 
   useEffect(() => {
     // Check session auth

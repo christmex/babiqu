@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { AlertCircle, Loader2, MessageCircle, Send } from "lucide-react";
+import { AlertCircle, Loader2, MessageCircle, Send, Lock, Target, CheckCircle2, Sun, Moon, Banknote, Landmark, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
   MENUS, ALA_CARTE, BANK_INFO, ONGKIR, WA_NUMBER,
@@ -369,7 +369,9 @@ export default function OrderPage() {
         {hero}
         <main className="max-w-lg mx-auto px-4 py-10">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
-            <p className="text-4xl mb-4">{batchClosedFull ? "🎯" : "🔒"}</p>
+            <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 bg-gray-100">
+              {batchClosedFull ? <Target size={24} className="text-gray-500" /> : <Lock size={24} className="text-gray-500" />}
+            </div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
               {batchClosedFull ? "Kuota Penuh!" : "PO Sedang Tutup"}
             </h2>
@@ -414,7 +416,7 @@ export default function OrderPage() {
           {/* Confirmation card */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
             <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">✅</span>
+              <CheckCircle2 size={28} className="text-green-500" />
             </div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Pesanan Berhasil Diterima!</h2>
             <p className="text-sm text-gray-500 leading-relaxed">
@@ -542,8 +544,8 @@ export default function OrderPage() {
           {(() => {
             const err = fieldError("jam_antar");
             const options = [
-              { value: "11.00 - 13.00 (Siang)", label: "Siang", sub: "11.00 – 13.00", icon: "☀️" },
-              { value: "17.00 - 19.00 (Malam)", label: "Malam", sub: "17.00 – 19.00", icon: "🌙" },
+              { value: "11.00 - 13.00 (Siang)", label: "Siang", sub: "11.00 – 13.00", Icon: Sun },
+              { value: "17.00 - 19.00 (Malam)", label: "Malam", sub: "17.00 – 19.00", Icon: Moon },
             ];
             return (
               <div data-field="jam_antar">
@@ -561,7 +563,7 @@ export default function OrderPage() {
                           ? "border-red-200 bg-white text-gray-400"
                           : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
                       }`}>
-                      <span className="text-2xl">{opt.icon}</span>
+                      <opt.Icon size={20} />
                       <span className="text-sm font-semibold">{opt.label}</span>
                       <span className="text-xs opacity-60">{opt.sub}</span>
                     </button>
@@ -793,17 +795,17 @@ export default function OrderPage() {
 
           <div className="flex gap-2 mb-5">
             {([
-              ["cash",             "💵", "Tunai"],
-              ["transfer_mandiri", "🏦", "Mandiri"],
-              ["transfer_bca",     "🏦", "BCA"],
-            ] as [PaymentMethod, string, string][]).map(([val, icon, label]) => (
+              ["cash",             Banknote,  "Tunai"],
+              ["transfer_mandiri", Landmark,  "Mandiri"],
+              ["transfer_bca",     Landmark,  "BCA"],
+            ] as [PaymentMethod, React.ElementType, string][]).map(([val, Icon, label]) => (
               <button key={val} type="button" onClick={() => { setPaymentMethod(val); setProofFile(null); setProofPreview(null); }}
-                className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-xl border-2 text-xs font-semibold transition ${
+                className={`flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 text-xs font-semibold transition ${
                   paymentMethod === val
                     ? "border-[#7b1d1d] bg-[#7b1d1d]/5 text-[#7b1d1d]"
                     : "border-gray-200 text-gray-400 hover:border-gray-300 bg-white"
                 }`}>
-                <span className="text-base">{icon}</span>
+                <Icon size={18} />
                 {label}
               </button>
             ))}
@@ -837,12 +839,12 @@ export default function OrderPage() {
                     onClick={() => setProofLightbox(true)}
                     className="w-full max-h-48 object-cover rounded-xl border border-gray-200 cursor-zoom-in" />
                   <button type="button" onClick={() => { setProofFile(null); setProofPreview(null); }}
-                    className="absolute top-2 right-2 bg-white/90 text-gray-500 hover:text-red-500 rounded-full w-7 h-7 flex items-center justify-center text-lg font-bold shadow-sm transition">×</button>
+                    className="absolute top-2 right-2 bg-white/90 text-gray-500 hover:text-red-500 rounded-full w-7 h-7 flex items-center justify-center shadow-sm transition"><X size={14} /></button>
                   <span className="absolute bottom-2 left-2 text-[10px] bg-black/40 text-white rounded px-1.5 py-0.5">Tap untuk perbesar</span>
                 </div>
               ) : (
                 <label className="flex flex-col items-center gap-2 border-2 border-dashed border-gray-200 rounded-xl py-7 cursor-pointer hover:border-[#7b1d1d]/40 hover:bg-gray-50 transition">
-                  <span className="text-2xl">📎</span>
+                  <Banknote size={22} className="text-gray-400" />
                   <span className="text-sm font-medium text-gray-600">Upload Bukti Transfer</span>
                   <span className="text-xs text-gray-400">JPG, PNG, HEIC · Auto-compress ke maks 2MB</span>
                   <input type="file" accept="image/*" className="hidden"
@@ -863,7 +865,7 @@ export default function OrderPage() {
 
           {paymentMethod === "cash" && (
             <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
-              <p className="text-sm text-amber-700">💵 Pembayaran tunai dilakukan saat pesanan diterima.</p>
+              <p className="flex items-center gap-2 text-sm text-amber-700"><Banknote size={16} /> Pembayaran tunai dilakukan saat pesanan diterima.</p>
             </div>
           )}
         </section>
