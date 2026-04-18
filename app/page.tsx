@@ -2,76 +2,15 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { AlertCircle, MessageCircle, Loader2, Trash2 } from "lucide-react";
+import { AlertCircle, Loader2, Send } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-
-const MENUS = [
-  {
-    id: "signature-andaliman",
-    name: "Signature Andaliman Pork Set",
-    price: 40000,
-    includes: ["Babi Panggang Merah", "Sambal Andaliman", "Sup Sayur Asin"],
-    options: [
-      {
-        key: "nasi",
-        label: "Pilihan Nasi",
-        choices: ["Nasi Kecombrang", "Nasi Putih"],
-      },
-    ],
-  },
-  {
-    id: "classic-roast",
-    name: "Classic Roast Pork Set",
-    price: 40000,
-    includes: ["Babi Panggang Merah", "Sambal Bawang Cuka", "Sup Sayur Asin"],
-    options: [
-      {
-        key: "nasi",
-        label: "Pilihan Nasi",
-        choices: ["Nasi Kecombrang", "Nasi Putih"],
-      },
-    ],
-  },
-  {
-    id: "sayur-asin-simple",
-    name: "Sayur Asin Simple Set",
-    price: 25000,
-    includes: ["Sup Sayur Asin + Tulang Babi"],
-    options: [
-      {
-        key: "nasi",
-        label: "Pilihan Nasi",
-        choices: ["Nasi Putih", "Nasi Kecombrang"],
-      },
-      {
-        key: "sambal",
-        label: "Pilihan Sambal",
-        choices: ["Sambal Andaliman", "Sambal Bawang Cuka"],
-      },
-    ],
-  },
-];
-
-type Portion = {
-  options: Record<string, string>;
-  notes: string;
-};
-
-type MenuOrder = {
-  qty: number;
-  portions: Portion[];
-  sameForAll: boolean;
-};
-
-type FormData = {
-  name: string;
-  nomor_wa: string;
-  alamat: string;
-  jam_antar: string;
-  notes: string;
-};
-
-const WA_NUMBER = "6285280221998";
+import {
+  MENUS, ALA_CARTE, BANK_INFO, ONGKIR,
+  formatRupiah, formatBatchDate,
+  emptyPortion, calculateTotal, buildOrderItems,
+  isFormComplete as checkFormComplete,
+  type MenuOrder, type FormData, type PaymentMethod,
+} from "@/lib/order-utils";
 
 async function compressImage(file: File, maxMB = 2): Promise<File> {
   const maxBytes = maxMB * 1024 * 1024;
@@ -80,7 +19,6 @@ async function compressImage(file: File, maxMB = 2): Promise<File> {
   return new Promise((resolve) => {
     const img = new window.Image();
     img.onload = () => {
-      // Scale down large dimensions (max 2048px on longest side)
       const maxDim = 2048;
       let { naturalWidth: w, naturalHeight: h } = img;
       if (w > maxDim || h > maxDim) {
@@ -94,7 +32,6 @@ async function compressImage(file: File, maxMB = 2): Promise<File> {
       canvas.height = h;
       canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
 
-      // Step quality down from 0.85 until under maxBytes
       let quality = 0.85;
       const tryEncode = () => {
         canvas.toBlob(
@@ -117,13 +54,6 @@ async function compressImage(file: File, maxMB = 2): Promise<File> {
   });
 }
 
-const BANK_INFO = {
-  transfer_mandiri: { bank: "Bank Mandiri", account: "1090021894001", name: "KORNELIUS SOPHIANO T" },
-  transfer_bca:     { bank: "Bank BCA",     account: "8210598261",    name: "KORNELIUS SOPHIANO T" },
-} as const;
-
-type PaymentMethod = "cash" | "transfer_mandiri" | "transfer_bca";
-
 type Batch = {
   id: string;
   label: string;
@@ -135,19 +65,11 @@ type Batch = {
   max_orders: number | null;
 };
 
-function formatBatchDate(dateStr: string) {
-  return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(
-    new Date(dateStr + "T00:00:00")
-  );
-}
-
-function formatRupiah(amount: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(amount);
-}
+type SuccessData = {
+  name: string;
+  jam_antar: string;
+  total: number;
+};
 
 export default function OrderPage() {
   const [form, setForm] = useState<FormData>({
@@ -158,13 +80,12 @@ export default function OrderPage() {
     notes: "",
   });
 
-  const emptyPortion = (menuId: string): Portion => ({
-    options: Object.fromEntries(MENUS.find((m) => m.id === menuId)!.options.map((o) => [o.key, ""])),
-    notes: "",
-  });
-
   const [orders, setOrders] = useState<Record<string, MenuOrder>>(() =>
     Object.fromEntries(MENUS.map((m) => [m.id, { qty: 0, portions: [], sameForAll: true }]))
+  );
+
+  const [alcOrders, setAlcOrders] = useState<Record<string, MenuOrder>>(() =>
+    Object.fromEntries(ALA_CARTE.map((m) => [m.id, { qty: 0, portions: [], sameForAll: true }]))
   );
 
   const [activeBatch, setActiveBatch] = useState<Batch | null | undefined>(undefined);
@@ -173,12 +94,10 @@ export default function OrderPage() {
   const [batchClosedFull, setBatchClosedFull] = useState(false);
   const [loading, setLoading] = useState(false);
   const [qtyEditing, setQtyEditing] = useState<string | null>(null);
-  const [expandedPortions, setExpandedPortions] = useState<Record<string, number | null>>({});
-  const [addingNote, setAddingNote] = useState<{ menuId: string; text: string; selected: number[] } | null>(null);
-  const [editingNote, setEditingNote] = useState<{ menuId: string; portionIndex: number; text: string } | null>(null);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [orderSuccess, setOrderSuccess] = useState<SuccessData | null>(null);
 
   // Payment
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
@@ -195,13 +114,11 @@ export default function OrderPage() {
         .order("open_date", { ascending: false }).limit(1).maybeSingle();
 
       if (active) {
-        // Count non-cancelled orders in this batch to check quota
         const { count } = await supabase
           .from("orders").select("*", { count: "exact", head: true })
           .eq("batch_id", active.id).neq("status", "cancelled");
         const cnt = count ?? 0;
         setBatchOrderCount(cnt);
-        // If manually closed or quota full → treat as no active batch
         const isFull = active.max_orders != null && cnt >= active.max_orders;
         if (active.is_closed || isFull) {
           setActiveBatch(null);
@@ -239,7 +156,6 @@ export default function OrderPage() {
   };
 
   const handleWaInput = (raw: string) => {
-    // only allow digits, +, -, spaces — strip everything else
     const cleaned = raw.replace(/[^\d+\-\s]/g, "");
     setForm((prev) => ({ ...prev, nomor_wa: cleaned }));
   };
@@ -252,23 +168,12 @@ export default function OrderPage() {
         return;
       }
     }
-    if (activeOrders.length === 0) {
+    if (activeOrders.length === 0 && activeAlcOrders.length === 0) {
       document.querySelector("[data-section='menu']")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      return;
-    }
-    for (const menu of activeOrders) {
-      const menuDef = MENUS.find((m) => m.id === menu.id)!;
-      for (let i = 0; i < orders[menu.id].portions.length; i++) {
-        for (const opt of menuDef.options) {
-          if (!orders[menu.id].portions[i].options[opt.key]) {
-            document.querySelector(`[data-option="${menu.id}-${i}-${opt.key}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-            return;
-          }
-        }
-      }
     }
   };
 
+  // ── Paket qty helpers ──────────────────────────────────────────────────────
   const setQty = (menuId: string, delta: number) => {
     setOrders((prev) => {
       const current = prev[menuId];
@@ -287,10 +192,7 @@ export default function OrderPage() {
       const current = prev[menuId];
       let portions = [...current.portions];
       if (next > current.qty) {
-        // add new empty portions
-        for (let i = current.qty; i < next; i++) {
-          portions.push(emptyPortion(menuId));
-        }
+        for (let i = current.qty; i < next; i++) portions.push(emptyPortion(menuId));
       } else {
         portions = portions.slice(0, next);
       }
@@ -298,142 +200,40 @@ export default function OrderPage() {
     });
   };
 
-  const applyToAll = (menuId: string, sourceIndex: number) => {
-    setOrders((prev) => {
-      const source = prev[menuId].portions[sourceIndex];
-      const portions = prev[menuId].portions.map(() => ({
-        options: { ...source.options },
-        notes: source.notes,
-      }));
-      return { ...prev, [menuId]: { ...prev[menuId], portions } };
-    });
-  };
-
-  const toggleSameForAll = (menuId: string, value: boolean) => {
-    setOrders((prev) => {
+  // ── À la carte qty helpers ─────────────────────────────────────────────────
+  const setAlcQty = (menuId: string, delta: number) => {
+    setAlcOrders((prev) => {
       const current = prev[menuId];
-      if (value && current.portions.length > 0) {
-        // switching to same-for-all: sync all portions to match portion[0]
-        const source = current.portions[0];
-        const portions = current.portions.map((p) => ({ options: { ...source.options }, notes: p.notes }));
-        return { ...prev, [menuId]: { ...current, sameForAll: true, portions } };
-      }
-      return { ...prev, [menuId]: { ...current, sameForAll: value } };
-    });
-    setExpandedPortions((prev) => ({ ...prev, [menuId]: value ? null : 0 }));
-  };
-
-  const setOption = (menuId: string, portionIndex: number, key: string, value: string) => {
-    setOrders((prev) => {
-      const portions = prev[menuId].portions.map((p, i) =>
-        i === portionIndex ? { ...p, options: { ...p.options, [key]: value } } : p
-      );
-      return { ...prev, [menuId]: { ...prev[menuId], portions } };
+      const next = Math.max(0, current.qty + delta);
+      const portions = delta > 0
+        ? [...current.portions, emptyPortion(menuId)]
+        : current.portions.slice(0, next);
+      return { ...prev, [menuId]: { ...current, qty: next, portions } };
     });
   };
 
-  const deletePortion = (menuId: string, portionIndex: number) => {
-    setOrders((prev) => {
-      const portions = prev[menuId].portions.filter((_, i) => i !== portionIndex);
-      return { ...prev, [menuId]: { ...prev[menuId], qty: portions.length, portions } };
-    });
+  const resetForm = () => {
+    setForm({ name: "", nomor_wa: "", alamat: "", jam_antar: "", notes: "" });
+    setOrders(Object.fromEntries(MENUS.map((m) => [m.id, { qty: 0, portions: [], sameForAll: true }])));
+    setAlcOrders(Object.fromEntries(ALA_CARTE.map((m) => [m.id, { qty: 0, portions: [], sameForAll: true }])));
+    setPaymentMethod("cash");
+    setProofFile(null);
+    setProofPreview(null);
+    setProofLightbox(false);
+    setError("");
+    setSubmitted(false);
+    setTouched({});
+    setOrderSuccess(null);
   };
 
-  const setPortionNotes = (menuId: string, portionIndex: number, value: string) => {
-    setOrders((prev) => {
-      const portions = prev[menuId].portions.map((p, i) =>
-        i === portionIndex ? { ...p, notes: value } : p
-      );
-      return { ...prev, [menuId]: { ...prev[menuId], portions } };
-    });
-  };
-
-  const total = MENUS.reduce((sum, menu) => {
-    return sum + menu.price * orders[menu.id].qty;
-  }, 0);
+  const total = calculateTotal(orders, alcOrders);
 
   const activeOrders = MENUS.filter((m) => orders[m.id].qty > 0);
+  const activeAlcOrders = ALA_CARTE.filter((m) => alcOrders[m.id].qty > 0);
 
-  const waDigits = form.nomor_wa.replace(/\D/g, "");
   const isTransfer = paymentMethod !== "cash";
-  const isFormComplete =
-    form.name.trim() !== "" &&
-    waDigits.length >= 9 && waDigits.length <= 15 &&
-    form.alamat.trim() !== "" &&
-    form.jam_antar.trim() !== "" &&
-    activeOrders.length > 0 &&
-    activeOrders.every((menu) => {
-      const ord = orders[menu.id];
-      const toCheck = ord.sameForAll ? [ord.portions[0]] : ord.portions;
-      return toCheck?.every((portion) =>
-        MENUS.find((m) => m.id === menu.id)!.options.every((opt) => portion?.options[opt.key] !== "")
-      ) ?? false;
-    }) &&
-    (!isTransfer || proofFile !== null);
-
-  const validate = () => {
-    if (!form.name.trim()) return "Nama harus diisi";
-    if (!form.nomor_wa.trim()) return "Nomor WA harus diisi";
-    if (!form.alamat.trim()) return "Alamat harus diisi";
-    if (!form.jam_antar.trim()) return "Jam antar harus diisi";
-    if (activeOrders.length === 0) return "Pilih minimal 1 menu";
-    for (const menu of activeOrders) {
-      const menuDef = MENUS.find((m) => m.id === menu.id)!;
-      orders[menu.id].portions.forEach((portion, i) => {
-        for (const opt of menuDef.options) {
-          if (!portion.options[opt.key]) {
-            return `Pilih ${opt.label} untuk ${menu.name} Porsi ${i + 1}`;
-          }
-        }
-      });
-    }
-    return "";
-  };
-
-  const buildWAMessage = (proofUrl?: string) => {
-    const lines = [
-      "*PESANAN BABIQU*",
-      "--------------------",
-      `Nama       : ${form.name}`,
-      `No. WA     : ${form.nomor_wa}`,
-      `Alamat     : ${form.alamat}`,
-      `Jam Antar  : ${form.jam_antar}`,
-      "",
-      "*DETAIL PESANAN*",
-      "--------------------",
-    ];
-
-    for (const menu of activeOrders) {
-      const m = MENUS.find((x) => x.id === menu.id)!;
-      const ord = orders[menu.id];
-      lines.push(`${ord.qty}x ${m.name}`);
-      ord.portions.forEach((portion, i) => {
-        if (ord.qty > 1) lines.push(`  [ Porsi ${i + 1} ]`);
-        for (const opt of m.options) {
-          lines.push(`  ${opt.label}: ${portion.options[opt.key]}`);
-        }
-        if (portion.notes.trim()) lines.push(`  Catatan: ${portion.notes.trim()}`);
-      });
-      lines.push(`  Subtotal: ${formatRupiah(m.price * ord.qty)}`);
-      lines.push("");
-    }
-
-    lines.push("--------------------");
-    lines.push(`*TOTAL: ${formatRupiah(total)}*`);
-    if (form.notes.trim()) lines.push("", `Catatan: ${form.notes}`);
-
-    lines.push("", "*PEMBAYARAN*", "--------------------");
-    if (paymentMethod === "cash") {
-      lines.push("Metode : Tunai (bayar saat diterima)");
-    } else {
-      const bank = BANK_INFO[paymentMethod];
-      lines.push(`Metode : Transfer ${bank.bank}`);
-      lines.push(`Rek    : ${bank.account} a/n ${bank.name}`);
-      if (proofUrl) lines.push(`Bukti  : ${proofUrl}`);
-    }
-
-    return encodeURIComponent(lines.join("\n"));
-  };
+  const hasAnyOrder = activeOrders.length > 0 || activeAlcOrders.length > 0;
+  const isFormComplete = checkFormComplete(form, orders, alcOrders, paymentMethod, proofFile);
 
   const handleSubmit = async () => {
     if (!isFormComplete) {
@@ -444,13 +244,28 @@ export default function OrderPage() {
     setError("");
     setLoading(true);
 
-    // Open the window NOW — synchronously inside the click handler.
-    // Safari blocks window.open() called after any await (treats it as
-    // a programmatic popup, not a user gesture). We open a blank tab
-    // immediately, then redirect it once the DB write succeeds.
-    const waWindow = window.open("", "_blank");
+    // Duplicate detection
+    if (activeBatch) {
+      const { data: existingOrders } = await supabase
+        .from("orders")
+        .select("id, nomor_wa")
+        .eq("batch_id", activeBatch.id)
+        .in("status", ["active", "delivered"]);
 
-    // Upload proof of payment if transfer method selected
+      const normalizedInput = form.nomor_wa.replace(/\D/g, "");
+      const isDuplicate = existingOrders?.some((o: { id: string; nomor_wa: string }) =>
+        o.nomor_wa.replace(/\D/g, "").endsWith(normalizedInput.slice(-9)) ||
+        normalizedInput.endsWith(o.nomor_wa.replace(/\D/g, "").slice(-9))
+      );
+
+      if (isDuplicate) {
+        setError("Nomor WA ini sudah memiliki pesanan aktif di batch ini. Hubungi kami jika ingin mengubah pesanan.");
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Upload proof of payment
     let proofUrl: string | null = null;
     if (isTransfer && proofFile) {
       const ext = proofFile.name.split(".").pop() ?? "jpg";
@@ -461,20 +276,13 @@ export default function OrderPage() {
       if (uploadError) {
         setError("Gagal upload bukti transfer. Coba lagi.");
         setLoading(false);
-        waWindow?.close();
         return;
       }
       const { data: urlData } = supabase.storage.from("payment-proofs").getPublicUrl(filename);
       proofUrl = urlData.publicUrl;
     }
 
-    const items = activeOrders.map((menu) => ({
-      menu_id: menu.id,
-      menu_name: menu.name,
-      qty: orders[menu.id].qty,
-      portions: orders[menu.id].portions,
-      subtotal: menu.price * orders[menu.id].qty,
-    }));
+    const items = buildOrderItems(orders, alcOrders);
 
     const { error: dbError } = await supabase.from("orders").insert({
       name: form.name,
@@ -492,20 +300,14 @@ export default function OrderPage() {
     if (dbError) {
       setError("Gagal menyimpan pesanan. Coba lagi.");
       setLoading(false);
-      waWindow?.close();
       return;
     }
 
-    const waUrl = `https://wa.me/${WA_NUMBER}?text=${buildWAMessage(proofUrl ?? undefined)}`;
-    if (waWindow) {
-      waWindow.location.href = waUrl;
-    } else {
-      window.location.href = waUrl;
-    }
+    setOrderSuccess({ name: form.name, jam_antar: form.jam_antar, total });
     setLoading(false);
   };
 
-  // ── Hero (shared) ──────────────────────────────────────────────────────────
+  // ── Hero ───────────────────────────────────────────────────────────────────
   const hero = (
     <header className="relative text-white text-center overflow-hidden">
       <div className="relative h-[400px] sm:h-[480px] w-full">
@@ -520,7 +322,7 @@ export default function OrderPage() {
     </header>
   );
 
-  // ── Batch loading ───────────────────────────────────────────────────────────
+  // ── Batch loading ──────────────────────────────────────────────────────────
   if (activeBatch === undefined) {
     return (
       <div className="min-h-screen bg-[#fdf8f2]">
@@ -533,7 +335,7 @@ export default function OrderPage() {
     );
   }
 
-  // ── PO Closed ───────────────────────────────────────────────────────────────
+  // ── PO Closed ──────────────────────────────────────────────────────────────
   if (activeBatch === null) {
     return (
       <div className="min-h-screen bg-[#fdf8f2]">
@@ -576,7 +378,39 @@ export default function OrderPage() {
     );
   }
 
-  // ── PO Open ─────────────────────────────────────────────────────────────────
+  // ── Success screen ─────────────────────────────────────────────────────────
+  if (orderSuccess) {
+    return (
+      <div className="min-h-screen bg-[#fdf8f2]">
+        {hero}
+        <main className="max-w-xl mx-auto px-4 py-10">
+          <div className="bg-white rounded-2xl border border-[#e8ddd0] shadow-sm p-8 text-center">
+            <p className="text-5xl mb-4">✅</p>
+            <h2 className="text-xl font-bold text-[#1c1208] mb-2">Pesanan Berhasil Diterima!</h2>
+            <p className="text-sm text-[#8a7060] leading-relaxed mb-5">
+              Tim kami akan segera menghubungi kamu via WhatsApp untuk konfirmasi pesanan.
+            </p>
+            <div className="bg-[#fdf8f2] rounded-xl border border-[#e8ddd0] p-4 text-left mb-6">
+              <p className="font-semibold text-[#1c1208]">{orderSuccess.name}</p>
+              <p className="text-sm text-[#5a3e2b] mt-1">{orderSuccess.jam_antar}</p>
+              <p className="text-sm font-bold text-[#7b1d1d] mt-1">
+                Total: {formatRupiah(orderSuccess.total)} <span className="text-xs font-normal text-[#8a7060]">(incl. ongkir)</span>
+              </p>
+            </div>
+            <button
+              onClick={resetForm}
+              className="w-full bg-[#7b1d1d] text-white font-bold py-4 rounded-xl hover:bg-[#6a1717] transition text-[15px]"
+            >
+              Kembali &amp; Pesan Lagi
+            </button>
+          </div>
+        </main>
+        <footer className="text-center py-8 text-xs text-[#b8a898]">© 2026 Babiqu · Signature Roast Pork</footer>
+      </div>
+    );
+  }
+
+  // ── PO Open ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#fdf8f2]">
       {hero}
@@ -640,7 +474,7 @@ export default function OrderPage() {
             );
           })}
 
-          {/* Jam Antar — toggle */}
+          {/* Jam Antar */}
           {(() => {
             const err = fieldError("jam_antar");
             const options = [
@@ -677,17 +511,17 @@ export default function OrderPage() {
               </div>
             );
           })()}
+
         </section>
 
-        {/* Menu */}
-        <section className="space-y-4" data-section="menu">
+        {/* Menu Paket */}
+        <section className="space-y-3" data-section="menu">
           <h2 className="text-sm font-bold tracking-[0.2em] uppercase text-[#7b1d1d] px-1">
-            Pilih Menu
+            Menu Paket
           </h2>
 
           {MENUS.map((menu) => {
             const ord = orders[menu.id];
-            const subtotal = menu.price * ord.qty;
             const isActive = ord.qty > 0;
 
             return (
@@ -700,26 +534,19 @@ export default function OrderPage() {
                 }`}
               >
                 <div className="p-5">
-                  {/* Menu header */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1">
-                      <h3 className="font-bold text-[#1c1208] leading-snug">
-                        {menu.name}
-                      </h3>
-                      <p className="text-xs text-[#8a7060] mt-1">
-                        {menu.includes.join(" · ")}
-                      </p>
-                      <p className="text-sm font-semibold text-[#7b1d1d] mt-2">
-                        {formatRupiah(menu.price)}
-                      </p>
+                      <h3 className="font-bold text-[#1c1208] leading-snug">{menu.name}</h3>
+                      <p className="text-xs text-[#8a7060] mt-1">{menu.includes.join(" · ")}</p>
+                      <p className="text-sm font-semibold text-[#7b1d1d] mt-2">{formatRupiah(menu.price)}</p>
                     </div>
 
-                    {/* Qty control */}
+                    {/* Qty stepper */}
                     <div className="flex items-center gap-2 shrink-0 mt-1">
                       <button
                         onClick={() => setQty(menu.id, -1)}
-                        className="w-8 h-8 rounded-full border border-[#d9cfc5] text-[#5a3e2b] font-bold text-lg flex items-center justify-center hover:bg-[#f5ede4] transition disabled:opacity-30"
                         disabled={ord.qty === 0}
+                        className="w-8 h-8 rounded-full border border-[#d9cfc5] text-[#5a3e2b] font-bold text-lg flex items-center justify-center hover:bg-[#f5ede4] transition disabled:opacity-30"
                       >
                         −
                       </button>
@@ -759,245 +586,68 @@ export default function OrderPage() {
                     </div>
                   </div>
 
-                  {/* Options (shown when qty > 0) */}
+                  {/* Subtotal row when active */}
                   {isActive && (
-                    <div className="mt-4 pt-4 border-t border-[#f0e8de] space-y-3">
+                    <div className="mt-3 pt-3 border-t border-[#f0e8de] flex justify-end">
+                      <span className="text-sm text-[#7b1d1d] font-semibold">
+                        Subtotal: {formatRupiah(menu.price * ord.qty)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </section>
 
-                      {/* Same-for-all toggle (only when qty > 1) */}
-                      {ord.qty > 1 && (
-                        <div className="flex items-center justify-between bg-[#fdf8f2] rounded-lg px-3 py-2">
-                          <span className="text-xs font-semibold text-[#5a3e2b]">Semua porsi sama?</span>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => toggleSameForAll(menu.id, true)}
-                              className={`px-3 py-1 rounded-full text-xs font-medium border transition ${ord.sameForAll ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"}`}
-                            >Ya, sama</button>
-                            <button
-                              onClick={() => toggleSameForAll(menu.id, false)}
-                              className={`px-3 py-1 rounded-full text-xs font-medium border transition ${!ord.sameForAll ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"}`}
-                            >Beda-beda</button>
-                          </div>
-                        </div>
-                      )}
+        {/* À La Carte */}
+        <section className="space-y-3">
+          <div className="px-1">
+            <h2 className="text-sm font-bold tracking-[0.2em] uppercase text-[#7b1d1d]">
+              À La Carte
+            </h2>
+            <p className="text-xs text-[#8a7060] mt-0.5">Bisa dipesan tanpa menu paket</p>
+          </div>
 
-                      {/* SAME FOR ALL: show one form */}
-                      {ord.sameForAll && ord.portions[0] && (() => {
-                        const portion = ord.portions[0];
-                        return (
-                          <div className="space-y-2">
-                            {menu.options.map((opt) => {
-                              const optErr = submitted && !portion.options[opt.key];
-                              return (
-                                <div key={opt.key} data-option={`${menu.id}-0-${opt.key}`}>
-                                  <div className="flex items-center gap-2 mb-1.5">
-                                    <p className={`text-xs font-semibold tracking-wide uppercase ${optErr ? "text-red-500" : "text-[#5a3e2b]"}`}>{opt.label}</p>
-                                    {optErr && <span className="text-[10px] text-red-500 flex items-center gap-0.5"><AlertCircle className="w-3 h-3" /> Wajib dipilih</span>}
-                                  </div>
-                                  <div className={`flex flex-wrap gap-2 p-2 rounded-lg transition ${optErr ? "bg-red-50 ring-1 ring-red-300" : ""}`}>
-                                    {opt.choices.map((choice) => (
-                                      <button key={choice}
-                                        onClick={() => {
-                                          // apply to all portions at once
-                                          setOrders((prev) => {
-                                            const portions = prev[menu.id].portions.map((p) => ({ ...p, options: { ...p.options, [opt.key]: choice } }));
-                                            return { ...prev, [menu.id]: { ...prev[menu.id], portions } };
-                                          });
-                                        }}
-                                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${portion.options[opt.key] === choice ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : optErr ? "bg-white text-red-600 border-red-300 hover:border-red-500" : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"}`}
-                                      >{choice}</button>
-                                    ))}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                            {/* Per-portion notes — inline add panel */}
-                            <div className="border-t border-dashed border-[#e8ddd0] pt-2 space-y-2">
-                              {/* Existing notes chips */}
-                              {ord.portions.some((p) => p.notes.trim()) && (
-                                <div className="space-y-1">
-                                  {ord.portions.map((p, idx) =>
-                                    p.notes.trim() ? (
-                                      <div key={idx} className="flex items-center gap-2 bg-[#f5ede4] rounded-lg px-3 py-1.5">
-                                        <span className="text-[11px] font-bold text-[#a07850] shrink-0">P{idx + 1}</span>
-                                        {editingNote?.menuId === menu.id && editingNote.portionIndex === idx ? (
-                                          <input
-                                            autoFocus
-                                            type="text"
-                                            value={editingNote.text}
-                                            onChange={(e) => setEditingNote((prev) => prev ? { ...prev, text: e.target.value } : null)}
-                                            onBlur={() => {
-                                              if (editingNote.text.trim()) setPortionNotes(menu.id, idx, editingNote.text.trim());
-                                              else setPortionNotes(menu.id, idx, "");
-                                              setEditingNote(null);
-                                            }}
-                                            onKeyDown={(e) => {
-                                              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-                                              if (e.key === "Escape") { setPortionNotes(menu.id, idx, p.notes); setEditingNote(null); }
-                                            }}
-                                            className="flex-1 text-xs text-[#1c1208] bg-transparent border-b border-[#a07850] focus:outline-none focus:border-[#7b1d1d] min-w-0"
-                                          />
-                                        ) : (
-                                          <span
-                                            onClick={() => setEditingNote({ menuId: menu.id, portionIndex: idx, text: p.notes })}
-                                            className="text-xs text-[#1c1208] flex-1 cursor-text hover:text-[#7b1d1d] transition"
-                                          >{p.notes}</span>
-                                        )}
-                                        <button onClick={() => setPortionNotes(menu.id, idx, "")} className="text-[#a07850] hover:text-red-500 transition text-sm leading-none">×</button>
-                                      </div>
-                                    ) : null
-                                  )}
-                                </div>
-                              )}
+          {ALA_CARTE.map((menu) => {
+            const ord = alcOrders[menu.id];
+            const isActive = ord.qty > 0;
+            return (
+              <div key={menu.id}
+                className={`bg-white rounded-2xl border shadow-sm transition-all ${
+                  isActive ? "border-[#7b1d1d] shadow-[0_0_0_1px_#7b1d1d20]" : "border-[#e8ddd0]"
+                }`}>
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <h3 className="font-bold text-[#1c1208] leading-snug">{menu.name}</h3>
+                      <p className="text-xs text-[#8a7060] mt-1">{menu.includes.join(" · ")}</p>
+                      <p className="text-sm font-semibold text-[#7b1d1d] mt-2">{formatRupiah(menu.price)}</p>
+                    </div>
+                    {/* Qty stepper */}
+                    <div className="flex items-center gap-2 shrink-0 mt-1">
+                      <button
+                        onClick={() => setAlcQty(menu.id, -1)}
+                        disabled={ord.qty === 0}
+                        className="w-8 h-8 rounded-full border border-[#d9cfc5] text-[#5a3e2b] font-bold text-lg flex items-center justify-center hover:bg-[#f5ede4] transition disabled:opacity-30"
+                      >
+                        −
+                      </button>
+                      <span className="w-8 text-center font-bold text-[#1c1208]">{ord.qty}</span>
+                      <button
+                        onClick={() => setAlcQty(menu.id, 1)}
+                        className="w-8 h-8 rounded-full bg-[#7b1d1d] text-white font-bold text-lg flex items-center justify-center hover:bg-[#6a1717] transition"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
 
-                              {/* Add note button / inline form */}
-                              {addingNote?.menuId === menu.id ? (
-                                <div className="bg-[#fdf8f2] border border-[#d9cfc5] rounded-xl p-3 space-y-2">
-                                  <p className="text-[11px] font-semibold text-[#5a3e2b] uppercase tracking-wide">Pilih porsi:</p>
-                                  <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
-                                    {ord.portions.map((_, idx) => {
-                                      const sel = addingNote.selected.includes(idx);
-                                      return (
-                                        <button
-                                          key={idx}
-                                          onClick={() => setAddingNote((prev) => prev ? ({
-                                            ...prev,
-                                            selected: sel ? prev.selected.filter((i) => i !== idx) : [...prev.selected, idx]
-                                          }) : null)}
-                                          className={`px-2.5 py-1 rounded-full text-xs font-bold border transition ${sel ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"}`}
-                                        >P{idx + 1}</button>
-                                      );
-                                    })}
-                                    <button
-                                      onClick={() => setAddingNote((prev) => prev ? ({ ...prev, selected: ord.portions.map((_, i) => i) }) : null)}
-                                      className="px-2.5 py-1 rounded-full text-xs font-medium border border-[#d9cfc5] text-[#5a3e2b] hover:border-[#7b1d1d] transition"
-                                    >Semua</button>
-                                  </div>
-                                  <input
-                                    type="text"
-                                    autoFocus
-                                    value={addingNote.text}
-                                    onChange={(e) => setAddingNote((prev) => prev ? ({ ...prev, text: e.target.value }) : null)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter" && addingNote.text.trim() && addingNote.selected.length > 0) {
-                                        addingNote.selected.forEach((idx) => setPortionNotes(menu.id, idx, addingNote.text.trim()));
-                                        setAddingNote(null);
-                                      }
-                                      if (e.key === "Escape") setAddingNote(null);
-                                    }}
-                                    placeholder="Tulis catatan..."
-                                    className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-xs text-[#1c1208] placeholder-[#b8a898] bg-white focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition"
-                                  />
-                                  <div className="flex gap-2">
-                                    <button
-                                      onClick={() => {
-                                        if (addingNote.text.trim() && addingNote.selected.length > 0) {
-                                          addingNote.selected.forEach((idx) => setPortionNotes(menu.id, idx, addingNote.text.trim()));
-                                          setAddingNote(null);
-                                        }
-                                      }}
-                                      disabled={!addingNote.text.trim() || addingNote.selected.length === 0}
-                                      className="flex-1 text-white text-xs font-semibold py-1.5 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed bg-[#7b1d1d] hover:bg-[#6a1717] disabled:hover:bg-[#7b1d1d]"
-                                    >Tambah Catatan</button>
-                                    <button
-                                      onClick={() => setAddingNote(null)}
-                                      className="px-4 text-xs text-[#8a7060] hover:text-[#1c1208] transition"
-                                    >Batal</button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => setAddingNote({ menuId: menu.id, text: "", selected: [] })}
-                                  className="text-xs text-[#7b1d1d] hover:underline font-medium"
-                                >
-                                  + Tambah catatan per porsi
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {/* DIFFERENT: accordion per portion */}
-                      {!ord.sameForAll && ord.portions.map((portion, portionIdx) => {
-                        const isOpen = expandedPortions[menu.id] === portionIdx;
-                        const isConfigured = menu.options.every((opt) => portion.options[opt.key]);
-                        return (
-                          <div key={portionIdx} className="border border-[#e8ddd0] rounded-xl overflow-hidden">
-                            {/* Accordion header */}
-                            <button
-                              onClick={() => setExpandedPortions((prev) => ({ ...prev, [menu.id]: isOpen ? null : portionIdx }))}
-                              className="w-full flex items-center justify-between px-4 py-2.5 bg-[#fdf8f2] hover:bg-[#f5ede4] transition text-left"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-[#a07850] uppercase tracking-wide">Porsi {portionIdx + 1}</span>
-                                {isConfigured && (
-                                  <span className="text-[10px] text-[#8a7060]">
-                                    {menu.options.map((opt) => portion.options[opt.key]).join(" · ")}
-                                    {portion.notes && ` · ${portion.notes.slice(0, 20)}${portion.notes.length > 20 ? "…" : ""}`}
-                                  </span>
-                                )}
-                                {submitted && !isConfigured && (
-                                  <span className="text-[10px] text-red-500 flex items-center gap-0.5"><AlertCircle className="w-3 h-3" /> Belum lengkap</span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); deletePortion(menu.id, portionIdx); }}
-                                  className="text-red-400 hover:text-red-600 transition p-1"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                                <span className="text-[#a07850] text-lg leading-none">{isOpen ? "−" : "+"}</span>
-                              </div>
-                            </button>
-
-                            {/* Accordion body */}
-                            {isOpen && (
-                              <div className="px-4 py-3 space-y-2 border-t border-[#f0e8de]">
-                                {menu.options.map((opt) => {
-                                  const optErr = submitted && !portion.options[opt.key];
-                                  return (
-                                    <div key={opt.key} data-option={`${menu.id}-${portionIdx}-${opt.key}`}>
-                                      <div className="flex items-center gap-2 mb-1.5">
-                                        <p className={`text-xs font-semibold tracking-wide uppercase ${optErr ? "text-red-500" : "text-[#5a3e2b]"}`}>{opt.label}</p>
-                                        {optErr && <span className="text-[10px] text-red-500 flex items-center gap-0.5"><AlertCircle className="w-3 h-3" /> Wajib dipilih</span>}
-                                      </div>
-                                      <div className={`flex flex-wrap gap-2 p-2 rounded-lg transition ${optErr ? "bg-red-50 ring-1 ring-red-300" : ""}`}>
-                                        {opt.choices.map((choice) => (
-                                          <button key={choice}
-                                            onClick={() => setOption(menu.id, portionIdx, opt.key, choice)}
-                                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${portion.options[opt.key] === choice ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : optErr ? "bg-white text-red-600 border-red-300 hover:border-red-500" : "bg-white text-[#5a3e2b] border-[#d9cfc5] hover:border-[#7b1d1d]"}`}
-                                          >{choice}</button>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                                <textarea
-                                  value={portion.notes}
-                                  onChange={(e) => setPortionNotes(menu.id, portionIdx, e.target.value)}
-                                  placeholder={`Catatan porsi ${portionIdx + 1} (opsional)...`}
-                                  rows={2}
-                                  className="w-full border border-[#d9cfc5] rounded-lg px-3 py-2 text-xs text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition resize-none"
-                                />
-                                {ord.qty > 1 && (
-                                  <button
-                                    onClick={() => applyToAll(menu.id, portionIdx)}
-                                    className="text-[11px] text-[#7b1d1d] hover:underline font-medium"
-                                  >
-                                    Salin pengaturan ini ke semua porsi lain
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-
-                      {/* Subtotal */}
-                      <div className="flex justify-end pt-1">
-                        <span className="text-sm text-[#7b1d1d] font-semibold">Subtotal: {formatRupiah(subtotal)}</span>
-                      </div>
+                  {isActive && (
+                    <div className="mt-3 pt-3 border-t border-[#f0e8de] flex justify-end">
+                      <span className="text-sm text-[#7b1d1d] font-semibold">
+                        Subtotal: {formatRupiah(menu.price * ord.qty)}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -1007,55 +657,78 @@ export default function OrderPage() {
         </section>
 
         {/* Order Summary */}
-        {activeOrders.length > 0 && (
+        {hasAnyOrder && (
           <section className="bg-white rounded-2xl shadow-sm border border-[#e8ddd0] p-6">
             <h2 className="text-sm font-bold tracking-[0.2em] uppercase text-[#7b1d1d] mb-4">
               Ringkasan Pesanan
             </h2>
             <div className="space-y-3">
-              {activeOrders.map((menu) => {
+              {activeOrders.map((menu, idx) => {
                 const ord = orders[menu.id];
+                const isLast = idx === activeOrders.length - 1 && activeAlcOrders.length === 0;
                 return (
                   <div key={menu.id}>
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex-1">
-                        <p className="font-semibold text-[#1c1208] text-sm">{menu.name}</p>
-                        {ord.portions.map((portion, i) => (
-                          <div key={i} className="mt-0.5">
-                            <p className="text-xs text-[#8a7060]">
-                              {ord.qty > 1 ? `Porsi ${i + 1}: ` : ""}
-                              {MENUS.find((m) => m.id === menu.id)!.options
-                                .map((opt) => portion.options[opt.key] || "—")
-                                .join(" · ")}
-                            </p>
-                            {portion.notes.trim() && (
-                              <p className="text-xs text-[#a07850] italic ml-1">↳ {portion.notes.trim()}</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                    <div className="flex justify-between items-center gap-2">
+                      <p className="font-semibold text-[#1c1208] text-sm">{menu.name}</p>
                       <div className="text-right shrink-0">
-                        <p className="text-xs text-[#8a7060]">{ord.qty}x {formatRupiah(menu.price)}</p>
-                        <p className="text-sm font-semibold text-[#7b1d1d]">
-                          {formatRupiah(menu.price * ord.qty)}
-                        </p>
+                        <p className="text-xs text-[#8a7060]">{ord.qty}× {formatRupiah(menu.price)}</p>
+                        <p className="text-sm font-semibold text-[#7b1d1d]">{formatRupiah(menu.price * ord.qty)}</p>
                       </div>
                     </div>
-                    {activeOrders.indexOf(menu) < activeOrders.length - 1 && (
-                      <div className="border-b border-[#f0e8de] mt-3" />
-                    )}
+                    {!isLast && <div className="border-b border-[#f0e8de] mt-3" />}
                   </div>
                 );
               })}
+              {activeAlcOrders.map((menu, idx) => {
+                const ord = alcOrders[menu.id];
+                const isLast = idx === activeAlcOrders.length - 1;
+                return (
+                  <div key={menu.id}>
+                    <div className="flex justify-between items-center gap-2">
+                      <p className="font-semibold text-[#1c1208] text-sm">{menu.name}</p>
+                      <div className="text-right shrink-0">
+                        <p className="text-xs text-[#8a7060]">{ord.qty}× {formatRupiah(menu.price)}</p>
+                        <p className="text-sm font-semibold text-[#7b1d1d]">{formatRupiah(menu.price * ord.qty)}</p>
+                      </div>
+                    </div>
+                    {!isLast && <div className="border-b border-[#f0e8de] mt-3" />}
+                  </div>
+                );
+              })}
+
+              {/* Ongkir + Total */}
+              <div className="border-t border-[#f0e8de] pt-3 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-[#8a7060]">Ongkos Kirim</span>
+                  <span className="text-sm text-[#8a7060]">{formatRupiah(ONGKIR)}</span>
+                </div>
+                <div className="flex justify-between items-center border-t border-[#f0e8de] pt-2">
+                  <span className="text-sm font-bold text-[#1c1208]">Total</span>
+                  <span className="text-lg font-bold text-[#7b1d1d]">{formatRupiah(total)}</span>
+                </div>
+              </div>
             </div>
           </section>
         )}
+
+        {/* Catatan (global) */}
+        <section className="bg-white rounded-2xl shadow-sm border border-[#e8ddd0] p-6">
+          <label className="block text-xs font-semibold text-[#5a3e2b] mb-1 tracking-wide uppercase">
+            Catatan Pesanan <span className="text-[#b8a898] font-normal normal-case">(Opsional)</span>
+          </label>
+          <textarea
+            value={form.notes}
+            onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+            placeholder="Ada permintaan khusus atau info tambahan?"
+            rows={2}
+            className="w-full border border-[#d9cfc5] rounded-lg px-4 py-2.5 text-[15px] text-[#1c1208] placeholder-[#b8a898] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition resize-none"
+          />
+        </section>
 
         {/* Payment Method */}
         <section className="bg-white rounded-2xl shadow-sm border border-[#e8ddd0] p-6">
           <p className="text-xs font-bold text-[#5a3e2b] uppercase tracking-wider mb-3">Metode Pembayaran</p>
 
-          {/* Picker */}
           <div className="flex gap-2 mb-4">
             {([
               ["cash",             "💵", "Tunai"],
@@ -1135,21 +808,7 @@ export default function OrderPage() {
 
         {/* Total & CTA */}
         <section className="bg-white rounded-2xl shadow-sm border border-[#e8ddd0] p-6">
-          <div className="flex items-center justify-between mb-5">
-            <span className="text-sm font-semibold text-[#5a3e2b] tracking-wide uppercase">
-              Total Pesanan
-            </span>
-            <span className="text-2xl font-bold text-[#7b1d1d]">
-              {formatRupiah(total)}
-            </span>
-          </div>
-
-          {submitted && activeOrders.length === 0 && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" /> Pilih minimal 1 menu dulu ya
-            </div>
-          )}
-          {error && (
+            {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" /> {error}
             </div>
@@ -1157,10 +816,10 @@ export default function OrderPage() {
 
           <button
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={!isFormComplete || loading}
             className={`w-full text-white font-bold py-4 rounded-xl tracking-wide text-[15px] transition flex items-center justify-center gap-2 ${
               isFormComplete
-                ? "bg-[#7b1d1d] hover:bg-[#6a1717] cursor-pointer"
+                ? "bg-[#7b1d1d] hover:bg-[#6a1717]"
                 : "bg-[#c4a89a] cursor-not-allowed"
             }`}
           >
@@ -1168,13 +827,13 @@ export default function OrderPage() {
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
               <>
-                <MessageCircle className="w-5 h-5" />
-                Pesan via WhatsApp
+                <Send className="w-5 h-5" />
+                Kirim Pesanan
               </>
             )}
           </button>
           <p className="text-center text-xs text-[#b8a898] mt-3">
-            Pesanan akan dikirim ke WhatsApp kami untuk konfirmasi
+            Pesanan kamu akan langsung kami proses. Tim kami akan menghubungi via WA.
           </p>
         </section>
       </main>

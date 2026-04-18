@@ -2,13 +2,14 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { ClipboardList, BarChart2, Receipt, CalendarDays, ExternalLink, RefreshCw } from "lucide-react";
+import { ClipboardList, BarChart2, Receipt, CalendarDays, ExternalLink, RefreshCw, MessageCircle } from "lucide-react";
+import { buildWAMessage, MENUS, ALA_CARTE, ONGKIR, type PaymentMethod } from "@/lib/order-utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Portion = { options: Record<string, string>; notes: string };
 type OrderItem = { menu_id: string; menu_name: string; qty: number; portions: Portion[]; subtotal: number };
-type OrderStatus = "active" | "delivered" | "cancelled";
+type OrderStatus = "active" | "pending" | "confirmed" | "delivered" | "cancelled";
 type Order = {
   id: string; created_at: string; name: string; nomor_wa: string;
   alamat: string; jam_antar: string; items: OrderItem[];
@@ -76,7 +77,64 @@ function isToday(iso: string) { return new Date(iso).toDateString() === new Date
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+const ADMIN_PASSWORD = "iniL@hB!bi";
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+
 export default function DashboardPage() {
+  // ── Auth gate ─────────────────────────────────────────────────────────────
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [pwInput, setPwInput] = useState("");
+  const [pwError, setPwError] = useState("");
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+  const [attempts, setAttempts] = useState(0);
+
+  useEffect(() => {
+    // Check session auth
+    if (sessionStorage.getItem("dapur_auth") === "1") { setIsAuthed(true); return; }
+    // Restore lockout state
+    const lu = Number(sessionStorage.getItem("dapur_locked_until") || 0);
+    const att = Number(sessionStorage.getItem("dapur_attempts") || 0);
+    if (lu > Date.now()) setLockedUntil(lu);
+    setAttempts(att);
+  }, []);
+
+  // Countdown ticker
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!lockedUntil) return;
+    const id = setInterval(() => {
+      setTick((t) => t + 1);
+      if (Date.now() >= lockedUntil) { setLockedUntil(null); setAttempts(0); clearInterval(id); }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [lockedUntil]);
+
+  function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    if (lockedUntil && Date.now() < lockedUntil) return;
+    if (pwInput === ADMIN_PASSWORD) {
+      sessionStorage.setItem("dapur_auth", "1");
+      sessionStorage.removeItem("dapur_attempts");
+      sessionStorage.removeItem("dapur_locked_until");
+      setIsAuthed(true);
+    } else {
+      const newAtt = attempts + 1;
+      setAttempts(newAtt);
+      sessionStorage.setItem("dapur_attempts", String(newAtt));
+      if (newAtt >= MAX_ATTEMPTS) {
+        const until = Date.now() + LOCKOUT_MS;
+        setLockedUntil(until);
+        sessionStorage.setItem("dapur_locked_until", String(until));
+        setPwError(`Terlalu banyak percobaan. Coba lagi dalam 15 menit.`);
+      } else {
+        setPwError(`Password salah. ${MAX_ATTEMPTS - newAtt} percobaan tersisa.`);
+      }
+      setPwInput("");
+    }
+  }
+
+  // ── All dashboard hooks (must come before any early return) ─────────────────
   const [tab, setTab] = useState<"pesanan" | "keuangan" | "pengeluaran" | "batch">("pesanan");
   const [orders, setOrders] = useState<Order[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -143,7 +201,87 @@ export default function DashboardPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { if (isAuthed) fetchAll(); }, [fetchAll, isAuthed]);
+
+  // ── Auth gate render ──────────────────────────────────────────────────────
+  if (!isAuthed) {
+    const isLocked = lockedUntil !== null && Date.now() < lockedUntil;
+    const remaining = isLocked ? Math.ceil((lockedUntil! - Date.now()) / 1000) : 0;
+    const mins = Math.floor(remaining / 60);
+    const secs = remaining % 60;
+    return (
+      <div className="min-h-screen bg-[#fdf8f2] flex items-center justify-center px-4">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <p className="text-[10px] tracking-[0.25em] uppercase text-[#7b1d1d] font-semibold mb-1">Babiqu</p>
+            <h1 className="text-2xl font-bold text-[#1c1208]">Dapur Dashboard</h1>
+            <p className="text-sm text-[#b8a898] mt-1">Masukkan password untuk melanjutkan</p>
+          </div>
+          <form onSubmit={handleLogin} className="bg-white rounded-2xl border border-[#e8ddd0] p-6 space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-[#5a3e2b] mb-2 uppercase tracking-wide">Password</label>
+              <input
+                type="password" value={pwInput} onChange={(e) => { setPwInput(e.target.value); setPwError(""); }}
+                placeholder="••••••••••" disabled={isLocked} autoFocus
+                className="w-full border border-[#d9cfc5] rounded-xl px-4 py-3 text-[#1c1208] bg-[#fdf8f2] focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition disabled:opacity-50"
+              />
+            </div>
+            {pwError && (
+              <div className={`text-sm rounded-xl px-4 py-3 ${isLocked ? "bg-red-50 border border-red-200 text-red-600" : "bg-amber-50 border border-amber-200 text-amber-700"}`}>
+                {isLocked ? `🔒 ${pwError} (${mins}:${String(secs).padStart(2,"0")})` : `⚠️ ${pwError}`}
+              </div>
+            )}
+            <button type="submit" disabled={isLocked || !pwInput}
+              className="w-full bg-[#7b1d1d] text-white font-bold py-3 rounded-xl hover:bg-[#6a1717] transition disabled:opacity-40">
+              {isLocked ? `Terkunci (${mins}:${String(secs).padStart(2,"0")})` : "Masuk"}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // ── WA message builder for admin ─────────────────────────────────────────
+
+  function buildOrderWAUrl(order: Order): string {
+    // Reconstruct orders/alcOrders maps from order items
+    const ordersMap: Record<string, import("@/lib/order-utils").MenuOrder> = {};
+    const alcOrdersMap: Record<string, import("@/lib/order-utils").MenuOrder> = {};
+
+    // Init all to 0
+    MENUS.forEach(m => { ordersMap[m.id] = { qty: 0, portions: [], sameForAll: true }; });
+    ALA_CARTE.forEach(m => { alcOrdersMap[m.id] = { qty: 0, portions: [], sameForAll: true }; });
+
+    // Fill from order items
+    order.items?.forEach(item => {
+      if (ordersMap[item.menu_id] !== undefined) {
+        ordersMap[item.menu_id] = { qty: item.qty, portions: item.portions || [], sameForAll: true };
+      } else if (alcOrdersMap[item.menu_id] !== undefined) {
+        alcOrdersMap[item.menu_id] = { qty: item.qty, portions: item.portions || [], sameForAll: true };
+      } else {
+        // Unknown menu — put in alc bucket so it doesn't get lost
+        alcOrdersMap[item.menu_id] = { qty: item.qty, portions: item.portions || [], sameForAll: true };
+      }
+    });
+
+    const msg = buildWAMessage({
+      form: {
+        name: order.name,
+        nomor_wa: order.nomor_wa,
+        alamat: order.alamat,
+        jam_antar: order.jam_antar,
+        catatan: order.notes,
+      },
+      orders: ordersMap,
+      alcOrders: alcOrdersMap,
+      total: order.total,
+      paymentMethod: order.payment_method as PaymentMethod,
+      proofUrl: order.payment_proof_url ?? undefined,
+    });
+
+    const cleaned = order.nomor_wa.replace(/\D/g, "");
+    return `https://wa.me/${cleaned}?text=${encodeURIComponent(msg)}`;
+  }
 
   // ── Status helpers ────────────────────────────────────────────────────────
 
@@ -166,8 +304,13 @@ export default function DashboardPage() {
     closeModal();
   }
 
+  async function handleConfirm(orderId: string) {
+    await updateStatus(orderId, "confirmed");
+    closeModal();
+  }
+
   async function handleRestore(orderId: string) {
-    await updateStatus(orderId, "active", { cancel_reason: "" });
+    await updateStatus(orderId, "pending", { cancel_reason: "" });
   }
 
   // ── Add expense ──────────────────────────────────────────────────────────
@@ -258,11 +401,14 @@ export default function DashboardPage() {
 
   // ── Derived data ─────────────────────────────────────────────────────────
 
+  const isPending = (s: OrderStatus) => s === "active" || s === "pending";
+
   const todayOrders = orders.filter((o) => isToday(o.created_at));
-  const todayActive = todayOrders.filter((o) => o.status === "active");
+  const todayPending = todayOrders.filter((o) => isPending(o.status));
+  const todayConfirmed = todayOrders.filter((o) => o.status === "confirmed");
   const todayDelivered = todayOrders.filter((o) => o.status === "delivered");
 
-  const periodOrders = orders.filter((o) => isInPeriod(o.created_at, period) && o.status !== "cancelled");
+  const periodOrders = orders.filter((o) => isInPeriod(o.created_at, period) && o.status !== "cancelled" && !isPending(o.status));
   const periodExpenses = expenses.filter((e) => isInPeriod(e.date, period));
   const periodRevenue = periodOrders.reduce((s, o) => s + o.total, 0);
   const periodExpTotal = periodExpenses.reduce((s, e) => s + e.amount, 0);
@@ -297,6 +443,11 @@ export default function DashboardPage() {
   // Current open batch (for labeling filters)
   const currentBatch = batches.find(b => isBatchActive(b, orders.filter(o => o.batch_id === b.id && o.status !== "cancelled").length));
   const poFilterLabel = currentBatch ? currentBatch.label.split(/[—–-]/)[0].trim() : "PO Ini";
+
+  // Omzet for current batch (active + delivered, not cancelled)
+  const currentBatchRevenue = currentBatch
+    ? orders.filter(o => o.batch_id === currentBatch.id && (o.status === "confirmed" || o.status === "delivered")).reduce((s, o) => s + o.total, 0)
+    : orders.filter(o => isToday(o.created_at) && (o.status === "confirmed" || o.status === "delivered")).reduce((s, o) => s + o.total, 0);
 
   const expByCategory = EXPENSE_CATEGORIES.map((cat) => ({
     cat, total: periodExpenses.filter((e) => e.category === cat).reduce((s, e) => s + e.amount, 0),
@@ -340,10 +491,10 @@ export default function DashboardPage() {
         {/* Quick stats — 2×2 on mobile, 4 col on wider */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
           {[
-            { label: "Aktif",        value: todayActive.length, color: "text-[#1c1208]" },
-            { label: "Selesai",      value: todayDelivered.length, color: "text-green-700" },
-            { label: "Batal",        value: todayOrders.filter((o) => o.status === "cancelled").length, color: "text-red-500" },
-            { label: "Omzet Hari Ini", value: formatRupiah(todayDelivered.reduce((s,o)=>s+o.total,0)+todayActive.reduce((s,o)=>s+o.total,0)), color: "text-[#7b1d1d]", small: true },
+            { label: "Menunggu",     value: todayPending.length,    color: "text-amber-600" },
+            { label: "Konfirmasi",   value: todayConfirmed.length,  color: "text-blue-600" },
+            { label: "Selesai",      value: todayDelivered.length,  color: "text-green-700" },
+            { label: "Omzet Batch",  value: formatRupiah(currentBatchRevenue), color: "text-[#7b1d1d]", small: true },
           ].map((s) => (
             <div key={s.label} className="bg-white rounded-2xl border border-[#e8ddd0] px-3 py-2.5">
               <p className="text-[9px] text-[#8a7060] uppercase tracking-widest font-semibold leading-tight">{s.label}</p>
@@ -435,6 +586,8 @@ export default function DashboardPage() {
               );
               const isCancelled = order.status === "cancelled";
               const isDelivered = order.status === "delivered";
+              const isConfirmed = order.status === "confirmed";
+              const isOrderPending = isPending(order.status);
 
               return (
                 <div key={order.id}>
@@ -446,18 +599,25 @@ export default function DashboardPage() {
 
                   <button onClick={() => setSelectedOrder(order)}
                     className={`w-full text-left bg-white rounded-xl border px-4 py-3 transition-all active:scale-[0.99] ${
-                      isCancelled ? "border-red-200" : isDelivered ? "border-green-200 bg-green-50/20" : "border-[#e8ddd0] hover:border-[#c8b8a8]"
+                      isCancelled ? "border-red-200 opacity-60" :
+                      isDelivered ? "border-green-200 bg-green-50/20" :
+                      isConfirmed ? "border-blue-200 bg-blue-50/10" :
+                      "border-[#e8ddd0] hover:border-[#c8b8a8]"
                     }`}>
-                    {/* Status banner */}
-                    {isCancelled && (
+                    {/* Status badge row */}
+                    {(isCancelled || isDelivered || isConfirmed) && (
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-bold bg-red-100 text-red-500 px-2 py-0.5 rounded-full">BATAL</span>
-                        {order.cancel_reason && <span className="text-xs text-red-400 truncate">{order.cancel_reason}</span>}
+                        {isCancelled && <>
+                          <span className="text-[10px] font-bold bg-red-100 text-red-500 px-2 py-0.5 rounded-full">BATAL</span>
+                          {order.cancel_reason && <span className="text-xs text-red-400 truncate">{order.cancel_reason}</span>}
+                        </>}
+                        {isDelivered && <span className="text-[10px] font-bold bg-green-100 text-green-600 px-2 py-0.5 rounded-full">SELESAI</span>}
+                        {isConfirmed && <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">KONFIRMASI ✓</span>}
                       </div>
                     )}
-                    {isDelivered && (
+                    {isOrderPending && (
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-bold bg-green-100 text-green-600 px-2 py-0.5 rounded-full">SELESAI</span>
+                        <span className="text-[10px] font-bold bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">MENUNGGU</span>
                       </div>
                     )}
 
@@ -792,7 +952,7 @@ export default function DashboardPage() {
                               <span>Antar: {formatBatchDate(batch.delivery_date)}</span>
                               {batch.max_orders != null && (
                                 <span className={`font-semibold ${isFull ? "text-orange-600" : "text-[#8a7060]"}`}>
-                                  Kuota: {orderCount}/{batch.max_orders}
+                                  Terisi: {orderCount}/{batch.max_orders}
                                 </span>
                               )}
                             </div>
@@ -876,6 +1036,8 @@ export default function DashboardPage() {
         const o = selectedOrder;
         const isCancelled = o.status === "cancelled";
         const isDelivered = o.status === "delivered";
+        const isConfirmedOrder = o.status === "confirmed";
+        const isModalPending = isPending(o.status);
         return (
           <div className="fixed inset-0 z-[60] bg-[#fdf8f2] flex flex-col">
             {/* Top bar */}
@@ -912,7 +1074,15 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between bg-green-50 border border-green-100 rounded-2xl px-4 py-3">
                     <p className="text-sm font-bold text-green-700">✓ Pesanan sudah diantar</p>
                     <button onClick={() => handleRestore(o.id)}
-                      className="shrink-0 text-sm text-[#8a7060] hover:text-[#1c1208] transition ml-3">Batalkan</button>
+                      className="shrink-0 text-sm text-[#8a7060] hover:text-[#1c1208] transition ml-3">Pulihkan</button>
+                  </div>
+                )}
+                {isConfirmedOrder && (
+                  <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3">
+                    <p className="text-sm font-bold text-blue-700">✓ Pesanan dikonfirmasi</p>
+                    <p className="text-xs text-blue-500 mt-0.5">
+                      {o.payment_method === "cash" ? "Bayar tunai saat pengiriman" : "Transfer sudah dikonfirmasi"}
+                    </p>
                   </div>
                 )}
 
@@ -999,11 +1169,41 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Sticky bottom action bar — only for active orders */}
-            {o.status === "active" && (
+            {/* Sticky bottom action bar */}
+            {!isCancelled && (
               <div className="shrink-0 bg-white border-t border-[#e8ddd0] px-4 py-4 safe-area-pb">
                 <div className="max-w-2xl mx-auto space-y-2">
-                  {cancelling === o.id ? (
+                  {/* Kirim WA — always visible */}
+                  <a href={buildOrderWAUrl(o)} target="_blank" rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl bg-[#25D366] hover:bg-[#20ba5a] active:scale-[0.99] transition font-bold text-white text-sm">
+                    <MessageCircle size={18} /> Kirim WA ke Pelanggan
+                  </a>
+
+                  {/* PENDING → Konfirmasi or Cancel */}
+                  {isModalPending && (cancelling === o.id ? (
+                    <div className="flex gap-2">
+                      <button onClick={() => handleCancel(o.id)} disabled={cancelLoading || !cancelReason.trim()}
+                        className="flex-1 text-sm font-bold text-white bg-red-500 hover:bg-red-600 py-3.5 rounded-2xl transition disabled:opacity-40">
+                        {cancelLoading ? "Menyimpan..." : "Konfirmasi Batalkan"}
+                      </button>
+                      <button onClick={() => { setCancelling(null); setCancelReason(""); }}
+                        className="px-5 py-3.5 text-sm font-semibold text-[#8a7060] bg-[#f0e8de] rounded-2xl">Batal</button>
+                    </div>
+                  ) : (
+                    <>
+                      <button onClick={() => handleConfirm(o.id)}
+                        className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] transition font-bold text-white text-base">
+                        <span className="text-xl leading-none">✓</span> Konfirmasi Pesanan
+                      </button>
+                      <button onClick={() => setCancelling(o.id)}
+                        className="w-full flex items-center justify-center gap-2.5 py-3 rounded-2xl bg-white border-2 border-red-200 hover:border-red-300 hover:bg-red-50 active:scale-[0.99] transition font-bold text-red-500 text-sm">
+                        ✕ Batalkan
+                      </button>
+                    </>
+                  ))}
+
+                  {/* CONFIRMED → Selesaikan or Cancel */}
+                  {isConfirmedOrder && (cancelling === o.id ? (
                     <div className="flex gap-2">
                       <button onClick={() => handleCancel(o.id)} disabled={cancelLoading || !cancelReason.trim()}
                         className="flex-1 text-sm font-bold text-white bg-red-500 hover:bg-red-600 py-3.5 rounded-2xl transition disabled:opacity-40">
@@ -1019,10 +1219,15 @@ export default function DashboardPage() {
                         <span className="text-xl leading-none">✓</span> Selesaikan Pesanan
                       </button>
                       <button onClick={() => setCancelling(o.id)}
-                        className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-white border-2 border-red-200 hover:border-red-300 hover:bg-red-50 active:scale-[0.99] transition font-bold text-red-500 text-base">
-                        <span className="text-xl leading-none">✕</span> Batalkan Pesanan
+                        className="w-full flex items-center justify-center gap-2.5 py-3 rounded-2xl bg-white border-2 border-red-200 hover:border-red-300 hover:bg-red-50 active:scale-[0.99] transition font-bold text-red-500 text-sm">
+                        ✕ Batalkan
                       </button>
                     </>
+                  ))}
+
+                  {/* DELIVERED → no primary action, just info */}
+                  {isDelivered && (
+                    <p className="text-center text-xs text-[#b8a898]">Pesanan sudah selesai diantar</p>
                   )}
                 </div>
               </div>
