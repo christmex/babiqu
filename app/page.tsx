@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { AlertCircle, Loader2, MessageCircle, Send, Lock, Target, CheckCircle2, Sun, Moon, Banknote, Landmark, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { sendNewOrderNotification } from "./push-actions";
 import {
   MENUS, ALA_CARTE, BANK_INFO, ONGKIR, WA_NUMBER,
   formatRupiah, formatBatchDate,
@@ -327,17 +326,26 @@ export default function OrderPage() {
       return;
     }
 
-    // Fire push notification to admin(s) — don't block success UI on failure
+    // Fire push notification to admin(s) — keepalive survives navigation
     const itemsSummary = items
       .map((it) => `${it.qty}× ${it.menu_name.split(" ").slice(0, 2).join(" ")}`)
       .join(", ");
-    sendNewOrderNotification({
-      orderId: inserted?.id ?? "",
-      name: form.name,
-      total,
-      itemsSummary,
-      jam: form.jam_antar.includes("Siang") ? "Siang" : "Malam",
-    }).catch(() => {});
+    try {
+      await fetch("/api/push/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: inserted?.id ?? "",
+          name: form.name,
+          total,
+          itemsSummary,
+          jam: form.jam_antar.includes("Siang") ? "Siang" : "Malam",
+        }),
+        keepalive: true,
+      });
+    } catch {
+      // non-fatal — order already saved
+    }
 
     const successItems = [
       ...MENUS.filter(m => orders[m.id].qty > 0).map(m => ({ name: m.name, qty: orders[m.id].qty, price: m.price })),
