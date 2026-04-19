@@ -33,6 +33,12 @@ export default function PushToggle() {
     });
   }, []);
 
+  useEffect(() => {
+    if (!msg) return;
+    const t = setTimeout(() => setMsg(null), 2500);
+    return () => clearTimeout(t);
+  }, [msg]);
+
   async function handleSubscribe() {
     setLoading(true);
     setMsg(null);
