@@ -123,6 +123,13 @@ export const ALA_CARTE: MenuDef[] = [
     options: [],
   },
   {
+    id: "alc-sop-tulang",
+    name: "Sop Tulang",
+    price: 20000,
+    includes: ["Sop Tulang"],
+    options: [],
+  },
+  {
     id: "alc-sambel-andaliman",
     name: "Tambahan Sambel Andaliman",
     price: 3000,

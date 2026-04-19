@@ -9,6 +9,7 @@ import {
   ChevronUp, Plus, Minus, Eye, EyeOff,
 } from "lucide-react";
 import { buildWAMessage, MENUS, ALA_CARTE, ONGKIR, type PaymentMethod } from "@/lib/order-utils";
+import PushToggle from "./push-toggle";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -760,6 +761,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <PushToggle />
             <a href="/" target="_blank" rel="noopener noreferrer"
               className="flex items-center justify-center w-9 h-9 bg-[#1c1c1e] rounded-xl border border-white/[0.08] text-gray-500 hover:text-white transition"
               title="Buka Form">

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { AlertCircle, Loader2, MessageCircle, Send, Lock, Target, CheckCircle2, Sun, Moon, Banknote, Landmark, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { sendNewOrderNotification } from "./push-actions";
 import {
   MENUS, ALA_CARTE, BANK_INFO, ONGKIR, WA_NUMBER,
   formatRupiah, formatBatchDate,
@@ -307,7 +308,7 @@ export default function OrderPage() {
 
     const items = buildOrderItems(orders, alcOrders);
 
-    const { error: dbError } = await supabase.from("orders").insert({
+    const { data: inserted, error: dbError } = await supabase.from("orders").insert({
       name: form.name,
       nomor_wa: form.nomor_wa,
       alamat: form.alamat,
@@ -318,13 +319,25 @@ export default function OrderPage() {
       batch_id: activeBatch?.id ?? null,
       payment_method: paymentMethod,
       payment_proof_url: proofUrl,
-    });
+    }).select("id").single();
 
     if (dbError) {
       setError("Gagal menyimpan pesanan. Coba lagi.");
       setLoading(false);
       return;
     }
+
+    // Fire push notification to admin(s) — don't block success UI on failure
+    const itemsSummary = items
+      .map((it) => `${it.qty}× ${it.menu_name.split(" ").slice(0, 2).join(" ")}`)
+      .join(", ");
+    sendNewOrderNotification({
+      orderId: inserted?.id ?? "",
+      name: form.name,
+      total,
+      itemsSummary,
+      jam: form.jam_antar.includes("Siang") ? "Siang" : "Malam",
+    }).catch(() => {});
 
     const successItems = [
       ...MENUS.filter(m => orders[m.id].qty > 0).map(m => ({ name: m.name, qty: orders[m.id].qty, price: m.price })),

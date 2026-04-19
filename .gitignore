@@ -44,3 +44,4 @@ next-env.d.ts
 backup/
 # Playwright MCP snapshots
 .playwright-mcp/
+.claude/worktrees/
