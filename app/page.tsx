@@ -397,12 +397,14 @@ export default function OrderPage() {
               {batchClosedFull ? <Target size={28} className="text-gray-500 dark:text-gray-400" /> : <Lock size={28} className="text-gray-500 dark:text-gray-400" />}
             </div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              {batchClosedFull ? "Kuota Penuh!" : "PO Sedang Tutup"}
+              {batchClosedFull ? "Kuota Penuh!" : nextBatch ? "PO Belum Dibuka" : "PO Sudah Ditutup"}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-6">
               {batchClosedFull
                 ? "Pesanan untuk batch ini sudah mencapai batas kuota. Pantau terus untuk batch berikutnya!"
-                : "Pemesanan untuk batch ini sudah ditutup. Pantau terus untuk batch berikutnya!"}
+                : nextBatch
+                ? "Pemesanan akan dibuka di batch berikutnya. Catat tanggalnya!"
+                : "Pemesanan sudah ditutup. Pantau terus untuk batch berikutnya!"}
             </p>
             {nextBatch ? (
               <div className="bg-gray-50 dark:bg-[#2c2c2e] rounded-xl p-4 text-left">
@@ -516,7 +518,7 @@ export default function OrderPage() {
         <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm dark:border dark:border-white/[0.08] p-5">
           <div className="flex items-center gap-2 mb-1">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <p className="text-xs font-semibold text-green-600 dark:text-emerald-400 uppercase tracking-wider">PO Sedang Buka</p>
+            <p className="text-xs font-semibold text-green-600 dark:text-emerald-400 uppercase tracking-wider">PO Dibuka</p>
           </div>
           <p className="text-base font-bold text-gray-900 dark:text-white mb-3">{activeBatch.label}</p>
           <div className="space-y-1.5">
