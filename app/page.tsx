@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { AlertCircle, Loader2, MessageCircle, Send, Lock, Target, CheckCircle2, Sun, Moon, Banknote, Landmark, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import ThemeToggle from "./theme-toggle";
 import {
   MENUS, ALA_CARTE, BANK_INFO, ONGKIR, WA_NUMBER,
   formatRupiah, formatBatchDate,
@@ -373,12 +374,13 @@ export default function OrderPage() {
   // ── Batch loading ──────────────────────────────────────────────────────────
   if (activeBatch === undefined) {
     return (
-      <div className="min-h-screen bg-[#f2f2f7]">
+      <div className="min-h-screen bg-[#f2f2f7] dark:bg-[#0a0a0a]">
+        <ThemeToggle floating />
         {hero}
         <div className="flex items-center justify-center py-24">
           <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
         </div>
-        <footer className="text-center py-8 text-xs text-gray-400">© 2026 Babiqu · Signature Roast Pork</footer>
+        <footer className="text-center py-8 text-xs text-gray-400 dark:text-gray-500">© 2026 Babiqu · Signature Roast Pork</footer>
       </div>
     );
   }
@@ -386,47 +388,48 @@ export default function OrderPage() {
   // ── PO Closed ──────────────────────────────────────────────────────────────
   if (activeBatch === null) {
     return (
-      <div className="min-h-screen bg-[#f2f2f7]">
+      <div className="min-h-screen bg-[#f2f2f7] dark:bg-[#0a0a0a]">
+        <ThemeToggle floating />
         {hero}
         <main className="max-w-lg mx-auto px-4 py-8">
-          <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5 bg-gray-100">
-              {batchClosedFull ? <Target size={28} className="text-gray-500" /> : <Lock size={28} className="text-gray-500" />}
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm dark:border dark:border-white/[0.08] p-8 text-center">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5 bg-gray-100 dark:bg-white/10">
+              {batchClosedFull ? <Target size={28} className="text-gray-500 dark:text-gray-400" /> : <Lock size={28} className="text-gray-500 dark:text-gray-400" />}
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
               {batchClosedFull ? "Kuota Penuh!" : "PO Sedang Tutup"}
             </h2>
-            <p className="text-sm text-gray-500 leading-relaxed mb-6">
+            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-6">
               {batchClosedFull
                 ? "Pesanan untuk batch ini sudah mencapai batas kuota. Pantau terus untuk batch berikutnya!"
                 : "Pemesanan untuk batch ini sudah ditutup. Pantau terus untuk batch berikutnya!"}
             </p>
             {nextBatch ? (
-              <div className="bg-gray-50 rounded-xl p-4 text-left">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Batch Berikutnya</p>
-                <p className="font-bold text-gray-900 mb-3">{nextBatch.label}</p>
+              <div className="bg-gray-50 dark:bg-[#2c2c2e] rounded-xl p-4 text-left">
+                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Batch Berikutnya</p>
+                <p className="font-bold text-gray-900 dark:text-white mb-3">{nextBatch.label}</p>
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">PO Buka</span>
-                    <span className="text-sm font-semibold text-gray-900">{formatBatchDate(nextBatch.open_date)}</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">PO Buka</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">{formatBatchDate(nextBatch.open_date)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">PO Tutup</span>
-                    <span className="text-sm font-semibold text-gray-900">{formatBatchDate(nextBatch.close_date)}</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">PO Tutup</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">{formatBatchDate(nextBatch.close_date)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Pengiriman</span>
-                    <span className="text-sm font-semibold text-gray-900">{formatBatchDate(nextBatch.delivery_date)}</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Pengiriman</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">{formatBatchDate(nextBatch.delivery_date)}</span>
                   </div>
                 </div>
-                {nextBatch.notes && <p className="text-xs text-gray-400 italic mt-3">{nextBatch.notes}</p>}
+                {nextBatch.notes && <p className="text-xs text-gray-400 dark:text-gray-500 italic mt-3">{nextBatch.notes}</p>}
               </div>
             ) : (
-              <p className="text-xs text-gray-400">Info batch berikutnya akan segera diumumkan.</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Info batch berikutnya akan segera diumumkan.</p>
             )}
           </div>
         </main>
-        <footer className="text-center py-8 text-xs text-gray-400">© 2026 Babiqu · Signature Roast Pork</footer>
+        <footer className="text-center py-8 text-xs text-gray-400 dark:text-gray-500">© 2026 Babiqu · Signature Roast Pork</footer>
       </div>
     );
   }
@@ -434,33 +437,34 @@ export default function OrderPage() {
   // ── Success screen ─────────────────────────────────────────────────────────
   if (orderSuccess) {
     return (
-      <div className="min-h-screen bg-[#f2f2f7]">
+      <div className="min-h-screen bg-[#f2f2f7] dark:bg-[#0a0a0a]">
+        <ThemeToggle floating />
         {hero}
         <main className="max-w-lg mx-auto px-4 py-8 space-y-4">
           {/* Confirmation card */}
-          <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
-            <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5">
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm dark:border dark:border-white/[0.08] p-8 text-center">
+            <div className="w-16 h-16 bg-green-50 dark:bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-5">
               <CheckCircle2 size={32} className="text-green-500" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Pesanan Diterima!</h2>
-            <p className="text-sm text-gray-500 leading-relaxed">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Pesanan Diterima!</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
               Tim kami akan segera menghubungi kamu via WhatsApp untuk konfirmasi pesanan.
             </p>
           </div>
 
           {/* Order summary card */}
-          <div className="bg-white rounded-2xl shadow-sm p-5">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Detail Pesanan</p>
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm dark:border dark:border-white/[0.08] p-5">
+            <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Detail Pesanan</p>
 
-            <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+            <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100 dark:border-white/[0.08]">
               <div>
-                <p className="font-semibold text-gray-900">{orderSuccess.name}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{orderSuccess.jam_antar}</p>
+                <p className="font-semibold text-gray-900 dark:text-white">{orderSuccess.name}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{orderSuccess.jam_antar}</p>
               </div>
               <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${
                 orderSuccess.paymentMethod === "cash"
-                  ? "bg-amber-50 text-amber-600"
-                  : "bg-emerald-50 text-emerald-600"
+                  ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                  : "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600"
               }`}>
                 {orderSuccess.paymentMethod === "cash" ? "TUNAI" : orderSuccess.paymentMethod === "transfer_mandiri" ? "MANDIRI" : "BCA"}
               </span>
@@ -469,19 +473,19 @@ export default function OrderPage() {
             <div className="space-y-2.5">
               {orderSuccess.items.map((it) => (
                 <div key={it.name} className="flex items-center justify-between gap-2">
-                  <p className="text-sm text-gray-700">{it.qty}× {it.name}</p>
-                  <p className="text-sm font-medium text-gray-900 shrink-0">{formatRupiah(it.price * it.qty)}</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">{it.qty}× {it.name}</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white shrink-0">{formatRupiah(it.price * it.qty)}</p>
                 </div>
               ))}
             </div>
 
-            <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
-              <div className="flex justify-between text-sm text-gray-400">
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/[0.08] space-y-2">
+              <div className="flex justify-between text-sm text-gray-400 dark:text-gray-500">
                 <span>Ongkos Kirim</span>
                 <span>{formatRupiah(ONGKIR)}</span>
               </div>
-              <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                <span className="text-base font-bold text-gray-900">Total</span>
+              <div className="flex justify-between items-center pt-3 border-t border-gray-100 dark:border-white/[0.08]">
+                <span className="text-base font-bold text-gray-900 dark:text-white">Total</span>
                 <span className="text-xl font-bold text-[#7b1d1d]">{formatRupiah(orderSuccess.total)}</span>
               </div>
             </div>
@@ -490,52 +494,53 @@ export default function OrderPage() {
           {/* Actions */}
           <button
             onClick={resetForm}
-            className="w-full bg-gray-900 hover:bg-black text-white font-bold py-4 rounded-2xl text-sm tracking-wide transition"
+            className="w-full bg-gray-900 dark:bg-white dark:bg-[#1c1c1e] dark:text-gray-900 hover:bg-black text-white font-bold py-4 rounded-2xl text-sm tracking-wide transition"
           >
             Kembali &amp; Pesan Lagi
           </button>
         </main>
-        <footer className="text-center py-8 text-xs text-gray-400">© 2026 Babiqu · Signature Roast Pork</footer>
+        <footer className="text-center py-8 text-xs text-gray-400 dark:text-gray-500">© 2026 Babiqu · Signature Roast Pork</footer>
       </div>
     );
   }
 
   // ── PO Open ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#f2f2f7]">
+    <div className="min-h-screen bg-[#f2f2f7] dark:bg-[#0a0a0a]">
+      <ThemeToggle floating />
       {hero}
 
       <main className="max-w-lg mx-auto px-4 py-8 space-y-5">
 
         {/* PO Info Banner */}
-        <div className="bg-white rounded-2xl shadow-sm p-5">
+        <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm dark:border dark:border-white/[0.08] p-5">
           <div className="flex items-center gap-2 mb-1">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <p className="text-xs font-semibold text-green-600 uppercase tracking-wider">PO Sedang Buka</p>
+            <p className="text-xs font-semibold text-green-600 dark:text-emerald-400 uppercase tracking-wider">PO Sedang Buka</p>
           </div>
-          <p className="text-base font-bold text-gray-900 mb-3">{activeBatch.label}</p>
+          <p className="text-base font-bold text-gray-900 dark:text-white mb-3">{activeBatch.label}</p>
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-500">PO Tutup</span>
-              <span className="text-sm font-semibold text-gray-900">{formatBatchDate(activeBatch.close_date)}</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">PO Tutup</span>
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">{formatBatchDate(activeBatch.close_date)}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-500">Pengiriman</span>
-              <span className="text-sm font-semibold text-gray-900">{formatBatchDate(activeBatch.delivery_date)}</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">Pengiriman</span>
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">{formatBatchDate(activeBatch.delivery_date)}</span>
             </div>
             {activeBatch.max_orders != null && (
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500">Sisa Kuota</span>
-                <span className="text-sm font-semibold text-gray-900">{Math.max(0, activeBatch.max_orders - batchOrderCount)}/{activeBatch.max_orders} porsi</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Sisa Kuota</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">{Math.max(0, activeBatch.max_orders - batchOrderCount)}/{activeBatch.max_orders} porsi</span>
               </div>
             )}
           </div>
-          {activeBatch.notes && <p className="text-xs text-gray-400 mt-3 italic">{activeBatch.notes}</p>}
+          {activeBatch.notes && <p className="text-xs text-gray-400 dark:text-gray-500 mt-3 italic">{activeBatch.notes}</p>}
         </div>
 
         {/* Customer Info */}
-        <section className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
-          <h2 className="text-base font-bold text-gray-900">Informasi Pemesan</h2>
+        <section className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm dark:border dark:border-white/[0.08] p-5 space-y-4">
+          <h2 className="text-base font-bold text-gray-900 dark:text-white">Informasi Pemesan</h2>
 
           {(["name", "nomor_wa", "alamat"] as const).map((key) => {
             const meta = {
@@ -546,7 +551,7 @@ export default function OrderPage() {
             const err = fieldError(key);
             return (
               <div key={key}>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   {meta.label}
                 </label>
                 <input
@@ -561,14 +566,14 @@ export default function OrderPage() {
                   }
                   onBlur={key === "nomor_wa" ? handleWaBlur : () => touch(key)}
                   placeholder={meta.placeholder}
-                  className={`w-full bg-gray-50 rounded-xl px-4 py-3.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 transition ${
+                  className={`w-full bg-gray-50 dark:bg-[#2c2c2e] rounded-xl px-4 py-3.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 transition ${
                     err
                       ? "ring-2 ring-red-300"
                       : "focus:ring-gray-900/10"
                   }`}
                 />
                 {err && (
-                  <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
+                  <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3 shrink-0" /> {err}
                   </p>
                 )}
@@ -585,7 +590,7 @@ export default function OrderPage() {
             ];
             return (
               <div data-field="jam_antar">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   Jam Antar
                 </label>
                 <div className="grid grid-cols-2 gap-3">
@@ -594,10 +599,10 @@ export default function OrderPage() {
                       onClick={() => { setForm((prev) => ({ ...prev, jam_antar: opt.value })); touch("jam_antar"); }}
                       className={`flex flex-col items-center gap-2 py-5 rounded-2xl border-2 font-medium transition active:scale-[0.98] ${
                         form.jam_antar === opt.value
-                          ? "border-gray-900 bg-gray-900 text-white"
+                          ? "border-gray-900 dark:border-white bg-gray-900 dark:bg-white dark:bg-[#1c1c1e] dark:text-gray-900 text-white"
                           : err
-                          ? "border-red-200 bg-white text-gray-400"
-                          : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
+                          ? "border-red-200 dark:border-red-500/30 bg-white dark:bg-[#1c1c1e] text-gray-400 dark:text-gray-500"
+                          : "border-gray-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-gray-500 dark:text-gray-400 hover:border-gray-300"
                       }`}>
                       <opt.Icon size={20} />
                       <span className="text-sm font-semibold">{opt.label}</span>
@@ -606,7 +611,7 @@ export default function OrderPage() {
                   ))}
                 </div>
                 {err && (
-                  <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
+                  <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3 shrink-0" /> {err}
                   </p>
                 )}
@@ -619,8 +624,8 @@ export default function OrderPage() {
         {/* Menu Paket */}
         <section className="space-y-3" data-section="menu">
           <div className="px-1">
-            <h2 className="text-base font-bold text-gray-900">Menu Paket</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Pilih menu dan jumlah porsi</p>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white">Menu Paket</h2>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Pilih menu dan jumlah porsi</p>
           </div>
 
           {MENUS.map((menu) => {
@@ -630,16 +635,16 @@ export default function OrderPage() {
             return (
               <div
                 key={menu.id}
-                className={`bg-white rounded-2xl shadow-sm transition-all ${
+                className={`bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm dark:border dark:border-white/[0.08] transition-all ${
                   isActive ? "ring-2 ring-gray-900" : ""
                 }`}
               >
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 text-sm leading-snug">{menu.name}</h3>
-                      <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{menu.includes.join(" · ")}</p>
-                      <p className="text-base font-bold text-gray-900 mt-2">{formatRupiah(menu.price)}</p>
+                      <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-snug">{menu.name}</h3>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 leading-relaxed">{menu.includes.join(" · ")}</p>
+                      <p className="text-base font-bold text-gray-900 dark:text-white mt-2">{formatRupiah(menu.price)}</p>
                     </div>
 
                     {/* Qty stepper */}
@@ -647,7 +652,7 @@ export default function OrderPage() {
                       <button
                         onClick={() => setQty(menu.id, -1)}
                         disabled={ord.qty === 0}
-                        className="w-9 h-9 rounded-full bg-gray-100 text-gray-700 font-bold text-xl flex items-center justify-center hover:bg-gray-200 transition disabled:opacity-25"
+                        className="w-9 h-9 rounded-full bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 font-bold text-xl flex items-center justify-center hover:bg-gray-200 dark:hover:bg-white/10 transition disabled:opacity-25"
                       >
                         −
                       </button>
@@ -667,20 +672,20 @@ export default function OrderPage() {
                             if (e.key === "Enter") (e.target as HTMLInputElement).blur();
                             if (e.key === "Escape") setQtyEditing(null);
                           }}
-                          className="w-10 text-center font-bold text-gray-900 border border-gray-900 rounded-lg text-sm focus:outline-none py-0.5"
+                          className="w-10 text-center font-bold text-gray-900 dark:text-white border border-gray-900 dark:border-white rounded-lg text-sm focus:outline-none py-0.5"
                         />
                       ) : (
                         <button
                           onClick={() => setQtyEditing(menu.id)}
                           title="Ketuk untuk ubah jumlah"
-                          className="w-8 text-center font-bold text-gray-900 hover:text-gray-600 transition"
+                          className="w-8 text-center font-bold text-gray-900 dark:text-white hover:text-gray-600 transition"
                         >
                           {ord.qty}
                         </button>
                       )}
                       <button
                         onClick={() => setQty(menu.id, 1)}
-                        className="w-9 h-9 rounded-full bg-gray-900 text-white font-bold text-xl flex items-center justify-center hover:bg-black transition"
+                        className="w-9 h-9 rounded-full bg-gray-900 dark:bg-white dark:bg-[#1c1c1e] dark:text-gray-900 text-white font-bold text-xl flex items-center justify-center hover:bg-black transition"
                       >
                         +
                       </button>
@@ -689,7 +694,7 @@ export default function OrderPage() {
 
                   {/* Subtotal row when active */}
                   {isActive && (
-                    <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
+                    <div className="mt-3 pt-3 border-t border-gray-100 dark:border-white/[0.08] flex justify-end">
                       <span className="text-xs font-semibold text-[#7b1d1d]">
                         Subtotal: {formatRupiah(menu.price * ord.qty)}
                       </span>
@@ -704,8 +709,8 @@ export default function OrderPage() {
         {/* À La Carte */}
         <section className="space-y-3">
           <div className="px-1">
-            <h2 className="text-base font-bold text-gray-900">À La Carte</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Bisa dipesan tanpa menu paket</p>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white">À La Carte</h2>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Bisa dipesan tanpa menu paket</p>
           </div>
 
           {ALA_CARTE.map((menu) => {
@@ -713,29 +718,29 @@ export default function OrderPage() {
             const isActive = ord.qty > 0;
             return (
               <div key={menu.id}
-                className={`bg-white rounded-2xl shadow-sm transition-all ${
+                className={`bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm dark:border dark:border-white/[0.08] transition-all ${
                   isActive ? "ring-2 ring-gray-900" : ""
                 }`}>
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 text-sm leading-snug">{menu.name}</h3>
-                      <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{menu.includes.join(" · ")}</p>
-                      <p className="text-base font-bold text-gray-900 mt-2">{formatRupiah(menu.price)}</p>
+                      <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-snug">{menu.name}</h3>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 leading-relaxed">{menu.includes.join(" · ")}</p>
+                      <p className="text-base font-bold text-gray-900 dark:text-white mt-2">{formatRupiah(menu.price)}</p>
                     </div>
                     {/* Qty stepper */}
                     <div className="flex items-center gap-3 shrink-0 mt-1">
                       <button
                         onClick={() => setAlcQty(menu.id, -1)}
                         disabled={ord.qty === 0}
-                        className="w-9 h-9 rounded-full bg-gray-100 text-gray-700 font-bold text-xl flex items-center justify-center hover:bg-gray-200 transition disabled:opacity-25"
+                        className="w-9 h-9 rounded-full bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 font-bold text-xl flex items-center justify-center hover:bg-gray-200 dark:hover:bg-white/10 transition disabled:opacity-25"
                       >
                         −
                       </button>
-                      <span className="w-8 text-center font-bold text-gray-900">{ord.qty}</span>
+                      <span className="w-8 text-center font-bold text-gray-900 dark:text-white">{ord.qty}</span>
                       <button
                         onClick={() => setAlcQty(menu.id, 1)}
-                        className="w-9 h-9 rounded-full bg-gray-900 text-white font-bold text-xl flex items-center justify-center hover:bg-black transition"
+                        className="w-9 h-9 rounded-full bg-gray-900 dark:bg-white dark:bg-[#1c1c1e] dark:text-gray-900 text-white font-bold text-xl flex items-center justify-center hover:bg-black transition"
                       >
                         +
                       </button>
@@ -743,7 +748,7 @@ export default function OrderPage() {
                   </div>
 
                   {isActive && (
-                    <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
+                    <div className="mt-3 pt-3 border-t border-gray-100 dark:border-white/[0.08] flex justify-end">
                       <span className="text-xs font-semibold text-[#7b1d1d]">
                         Subtotal: {formatRupiah(menu.price * ord.qty)}
                       </span>
@@ -757,8 +762,8 @@ export default function OrderPage() {
 
         {/* Order Summary */}
         {hasAnyOrder && (
-          <section className="bg-white rounded-2xl shadow-sm p-5">
-            <h2 className="text-base font-bold text-gray-900 mb-4">Ringkasan</h2>
+          <section className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm dark:border dark:border-white/[0.08] p-5">
+            <h2 className="text-base font-bold text-gray-900 dark:text-white mb-4">Ringkasan</h2>
             <div className="space-y-3">
               {activeOrders.map((menu, idx) => {
                 const ord = orders[menu.id];
@@ -766,13 +771,13 @@ export default function OrderPage() {
                 return (
                   <div key={menu.id}>
                     <div className="flex justify-between items-center gap-2">
-                      <p className="text-sm text-gray-700">{menu.name}</p>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">{menu.name}</p>
                       <div className="text-right shrink-0">
-                        <p className="text-xs text-gray-400">{ord.qty}× {formatRupiah(menu.price)}</p>
-                        <p className="text-sm font-medium text-gray-900">{formatRupiah(menu.price * ord.qty)}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{ord.qty}× {formatRupiah(menu.price)}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{formatRupiah(menu.price * ord.qty)}</p>
                       </div>
                     </div>
-                    {!isLast && <div className="border-b border-gray-100 mt-3" />}
+                    {!isLast && <div className="border-b border-gray-100 dark:border-white/[0.08] mt-3" />}
                   </div>
                 );
               })}
@@ -782,25 +787,25 @@ export default function OrderPage() {
                 return (
                   <div key={menu.id}>
                     <div className="flex justify-between items-center gap-2">
-                      <p className="text-sm text-gray-700">{menu.name}</p>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">{menu.name}</p>
                       <div className="text-right shrink-0">
-                        <p className="text-xs text-gray-400">{ord.qty}× {formatRupiah(menu.price)}</p>
-                        <p className="text-sm font-medium text-gray-900">{formatRupiah(menu.price * ord.qty)}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{ord.qty}× {formatRupiah(menu.price)}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{formatRupiah(menu.price * ord.qty)}</p>
                       </div>
                     </div>
-                    {!isLast && <div className="border-b border-gray-100 mt-3" />}
+                    {!isLast && <div className="border-b border-gray-100 dark:border-white/[0.08] mt-3" />}
                   </div>
                 );
               })}
 
               {/* Ongkir + Total */}
-              <div className="border-t border-gray-100 pt-3 space-y-2">
+              <div className="border-t border-gray-100 dark:border-white/[0.08] pt-3 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-400">Ongkos Kirim</span>
-                  <span className="text-sm text-gray-400">{formatRupiah(ONGKIR)}</span>
+                  <span className="text-sm text-gray-400 dark:text-gray-500">Ongkos Kirim</span>
+                  <span className="text-sm text-gray-400 dark:text-gray-500">{formatRupiah(ONGKIR)}</span>
                 </div>
-                <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                  <span className="text-base font-bold text-gray-900">Total</span>
+                <div className="flex justify-between items-center pt-3 border-t border-gray-100 dark:border-white/[0.08]">
+                  <span className="text-base font-bold text-gray-900 dark:text-white">Total</span>
                   <span className="text-xl font-bold text-[#7b1d1d]">{formatRupiah(total)}</span>
                 </div>
               </div>
@@ -809,22 +814,22 @@ export default function OrderPage() {
         )}
 
         {/* Catatan (global) */}
-        <section className="bg-white rounded-2xl shadow-sm p-5">
-          <h2 className="text-base font-bold text-gray-900 mb-3">
-            Catatan <span className="text-sm font-normal text-gray-400">(Opsional)</span>
+        <section className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm dark:border dark:border-white/[0.08] p-5">
+          <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3">
+            Catatan <span className="text-sm font-normal text-gray-400 dark:text-gray-500">(Opsional)</span>
           </h2>
           <textarea
             value={form.notes}
             onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
             placeholder="Ada permintaan khusus atau info tambahan?"
             rows={2}
-            className="w-full bg-gray-50 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 transition resize-none"
+            className="w-full bg-gray-50 dark:bg-[#2c2c2e] rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-900/10 transition resize-none"
           />
         </section>
 
         {/* Payment Method */}
-        <section className="bg-white rounded-2xl shadow-sm p-5">
-          <h2 className="text-base font-bold text-gray-900 mb-4">Metode Pembayaran</h2>
+        <section className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm dark:border dark:border-white/[0.08] p-5">
+          <h2 className="text-base font-bold text-gray-900 dark:text-white mb-4">Metode Pembayaran</h2>
 
           <div className="flex gap-2 mb-5">
             {([
@@ -835,8 +840,8 @@ export default function OrderPage() {
               <button key={val} type="button" onClick={() => { setPaymentMethod(val); setProofFile(null); setProofPreview(null); }}
                 className={`flex-1 flex flex-col items-center gap-1.5 py-3.5 rounded-xl text-xs font-semibold transition ${
                   paymentMethod === val
-                    ? "bg-gray-900 text-white"
-                    : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                    ? "bg-gray-900 dark:bg-white dark:bg-[#1c1c1e] dark:text-gray-900 text-white"
+                    : "bg-gray-50 dark:bg-[#2c2c2e] text-gray-500 dark:text-gray-400 hover:bg-gray-100"
                 }`}>
                 <Icon size={18} />
                 {label}
@@ -846,15 +851,15 @@ export default function OrderPage() {
 
           {/* Bank account info */}
           {isTransfer && (
-            <div className="bg-gray-50 rounded-xl p-4 mb-4">
-              <p className="text-xs text-gray-400 mb-1">Rekening {BANK_INFO[paymentMethod as keyof typeof BANK_INFO].bank}</p>
-              <p className="text-2xl font-bold text-gray-900 tracking-wider">
+            <div className="bg-gray-50 dark:bg-[#2c2c2e] rounded-xl p-4 mb-4">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Rekening {BANK_INFO[paymentMethod as keyof typeof BANK_INFO].bank}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white tracking-wider">
                 {BANK_INFO[paymentMethod as keyof typeof BANK_INFO].account}
               </p>
-              <p className="text-xs text-gray-500 mt-0.5">a/n {BANK_INFO[paymentMethod as keyof typeof BANK_INFO].name}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">a/n {BANK_INFO[paymentMethod as keyof typeof BANK_INFO].name}</p>
               <button type="button"
                 onClick={() => navigator.clipboard.writeText(BANK_INFO[paymentMethod as keyof typeof BANK_INFO].account)}
-                className="mt-3 text-xs font-semibold text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition">
+                className="mt-3 text-xs font-semibold text-gray-900 dark:text-white bg-white dark:bg-[#1c1c1e] border border-gray-200 dark:border-white/10 rounded-lg px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-white/10 transition">
                 Salin Nomor
               </button>
             </div>
@@ -863,24 +868,24 @@ export default function OrderPage() {
           {/* Proof upload */}
           {isTransfer && (
             <div className="mb-4">
-              <p className="text-sm font-medium text-gray-700 mb-1.5">
-                Bukti Transfer <span className="text-red-500">*</span>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Bukti Transfer <span className="text-red-500 dark:text-red-400">*</span>
               </p>
               {proofPreview ? (
                 <div className="relative">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={proofPreview} alt="Bukti transfer"
                     onClick={() => setProofLightbox(true)}
-                    className="w-full max-h-48 object-cover rounded-xl border border-gray-100 cursor-zoom-in" />
+                    className="w-full max-h-48 object-cover rounded-xl border border-gray-100 dark:border-white/[0.08] cursor-zoom-in" />
                   <button type="button" onClick={() => { setProofFile(null); setProofPreview(null); }}
-                    className="absolute top-2 right-2 bg-white/90 text-gray-500 hover:text-red-500 rounded-full w-7 h-7 flex items-center justify-center shadow-sm transition"><X size={14} /></button>
+                    className="absolute top-2 right-2 bg-white/90 text-gray-500 dark:text-gray-400 hover:text-red-500 rounded-full w-7 h-7 flex items-center justify-center shadow-sm transition"><X size={14} /></button>
                   <span className="absolute bottom-2 left-2 text-[10px] bg-black/40 text-white rounded px-1.5 py-0.5">Tap untuk perbesar</span>
                 </div>
               ) : (
-                <label className="flex flex-col items-center gap-2 border-2 border-dashed border-gray-200 rounded-xl py-7 cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition">
-                  <Banknote size={22} className="text-gray-400" />
-                  <span className="text-sm font-medium text-gray-600">Upload Bukti Transfer</span>
-                  <span className="text-xs text-gray-400">JPG, PNG, HEIC · Auto-compress ke maks 2MB</span>
+                <label className="flex flex-col items-center gap-2 border-2 border-dashed border-gray-200 dark:border-white/10 rounded-xl py-7 cursor-pointer hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 transition">
+                  <Banknote size={22} className="text-gray-400 dark:text-gray-500" />
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Upload Bukti Transfer</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">JPG, PNG, HEIC · Auto-compress ke maks 2MB</span>
                   <input type="file" accept="image/*" className="hidden"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
@@ -892,14 +897,14 @@ export default function OrderPage() {
                 </label>
               )}
               {submitted && isTransfer && !proofFile && (
-                <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Upload bukti transfer dulu ya</p>
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Upload bukti transfer dulu ya</p>
               )}
             </div>
           )}
 
           {paymentMethod === "cash" && (
-            <div className="bg-amber-50 rounded-xl px-4 py-3">
-              <p className="flex items-center gap-2 text-sm text-amber-700"><Banknote size={16} /> Pembayaran tunai dilakukan saat pesanan diterima.</p>
+            <div className="bg-amber-50 dark:bg-amber-500/10 rounded-xl px-4 py-3">
+              <p className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400"><Banknote size={16} /> Pembayaran tunai dilakukan saat pesanan diterima.</p>
             </div>
           )}
         </section>
@@ -907,8 +912,8 @@ export default function OrderPage() {
         {/* Error + Submit CTA */}
         <section className="space-y-3">
           {error && (
-            <div className="bg-red-50 border border-red-100 rounded-xl p-4 space-y-2">
-              <div className="flex items-start gap-2 text-sm text-red-600">
+            <div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-xl p-4 space-y-2">
+              <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /> {error}
               </div>
               {error.includes("Hubungi kami") && (
@@ -930,7 +935,7 @@ export default function OrderPage() {
             className={`w-full font-bold py-4 rounded-2xl text-sm tracking-wide transition flex items-center justify-center gap-2 ${
               isFormComplete
                 ? "bg-gray-900 hover:bg-black text-white"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                : "bg-gray-200 dark:bg-white/10 text-gray-400 dark:text-gray-500 cursor-not-allowed"
             }`}
           >
             {loading ? (
@@ -942,14 +947,14 @@ export default function OrderPage() {
               </>
             )}
           </button>
-          <p className="text-center text-xs text-gray-400">
+          <p className="text-center text-xs text-gray-400 dark:text-gray-500">
             Pesanan kamu akan langsung kami proses. Tim kami akan menghubungi via WA.
           </p>
         </section>
 
       </main>
 
-      <footer className="text-center py-8 text-xs text-gray-400">
+      <footer className="text-center py-8 text-xs text-gray-400 dark:text-gray-500">
         © 2026 Babiqu · Signature Roast Pork
       </footer>
 

@@ -1,10 +1,17 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 body {
   background: #fdf8f2;
   color: #1c1208;
   font-family: Georgia, 'Times New Roman', serif;
   -webkit-font-smoothing: antialiased;
+}
+
+.dark body {
+  background: #0a0a0a;
+  color: #fafafa;
 }
 
 /* Prevent iOS Safari auto-zoom on input focus */
