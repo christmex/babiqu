@@ -343,8 +343,8 @@ export default function OrderPage() {
       </div>
       <div className="absolute inset-0 flex flex-col items-center justify-end pb-10 px-4">
         <p className="text-[10px] tracking-[0.4em] uppercase text-white/60 mb-2 font-medium">Signature Roast Pork</p>
-        <h1 className="text-5xl font-bold tracking-widest drop-shadow-md">BABIQU</h1>
-        <p className="text-white/70 text-sm mt-2.5 tracking-wider">Pesan langsung · Antar ke rumah</p>
+        <h1 className="text-5xl font-black tracking-widest drop-shadow-lg">BABIQU</h1>
+        <p className="text-sm text-white/70 tracking-wider mt-2">Pesan langsung · Antar ke rumah</p>
       </div>
     </header>
   );
@@ -352,10 +352,10 @@ export default function OrderPage() {
   // ── Batch loading ──────────────────────────────────────────────────────────
   if (activeBatch === undefined) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[#f2f2f7]">
         {hero}
         <div className="flex items-center justify-center py-24">
-          <div className="w-5 h-5 border-2 border-[#7b1d1d] border-t-transparent rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
         </div>
         <footer className="text-center py-8 text-xs text-gray-400">© 2026 Babiqu · Signature Roast Pork</footer>
       </div>
@@ -365,37 +365,40 @@ export default function OrderPage() {
   // ── PO Closed ──────────────────────────────────────────────────────────────
   if (activeBatch === null) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[#f2f2f7]">
         {hero}
-        <main className="max-w-lg mx-auto px-4 py-10">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
-            <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 bg-gray-100">
-              {batchClosedFull ? <Target size={24} className="text-gray-500" /> : <Lock size={24} className="text-gray-500" />}
+        <main className="max-w-lg mx-auto px-4 py-8">
+          <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5 bg-gray-100">
+              {batchClosedFull ? <Target size={28} className="text-gray-500" /> : <Lock size={28} className="text-gray-500" />}
             </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
               {batchClosedFull ? "Kuota Penuh!" : "PO Sedang Tutup"}
             </h2>
             <p className="text-sm text-gray-500 leading-relaxed mb-6">
               {batchClosedFull
-                ? "Pesanan untuk batch ini sudah mencapai batas kuota.\nPantau terus untuk batch berikutnya!"
-                : "Pemesanan untuk batch ini sudah ditutup.\nPantau terus untuk batch berikutnya!"}
+                ? "Pesanan untuk batch ini sudah mencapai batas kuota. Pantau terus untuk batch berikutnya!"
+                : "Pemesanan untuk batch ini sudah ditutup. Pantau terus untuk batch berikutnya!"}
             </p>
             {nextBatch ? (
-              <div className="bg-gray-50 rounded-xl border border-gray-100 p-4 text-left">
-                <p className="text-[10px] font-semibold text-[#7b1d1d] uppercase tracking-widest mb-2">Batch Berikutnya</p>
-                <p className="font-semibold text-gray-900 mb-2">{nextBatch.label}</p>
-                <div className="space-y-1">
-                  <p className="text-xs text-gray-500">
-                    <span className="font-medium text-gray-700">PO Buka:</span> {formatBatchDate(nextBatch.open_date)}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    <span className="font-medium text-gray-700">PO Tutup:</span> {formatBatchDate(nextBatch.close_date)}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    <span className="font-medium text-gray-700">Pengiriman:</span> {formatBatchDate(nextBatch.delivery_date)}
-                  </p>
+              <div className="bg-gray-50 rounded-xl p-4 text-left">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Batch Berikutnya</p>
+                <p className="font-bold text-gray-900 mb-3">{nextBatch.label}</p>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">PO Buka</span>
+                    <span className="text-sm font-semibold text-gray-900">{formatBatchDate(nextBatch.open_date)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">PO Tutup</span>
+                    <span className="text-sm font-semibold text-gray-900">{formatBatchDate(nextBatch.close_date)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">Pengiriman</span>
+                    <span className="text-sm font-semibold text-gray-900">{formatBatchDate(nextBatch.delivery_date)}</span>
+                  </div>
                 </div>
-                {nextBatch.notes && <p className="text-xs text-gray-400 italic mt-2">{nextBatch.notes}</p>}
+                {nextBatch.notes && <p className="text-xs text-gray-400 italic mt-3">{nextBatch.notes}</p>}
               </div>
             ) : (
               <p className="text-xs text-gray-400">Info batch berikutnya akan segera diumumkan.</p>
@@ -410,23 +413,23 @@ export default function OrderPage() {
   // ── Success screen ─────────────────────────────────────────────────────────
   if (orderSuccess) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[#f2f2f7]">
         {hero}
-        <main className="max-w-lg mx-auto px-4 py-10 space-y-3">
+        <main className="max-w-lg mx-auto px-4 py-8 space-y-4">
           {/* Confirmation card */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
-            <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 size={28} className="text-green-500" />
+          <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
+            <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5">
+              <CheckCircle2 size={32} className="text-green-500" />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Pesanan Berhasil Diterima!</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Pesanan Diterima!</h2>
             <p className="text-sm text-gray-500 leading-relaxed">
               Tim kami akan segera menghubungi kamu via WhatsApp untuk konfirmasi pesanan.
             </p>
           </div>
 
           {/* Order summary card */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <p className="text-[10px] text-[#7b1d1d] font-semibold uppercase tracking-widest mb-4">Detail Pesanan</p>
+          <div className="bg-white rounded-2xl shadow-sm p-5">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Detail Pesanan</p>
 
             <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
               <div>
@@ -456,9 +459,9 @@ export default function OrderPage() {
                 <span>Ongkos Kirim</span>
                 <span>{formatRupiah(ONGKIR)}</span>
               </div>
-              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                <span className="text-sm font-semibold text-gray-900">Total</span>
-                <span className="text-lg font-bold text-[#7b1d1d]">{formatRupiah(orderSuccess.total)}</span>
+              <div className="flex justify-between items-center pt-3 border-t border-gray-100">
+                <span className="text-base font-bold text-gray-900">Total</span>
+                <span className="text-xl font-bold text-[#7b1d1d]">{formatRupiah(orderSuccess.total)}</span>
               </div>
             </div>
           </div>
@@ -466,7 +469,7 @@ export default function OrderPage() {
           {/* Actions */}
           <button
             onClick={resetForm}
-            className="w-full bg-[#7b1d1d] text-white font-semibold py-4 rounded-xl hover:bg-[#6a1717] transition text-sm tracking-wide"
+            className="w-full bg-gray-900 hover:bg-black text-white font-bold py-4 rounded-2xl text-sm tracking-wide transition"
           >
             Kembali &amp; Pesan Lagi
           </button>
@@ -478,29 +481,41 @@ export default function OrderPage() {
 
   // ── PO Open ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#f2f2f7]">
       {hero}
 
-      <main className="max-w-lg mx-auto px-4 py-8 space-y-4">
+      <main className="max-w-lg mx-auto px-4 py-8 space-y-5">
 
         {/* PO Info Banner */}
-        <div className="bg-[#7b1d1d] text-white rounded-2xl px-5 py-4">
-          <p className="text-[10px] tracking-widest uppercase font-semibold text-red-200/80 mb-1.5">{activeBatch.label}</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/80">
-            <span>PO tutup: <span className="font-semibold text-white">{formatBatchDate(activeBatch.close_date)}</span></span>
-            <span>Antar: <span className="font-semibold text-white">{formatBatchDate(activeBatch.delivery_date)}</span></span>
+        <div className="bg-white rounded-2xl shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <p className="text-xs font-semibold text-green-600 uppercase tracking-wider">PO Sedang Buka</p>
+          </div>
+          <p className="text-base font-bold text-gray-900 mb-3">{activeBatch.label}</p>
+          <div className="space-y-1.5">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-500">PO Tutup</span>
+              <span className="text-sm font-semibold text-gray-900">{formatBatchDate(activeBatch.close_date)}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-500">Pengiriman</span>
+              <span className="text-sm font-semibold text-gray-900">{formatBatchDate(activeBatch.delivery_date)}</span>
+            </div>
             {activeBatch.max_orders != null && (
-              <span>Sisa kuota: <span className="font-semibold text-white">{Math.max(0, activeBatch.max_orders - batchOrderCount)}/{activeBatch.max_orders} porsi</span></span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-500">Sisa Kuota</span>
+                <span className="text-sm font-semibold text-gray-900">{Math.max(0, activeBatch.max_orders - batchOrderCount)}/{activeBatch.max_orders} porsi</span>
+              </div>
             )}
           </div>
-          {activeBatch.notes && <p className="text-xs text-red-200/70 mt-2 italic">{activeBatch.notes}</p>}
+          {activeBatch.notes && <p className="text-xs text-gray-400 mt-3 italic">{activeBatch.notes}</p>}
         </div>
 
         {/* Customer Info */}
-        <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
-          <h2 className="text-xs font-semibold tracking-widest uppercase text-gray-400">
-            Informasi Pemesan
-          </h2>
+        <section className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
+          <h2 className="text-base font-bold text-gray-900">Informasi Pemesan</h2>
+
           {(["name", "nomor_wa", "alamat"] as const).map((key) => {
             const meta = {
               name:      { label: "Nama Lengkap",       placeholder: "e.g. Budi Santoso",        type: "text" },
@@ -510,7 +525,7 @@ export default function OrderPage() {
             const err = fieldError(key);
             return (
               <div key={key}>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   {meta.label}
                 </label>
                 <input
@@ -525,14 +540,14 @@ export default function OrderPage() {
                   }
                   onBlur={key === "nomor_wa" ? handleWaBlur : () => touch(key)}
                   placeholder={meta.placeholder}
-                  className={`w-full border rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-300 bg-white focus:outline-none transition ${
+                  className={`w-full bg-gray-50 rounded-xl px-4 py-3.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 transition ${
                     err
-                      ? "border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                      : "border-gray-200 focus:border-[#7b1d1d] focus:ring-2 focus:ring-[#7b1d1d]/10"
+                      ? "ring-2 ring-red-300"
+                      : "focus:ring-gray-900/10"
                   }`}
                 />
                 {err && (
-                  <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                  <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3 shrink-0" /> {err}
                   </p>
                 )}
@@ -549,16 +564,16 @@ export default function OrderPage() {
             ];
             return (
               <div data-field="jam_antar">
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Jam Antar
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   {options.map((opt) => (
                     <button key={opt.value} type="button"
                       onClick={() => { setForm((prev) => ({ ...prev, jam_antar: opt.value })); touch("jam_antar"); }}
-                      className={`flex flex-col items-center gap-1.5 py-4 rounded-xl border-2 font-medium transition active:scale-[0.98] ${
+                      className={`flex flex-col items-center gap-2 py-5 rounded-2xl border-2 font-medium transition active:scale-[0.98] ${
                         form.jam_antar === opt.value
-                          ? "border-[#7b1d1d] bg-[#7b1d1d]/5 text-[#7b1d1d]"
+                          ? "border-gray-900 bg-gray-900 text-white"
                           : err
                           ? "border-red-200 bg-white text-gray-400"
                           : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
@@ -570,7 +585,7 @@ export default function OrderPage() {
                   ))}
                 </div>
                 {err && (
-                  <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                  <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3 shrink-0" /> {err}
                   </p>
                 )}
@@ -581,9 +596,10 @@ export default function OrderPage() {
         </section>
 
         {/* Menu Paket */}
-        <section className="space-y-2.5" data-section="menu">
-          <div className="px-1 pb-1">
-            <h2 className="text-xs font-semibold tracking-widest uppercase text-gray-400">Menu Paket</h2>
+        <section className="space-y-3" data-section="menu">
+          <div className="px-1">
+            <h2 className="text-base font-bold text-gray-900">Menu Paket</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Pilih menu dan jumlah porsi</p>
           </div>
 
           {MENUS.map((menu) => {
@@ -593,26 +609,24 @@ export default function OrderPage() {
             return (
               <div
                 key={menu.id}
-                className={`bg-white rounded-2xl border shadow-sm transition-all ${
-                  isActive
-                    ? "border-[#7b1d1d]/40 shadow-[#7b1d1d]/5 shadow-md"
-                    : "border-gray-100"
+                className={`bg-white rounded-2xl shadow-sm transition-all ${
+                  isActive ? "ring-2 ring-gray-900" : ""
                 }`}
               >
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 leading-snug">{menu.name}</h3>
+                      <h3 className="font-semibold text-gray-900 text-sm leading-snug">{menu.name}</h3>
                       <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{menu.includes.join(" · ")}</p>
-                      <p className="text-sm font-semibold text-[#7b1d1d] mt-2">{formatRupiah(menu.price)}</p>
+                      <p className="text-base font-bold text-gray-900 mt-2">{formatRupiah(menu.price)}</p>
                     </div>
 
                     {/* Qty stepper */}
-                    <div className="flex items-center gap-2 shrink-0 mt-1">
+                    <div className="flex items-center gap-3 shrink-0 mt-1">
                       <button
                         onClick={() => setQty(menu.id, -1)}
                         disabled={ord.qty === 0}
-                        className="w-8 h-8 rounded-full border border-gray-200 text-gray-500 font-bold text-lg flex items-center justify-center hover:bg-gray-50 transition disabled:opacity-25"
+                        className="w-9 h-9 rounded-full bg-gray-100 text-gray-700 font-bold text-xl flex items-center justify-center hover:bg-gray-200 transition disabled:opacity-25"
                       >
                         −
                       </button>
@@ -632,20 +646,20 @@ export default function OrderPage() {
                             if (e.key === "Enter") (e.target as HTMLInputElement).blur();
                             if (e.key === "Escape") setQtyEditing(null);
                           }}
-                          className="w-10 text-center font-bold text-gray-900 border border-[#7b1d1d] rounded-lg text-sm focus:outline-none py-0.5"
+                          className="w-10 text-center font-bold text-gray-900 border border-gray-900 rounded-lg text-sm focus:outline-none py-0.5"
                         />
                       ) : (
                         <button
                           onClick={() => setQtyEditing(menu.id)}
                           title="Ketuk untuk ubah jumlah"
-                          className="w-8 text-center font-bold text-gray-900 hover:text-[#7b1d1d] transition"
+                          className="w-8 text-center font-bold text-gray-900 hover:text-gray-600 transition"
                         >
                           {ord.qty}
                         </button>
                       )}
                       <button
                         onClick={() => setQty(menu.id, 1)}
-                        className="w-8 h-8 rounded-full bg-[#7b1d1d] text-white font-bold text-lg flex items-center justify-center hover:bg-[#6a1717] transition"
+                        className="w-9 h-9 rounded-full bg-gray-900 text-white font-bold text-xl flex items-center justify-center hover:bg-black transition"
                       >
                         +
                       </button>
@@ -655,7 +669,7 @@ export default function OrderPage() {
                   {/* Subtotal row when active */}
                   {isActive && (
                     <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
-                      <span className="text-xs text-[#7b1d1d] font-medium">
+                      <span className="text-xs font-semibold text-[#7b1d1d]">
                         Subtotal: {formatRupiah(menu.price * ord.qty)}
                       </span>
                     </div>
@@ -667,9 +681,9 @@ export default function OrderPage() {
         </section>
 
         {/* À La Carte */}
-        <section className="space-y-2.5">
-          <div className="px-1 pb-1">
-            <h2 className="text-xs font-semibold tracking-widest uppercase text-gray-400">À La Carte</h2>
+        <section className="space-y-3">
+          <div className="px-1">
+            <h2 className="text-base font-bold text-gray-900">À La Carte</h2>
             <p className="text-xs text-gray-400 mt-0.5">Bisa dipesan tanpa menu paket</p>
           </div>
 
@@ -678,29 +692,29 @@ export default function OrderPage() {
             const isActive = ord.qty > 0;
             return (
               <div key={menu.id}
-                className={`bg-white rounded-2xl border shadow-sm transition-all ${
-                  isActive ? "border-[#7b1d1d]/40 shadow-[#7b1d1d]/5 shadow-md" : "border-gray-100"
+                className={`bg-white rounded-2xl shadow-sm transition-all ${
+                  isActive ? "ring-2 ring-gray-900" : ""
                 }`}>
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 leading-snug">{menu.name}</h3>
+                      <h3 className="font-semibold text-gray-900 text-sm leading-snug">{menu.name}</h3>
                       <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{menu.includes.join(" · ")}</p>
-                      <p className="text-sm font-semibold text-[#7b1d1d] mt-2">{formatRupiah(menu.price)}</p>
+                      <p className="text-base font-bold text-gray-900 mt-2">{formatRupiah(menu.price)}</p>
                     </div>
                     {/* Qty stepper */}
-                    <div className="flex items-center gap-2 shrink-0 mt-1">
+                    <div className="flex items-center gap-3 shrink-0 mt-1">
                       <button
                         onClick={() => setAlcQty(menu.id, -1)}
                         disabled={ord.qty === 0}
-                        className="w-8 h-8 rounded-full border border-gray-200 text-gray-500 font-bold text-lg flex items-center justify-center hover:bg-gray-50 transition disabled:opacity-25"
+                        className="w-9 h-9 rounded-full bg-gray-100 text-gray-700 font-bold text-xl flex items-center justify-center hover:bg-gray-200 transition disabled:opacity-25"
                       >
                         −
                       </button>
                       <span className="w-8 text-center font-bold text-gray-900">{ord.qty}</span>
                       <button
                         onClick={() => setAlcQty(menu.id, 1)}
-                        className="w-8 h-8 rounded-full bg-[#7b1d1d] text-white font-bold text-lg flex items-center justify-center hover:bg-[#6a1717] transition"
+                        className="w-9 h-9 rounded-full bg-gray-900 text-white font-bold text-xl flex items-center justify-center hover:bg-black transition"
                       >
                         +
                       </button>
@@ -709,7 +723,7 @@ export default function OrderPage() {
 
                   {isActive && (
                     <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
-                      <span className="text-xs text-[#7b1d1d] font-medium">
+                      <span className="text-xs font-semibold text-[#7b1d1d]">
                         Subtotal: {formatRupiah(menu.price * ord.qty)}
                       </span>
                     </div>
@@ -722,10 +736,8 @@ export default function OrderPage() {
 
         {/* Order Summary */}
         {hasAnyOrder && (
-          <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h2 className="text-xs font-semibold tracking-widest uppercase text-gray-400 mb-4">
-              Ringkasan Pesanan
-            </h2>
+          <section className="bg-white rounded-2xl shadow-sm p-5">
+            <h2 className="text-base font-bold text-gray-900 mb-4">Ringkasan</h2>
             <div className="space-y-3">
               {activeOrders.map((menu, idx) => {
                 const ord = orders[menu.id];
@@ -766,9 +778,9 @@ export default function OrderPage() {
                   <span className="text-sm text-gray-400">Ongkos Kirim</span>
                   <span className="text-sm text-gray-400">{formatRupiah(ONGKIR)}</span>
                 </div>
-                <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                  <span className="text-sm font-semibold text-gray-900">Total</span>
-                  <span className="text-lg font-bold text-[#7b1d1d]">{formatRupiah(total)}</span>
+                <div className="flex justify-between items-center pt-3 border-t border-gray-100">
+                  <span className="text-base font-bold text-gray-900">Total</span>
+                  <span className="text-xl font-bold text-[#7b1d1d]">{formatRupiah(total)}</span>
                 </div>
               </div>
             </div>
@@ -776,22 +788,22 @@ export default function OrderPage() {
         )}
 
         {/* Catatan (global) */}
-        <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <label className="block text-xs font-medium text-gray-500 mb-1.5">
-            Catatan Pesanan <span className="text-gray-300 font-normal">(Opsional)</span>
-          </label>
+        <section className="bg-white rounded-2xl shadow-sm p-5">
+          <h2 className="text-base font-bold text-gray-900 mb-3">
+            Catatan <span className="text-sm font-normal text-gray-400">(Opsional)</span>
+          </h2>
           <textarea
             value={form.notes}
             onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
             placeholder="Ada permintaan khusus atau info tambahan?"
             rows={2}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-300 bg-white focus:outline-none focus:border-[#7b1d1d] focus:ring-2 focus:ring-[#7b1d1d]/10 transition resize-none"
+            className="w-full bg-gray-50 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 transition resize-none"
           />
         </section>
 
         {/* Payment Method */}
-        <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Metode Pembayaran</p>
+        <section className="bg-white rounded-2xl shadow-sm p-5">
+          <h2 className="text-base font-bold text-gray-900 mb-4">Metode Pembayaran</h2>
 
           <div className="flex gap-2 mb-5">
             {([
@@ -800,10 +812,10 @@ export default function OrderPage() {
               ["transfer_bca",     Landmark,  "BCA"],
             ] as [PaymentMethod, React.ElementType, string][]).map(([val, Icon, label]) => (
               <button key={val} type="button" onClick={() => { setPaymentMethod(val); setProofFile(null); setProofPreview(null); }}
-                className={`flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 text-xs font-semibold transition ${
+                className={`flex-1 flex flex-col items-center gap-1.5 py-3.5 rounded-xl text-xs font-semibold transition ${
                   paymentMethod === val
-                    ? "border-[#7b1d1d] bg-[#7b1d1d]/5 text-[#7b1d1d]"
-                    : "border-gray-200 text-gray-400 hover:border-gray-300 bg-white"
+                    ? "bg-gray-900 text-white"
+                    : "bg-gray-50 text-gray-500 hover:bg-gray-100"
                 }`}>
                 <Icon size={18} />
                 {label}
@@ -813,17 +825,16 @@ export default function OrderPage() {
 
           {/* Bank account info */}
           {isTransfer && (
-            <div className="bg-gray-50 rounded-xl border border-gray-100 px-4 py-4 mb-5">
-              <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-2">Info Rekening</p>
-              <p className="text-sm font-semibold text-gray-700">{BANK_INFO[paymentMethod as keyof typeof BANK_INFO].bank}</p>
-              <p className="text-xl font-bold text-[#7b1d1d] tracking-wider my-1">
+            <div className="bg-gray-50 rounded-xl p-4 mb-4">
+              <p className="text-xs text-gray-400 mb-1">Rekening {BANK_INFO[paymentMethod as keyof typeof BANK_INFO].bank}</p>
+              <p className="text-2xl font-bold text-gray-900 tracking-wider">
                 {BANK_INFO[paymentMethod as keyof typeof BANK_INFO].account}
               </p>
-              <p className="text-xs text-gray-500">a/n {BANK_INFO[paymentMethod as keyof typeof BANK_INFO].name}</p>
+              <p className="text-xs text-gray-500 mt-0.5">a/n {BANK_INFO[paymentMethod as keyof typeof BANK_INFO].name}</p>
               <button type="button"
                 onClick={() => navigator.clipboard.writeText(BANK_INFO[paymentMethod as keyof typeof BANK_INFO].account)}
-                className="mt-3 text-xs font-semibold text-[#7b1d1d] border border-[#7b1d1d]/30 rounded-lg px-3 py-1.5 hover:bg-[#7b1d1d] hover:text-white hover:border-[#7b1d1d] transition">
-                Salin Nomor Rekening
+                className="mt-3 text-xs font-semibold text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition">
+                Salin Nomor
               </button>
             </div>
           )}
@@ -831,19 +842,21 @@ export default function OrderPage() {
           {/* Proof upload */}
           {isTransfer && (
             <div className="mb-4">
-              <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-2">Bukti Transfer <span className="text-red-400">*</span></p>
+              <p className="text-sm font-medium text-gray-700 mb-1.5">
+                Bukti Transfer <span className="text-red-500">*</span>
+              </p>
               {proofPreview ? (
                 <div className="relative">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={proofPreview} alt="Bukti transfer"
                     onClick={() => setProofLightbox(true)}
-                    className="w-full max-h-48 object-cover rounded-xl border border-gray-200 cursor-zoom-in" />
+                    className="w-full max-h-48 object-cover rounded-xl border border-gray-100 cursor-zoom-in" />
                   <button type="button" onClick={() => { setProofFile(null); setProofPreview(null); }}
                     className="absolute top-2 right-2 bg-white/90 text-gray-500 hover:text-red-500 rounded-full w-7 h-7 flex items-center justify-center shadow-sm transition"><X size={14} /></button>
                   <span className="absolute bottom-2 left-2 text-[10px] bg-black/40 text-white rounded px-1.5 py-0.5">Tap untuk perbesar</span>
                 </div>
               ) : (
-                <label className="flex flex-col items-center gap-2 border-2 border-dashed border-gray-200 rounded-xl py-7 cursor-pointer hover:border-[#7b1d1d]/40 hover:bg-gray-50 transition">
+                <label className="flex flex-col items-center gap-2 border-2 border-dashed border-gray-200 rounded-xl py-7 cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition">
                   <Banknote size={22} className="text-gray-400" />
                   <span className="text-sm font-medium text-gray-600">Upload Bukti Transfer</span>
                   <span className="text-xs text-gray-400">JPG, PNG, HEIC · Auto-compress ke maks 2MB</span>
@@ -858,23 +871,23 @@ export default function OrderPage() {
                 </label>
               )}
               {submitted && isTransfer && !proofFile && (
-                <p className="text-xs text-red-400 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Upload bukti transfer dulu ya</p>
+                <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Upload bukti transfer dulu ya</p>
               )}
             </div>
           )}
 
           {paymentMethod === "cash" && (
-            <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+            <div className="bg-amber-50 rounded-xl px-4 py-3">
               <p className="flex items-center gap-2 text-sm text-amber-700"><Banknote size={16} /> Pembayaran tunai dilakukan saat pesanan diterima.</p>
             </div>
           )}
         </section>
 
-        {/* Total & CTA */}
-        <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        {/* Error + Submit CTA */}
+        <section className="space-y-3">
           {error && (
-            <div className="bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl px-4 py-3 mb-4 space-y-2">
-              <div className="flex items-start gap-2">
+            <div className="bg-red-50 border border-red-100 rounded-xl p-4 space-y-2">
+              <div className="flex items-start gap-2 text-sm text-red-600">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /> {error}
               </div>
               {error.includes("Hubungi kami") && (
@@ -893,10 +906,10 @@ export default function OrderPage() {
           <button
             onClick={handleSubmit}
             disabled={!isFormComplete || loading}
-            className={`w-full text-white font-semibold py-4 rounded-xl tracking-wide text-sm transition flex items-center justify-center gap-2 ${
+            className={`w-full font-bold py-4 rounded-2xl text-sm tracking-wide transition flex items-center justify-center gap-2 ${
               isFormComplete
-                ? "bg-[#7b1d1d] hover:bg-[#6a1717] shadow-sm"
-                : "bg-gray-300 cursor-not-allowed"
+                ? "bg-gray-900 hover:bg-black text-white"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
           >
             {loading ? (
@@ -908,10 +921,11 @@ export default function OrderPage() {
               </>
             )}
           </button>
-          <p className="text-center text-xs text-gray-400 mt-3">
+          <p className="text-center text-xs text-gray-400">
             Pesanan kamu akan langsung kami proses. Tim kami akan menghubungi via WA.
           </p>
         </section>
+
       </main>
 
       <footer className="text-center py-8 text-xs text-gray-400">
@@ -922,7 +936,7 @@ export default function OrderPage() {
       <a
         href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Halo Babiqu, saya butuh bantuan dengan pesanan saya.")}`}
         target="_blank" rel="noopener noreferrer"
-        className="fixed bottom-6 right-4 z-50 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg flex items-center gap-2 px-4 py-3 text-sm font-semibold transition active:scale-95"
+        className="fixed bottom-6 right-4 z-50 bg-[#25D366] hover:bg-[#20ba5a] text-white rounded-full shadow-lg flex items-center gap-2 px-4 py-3 text-sm font-semibold transition active:scale-95"
       >
         <MessageCircle className="w-4 h-4 shrink-0" />
         Bantuan
