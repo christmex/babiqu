@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, BellOff, BellRing } from "lucide-react";
-import { subscribeUser, unsubscribeUser, sendTestNotification } from "../push-actions";
+import { Bell, BellOff } from "lucide-react";
+import { subscribeUser, unsubscribeUser } from "../push-actions";
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -91,37 +91,19 @@ export default function PushToggle() {
     setLoading(false);
   }
 
-  async function handleTest() {
-    if (!endpoint) return;
-    setLoading(true);
-    const res = await sendTestNotification(endpoint, "Tes dari admin panel 🎉");
-    setMsg(res.success ? "Test terkirim ✓" : `Gagal: ${res.error}`);
-    setLoading(false);
-  }
-
   if (!supported) return null;
 
   return (
     <div className="flex items-center gap-2">
       {subscribed ? (
-        <>
-          <button
-            onClick={handleTest}
-            disabled={loading}
-            title="Kirim test notif"
-            className="flex items-center justify-center w-9 h-9 bg-[#1c1c1e] rounded-xl border border-white/[0.08] text-amber-400 hover:border-amber-500/40 transition disabled:opacity-40"
-          >
-            <BellRing size={15} />
-          </button>
-          <button
-            onClick={handleUnsubscribe}
-            disabled={loading}
-            title="Matikan notifikasi"
-            className="flex items-center justify-center w-9 h-9 bg-[#1c1c1e] rounded-xl border border-white/[0.08] text-gray-500 hover:text-red-400 transition disabled:opacity-40"
-          >
-            <BellOff size={15} />
-          </button>
-        </>
+        <button
+          onClick={handleUnsubscribe}
+          disabled={loading}
+          title="Matikan notifikasi"
+          className="flex items-center justify-center w-9 h-9 bg-[#1c1c1e] rounded-xl border border-amber-500/30 text-amber-400 hover:border-red-500/40 hover:text-red-400 transition disabled:opacity-40"
+        >
+          <Bell size={15} />
+        </button>
       ) : (
         <button
           onClick={handleSubscribe}
@@ -129,7 +111,7 @@ export default function PushToggle() {
           title="Aktifkan notifikasi pesanan baru"
           className="flex items-center justify-center w-9 h-9 bg-[#1c1c1e] rounded-xl border border-white/[0.08] text-gray-500 hover:text-amber-400 hover:border-amber-500/40 transition disabled:opacity-40"
         >
-          <Bell size={15} />
+          <BellOff size={15} />
         </button>
       )}
       {msg && (
