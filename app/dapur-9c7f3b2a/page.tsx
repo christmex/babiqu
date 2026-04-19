@@ -273,38 +273,55 @@ export default function DashboardPage() {
     const mins = Math.floor(remaining / 60);
     const secs = remaining % 60;
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-[#f2f2f7] flex flex-col items-center justify-center px-4">
         <div className="w-full max-w-sm">
-          <div className="text-center mb-8">
-            <p className="text-[10px] tracking-[0.3em] uppercase text-[#7b1d1d] font-bold mb-1">Babiqu</p>
-            <h1 className="text-2xl font-bold text-gray-900">Dapur Dashboard</h1>
-            <p className="text-sm text-gray-400 mt-1">Masukkan password untuk melanjutkan</p>
+          {/* Brand mark */}
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-gray-900 rounded-2xl mb-5 shadow-lg">
+              <span className="text-white text-xl font-black tracking-tighter">BQ</span>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">Dapur</h1>
+            <p className="text-sm text-gray-400 mt-1">Masukkan password untuk lanjut</p>
           </div>
-          <form onSubmit={handleLogin} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+
+          {/* Card */}
+          <form onSubmit={handleLogin} className="bg-white rounded-3xl shadow-sm p-7 space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Password</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
               <div className="relative">
                 <input
-                  type={showPw ? "text" : "password"} value={pwInput} onChange={(e) => { setPwInput(e.target.value); setPwError(""); }}
+                  type={showPw ? "text" : "password"} value={pwInput}
+                  onChange={(e) => { setPwInput(e.target.value); setPwError(""); }}
                   placeholder="••••••••••" disabled={isLocked} autoFocus
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-gray-900 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition disabled:opacity-50"
+                  className="w-full bg-gray-50 rounded-xl px-4 py-3.5 pr-11 text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900/10 transition disabled:opacity-40"
                 />
                 <button type="button" onClick={() => setShowPw(v => !v)} tabIndex={-1}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
-                  {showPw ? <EyeOff size={17} /> : <Eye size={17} />}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition">
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
+
             {pwError && (
-              <div className={`text-sm rounded-xl px-4 py-3 ${isLocked ? "bg-red-50 border border-red-200 text-red-600" : "bg-amber-50 border border-amber-200 text-amber-700"}`}>
-                {isLocked ? `🔒 ${pwError} (${mins}:${String(secs).padStart(2,"0")})` : `⚠️ ${pwError}`}
+              <div className={`flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm ${
+                isLocked ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-700"
+              }`}>
+                <XCircle size={15} className="shrink-0 mt-0.5" />
+                <span>
+                  {isLocked
+                    ? `Terkunci. Coba lagi dalam ${mins}:${String(secs).padStart(2,"0")}`
+                    : pwError}
+                </span>
               </div>
             )}
+
             <button type="submit" disabled={isLocked || !pwInput}
-              className="w-full bg-[#7b1d1d] text-white font-bold py-3 rounded-xl hover:bg-[#6a1717] transition disabled:opacity-40">
+              className="w-full bg-gray-900 hover:bg-black text-white font-bold py-3.5 rounded-2xl transition disabled:opacity-30 text-sm">
               {isLocked ? `Terkunci (${mins}:${String(secs).padStart(2,"0")})` : "Masuk"}
             </button>
           </form>
+
+          <p className="text-center text-xs text-gray-400 mt-6">Babiqu · Admin Panel</p>
         </div>
       </div>
     );
