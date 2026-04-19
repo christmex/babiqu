@@ -273,30 +273,30 @@ export default function DashboardPage() {
     const mins = Math.floor(remaining / 60);
     const secs = remaining % 60;
     return (
-      <div className="min-h-screen bg-[#f2f2f7] flex flex-col items-center justify-center px-4">
+      <div className="min-h-screen bg-[#111111] flex flex-col items-center justify-center px-4">
         <div className="w-full max-w-sm">
           {/* Brand mark */}
           <div className="text-center mb-10">
-            <div className="inline-flex items-center justify-center w-14 h-14 bg-gray-900 rounded-2xl mb-5 shadow-lg">
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-[#1c1c1e] border border-white/10 rounded-2xl mb-5">
               <span className="text-white text-xl font-black tracking-tighter">BQ</span>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Dapur</h1>
-            <p className="text-sm text-gray-400 mt-1">Masukkan password untuk lanjut</p>
+            <h1 className="text-2xl font-bold text-white">Dapur</h1>
+            <p className="text-sm text-gray-500 mt-1">Masukkan password untuk lanjut</p>
           </div>
 
           {/* Card */}
-          <form onSubmit={handleLogin} className="bg-white rounded-3xl shadow-sm p-7 space-y-4">
+          <form onSubmit={handleLogin} className="bg-[#1c1c1e] rounded-3xl p-7 border border-white/10 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+              <label className="block text-sm font-medium text-gray-400 mb-2">Password</label>
               <div className="relative">
                 <input
                   type={showPw ? "text" : "password"} value={pwInput}
                   onChange={(e) => { setPwInput(e.target.value); setPwError(""); }}
                   placeholder="••••••••••" disabled={isLocked} autoFocus
-                  className="w-full bg-gray-50 rounded-xl px-4 py-3.5 pr-11 text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900/10 transition disabled:opacity-40"
+                  className="w-full bg-[#2c2c2e] rounded-xl px-4 py-3.5 pr-11 text-white placeholder-gray-600 border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition disabled:opacity-40"
                 />
                 <button type="button" onClick={() => setShowPw(v => !v)} tabIndex={-1}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition">
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition">
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
@@ -304,7 +304,7 @@ export default function DashboardPage() {
 
             {pwError && (
               <div className={`flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm ${
-                isLocked ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-700"
+                isLocked ? "bg-red-500/10 text-red-400" : "bg-amber-500/10 text-amber-400"
               }`}>
                 <XCircle size={15} className="shrink-0 mt-0.5" />
                 <span>
@@ -316,12 +316,12 @@ export default function DashboardPage() {
             )}
 
             <button type="submit" disabled={isLocked || !pwInput}
-              className="w-full bg-gray-900 hover:bg-black text-white font-bold py-3.5 rounded-2xl transition disabled:opacity-30 text-sm">
+              className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-3.5 rounded-2xl transition disabled:opacity-30 text-sm">
               {isLocked ? `Terkunci (${mins}:${String(secs).padStart(2,"0")})` : "Masuk"}
             </button>
           </form>
 
-          <p className="text-center text-xs text-gray-400 mt-6">Babiqu · Admin Panel</p>
+          <p className="text-center text-xs text-gray-600 mt-6">Babiqu · Admin Panel</p>
         </div>
       </div>
     );
@@ -738,35 +738,35 @@ export default function DashboardPage() {
   ] as const;
 
   return (
-    <div className="min-h-screen bg-[#f2f2f7] pb-24">
+    <div className="min-h-screen bg-[#111111] pb-24">
       <div className="max-w-2xl mx-auto px-4 pt-5 pb-4">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-5 pt-1">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 leading-tight">Dapur</h1>
+            <h1 className="text-2xl font-bold text-white leading-tight">Dapur</h1>
             <div className="flex items-center gap-2 mt-0.5">
               {currentBatch ? (
-                <span className="flex items-center gap-1.5 text-xs font-medium text-green-600">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   {currentBatch.label.split(/[—–-]/)[0].trim()}
                 </span>
               ) : (
-                <span className="text-xs text-gray-400">Tidak ada batch aktif</span>
+                <span className="text-xs text-gray-600">Tidak ada batch aktif</span>
               )}
               {lastUpdated && (
-                <span className="text-[10px] text-gray-300">· {lastUpdated.toLocaleTimeString("id-ID")}</span>
+                <span className="text-[10px] text-gray-600">· {lastUpdated.toLocaleTimeString("id-ID")}</span>
               )}
             </div>
           </div>
           <div className="flex items-center gap-2">
             <a href="/" target="_blank" rel="noopener noreferrer"
-              className="flex items-center justify-center w-9 h-9 bg-white rounded-xl shadow-sm text-gray-500 hover:text-gray-800 transition"
+              className="flex items-center justify-center w-9 h-9 bg-[#1c1c1e] rounded-xl border border-white/[0.08] text-gray-500 hover:text-white transition"
               title="Buka Form">
               <ExternalLink size={15} />
             </a>
             <button onClick={fetchAll} disabled={loading}
-              className="flex items-center justify-center w-9 h-9 bg-gray-900 text-white rounded-xl shadow-sm hover:bg-black transition disabled:opacity-40"
+              className="flex items-center justify-center w-9 h-9 bg-amber-500 text-black rounded-xl hover:bg-amber-400 transition disabled:opacity-40"
               title="Refresh">
               <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
             </button>
@@ -776,14 +776,14 @@ export default function DashboardPage() {
         {/* Quick stats — 2×2 grid */}
         <div className="grid grid-cols-2 gap-3 mb-5">
           {[
-            { label: "Menunggu",    value: todayPending.length,   big: true,  color: "text-gray-900" },
-            { label: "Konfirmasi",  value: todayConfirmed.length, big: true,  color: "text-gray-900" },
-            { label: "Selesai",     value: todayDelivered.length, big: true,  color: "text-green-600" },
-            { label: "Omzet Batch", value: formatRupiah(currentBatchRevenue), big: false, color: "text-gray-900" },
+            { label: "Menunggu",    value: todayPending.length,   big: true,  color: "text-white" },
+            { label: "Konfirmasi",  value: todayConfirmed.length, big: true,  color: "text-white" },
+            { label: "Selesai",     value: todayDelivered.length, big: true,  color: "text-emerald-400" },
+            { label: "Omzet Batch", value: formatRupiah(currentBatchRevenue), big: false, color: "text-white" },
           ].map((s) => (
-            <div key={s.label} className="bg-white rounded-2xl shadow-sm px-4 py-4">
+            <div key={s.label} className="bg-[#1c1c1e] rounded-2xl border border-white/[0.08] px-4 py-4">
               <p className={`font-bold leading-none ${s.color} ${s.big ? "text-3xl" : "text-lg"}`}>{s.value}</p>
-              <p className="text-xs text-gray-400 font-medium mt-2">{s.label}</p>
+              <p className="text-xs text-gray-500 font-medium mt-2">{s.label}</p>
             </div>
           ))}
         </div>
@@ -795,7 +795,7 @@ export default function DashboardPage() {
             {/* Filter row */}
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-gray-500">
-                <span className="font-bold text-gray-900">{displayedOrders.length}</span>
+                <span className="font-bold text-white">{displayedOrders.length}</span>
                 <span className="ml-1.5">
                   {resolvedFilterBatchId !== "all" && currentBatch && filterBatchId === "auto"
                     ? currentBatch.label.split(/[—–-]/)[0].trim()
@@ -813,13 +813,13 @@ export default function DashboardPage() {
                 }}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
                   activeFilterCount > 0
-                    ? "bg-gray-900 text-white"
-                    : "bg-white text-gray-600 shadow-sm hover:bg-gray-50"
+                    ? "bg-amber-500 text-black font-bold"
+                    : "bg-[#1c1c1e] text-gray-400 border border-white/[0.08] hover:border-white/20"
                 }`}
               >
                 <span>Filter</span>
                 {activeFilterCount > 0 && (
-                  <span className="bg-white/25 rounded-md px-1.5 text-[10px] font-bold">
+                  <span className="bg-black/20 rounded-md px-1.5 text-[10px] font-bold">
                     {activeFilterCount}
                   </span>
                 )}
@@ -828,11 +828,11 @@ export default function DashboardPage() {
 
             {/* Ringkasan Produksi */}
             {productionSummary.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <div className="bg-[#1c1c1e] rounded-2xl border border-white/[0.08] overflow-hidden">
                 <button onClick={() => { setShowSummary(v => !v); setSelectedProdMenuId(null); }}
-                  className="w-full flex items-center justify-between px-4 py-3.5 border-b border-gray-100">
-                  <p className="text-sm font-bold text-gray-900">Ringkasan Produksi</p>
-                  {showSummary ? <ChevronUp size={15} className="text-gray-400" /> : <ChevronDown size={15} className="text-gray-400" />}
+                  className="w-full flex items-center justify-between px-4 py-3.5 border-b border-white/[0.06]">
+                  <p className="text-sm font-bold text-white">Ringkasan Produksi</p>
+                  {showSummary ? <ChevronUp size={15} className="text-gray-600" /> : <ChevronDown size={15} className="text-gray-600" />}
                 </button>
                 {showSummary && (
                   <div>
@@ -842,42 +842,42 @@ export default function DashboardPage() {
                         o => o.status !== "cancelled" && o.items?.some(it => it.menu_id === menu.menuId)
                       );
                       return (
-                        <div key={menu.menuId} className="border-b border-gray-50 last:border-b-0">
+                        <div key={menu.menuId} className="border-b border-white/[0.05] last:border-b-0">
                           <button
                             onClick={() => setSelectedProdMenuId(isSelected ? null : menu.menuId)}
                             className={`w-full px-4 py-3 flex items-center justify-between transition ${
-                              isSelected ? "bg-gray-50" : "hover:bg-gray-50"
+                              isSelected ? "bg-white/[0.04]" : "hover:bg-white/[0.03]"
                             }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
-                              <ChevronDown size={13} className={`text-gray-300 transition-transform shrink-0 ${isSelected ? "rotate-180" : ""}`} />
-                              <p className="text-sm text-gray-800 truncate">{menu.name}</p>
+                              <ChevronDown size={13} className={`text-gray-600 transition-transform shrink-0 ${isSelected ? "rotate-180" : ""}`} />
+                              <p className="text-sm text-gray-200 truncate">{menu.name}</p>
                             </div>
-                            <span className="text-xs font-bold text-gray-900 bg-gray-100 px-2.5 py-0.5 rounded-lg shrink-0 ml-2">
+                            <span className="text-xs font-bold text-white bg-white/10 px-2.5 py-0.5 rounded-lg shrink-0 ml-2">
                               {menu.qty}×
                             </span>
                           </button>
 
                           {isSelected && (
-                            <div className="bg-gray-50 border-t border-gray-100 divide-y divide-gray-100">
+                            <div className="bg-white/[0.02] border-t border-white/[0.06] divide-y divide-white/[0.05]">
                               {ordersWithMenu.map(o => {
                                 const thisItem = o.items?.find(it => it.menu_id === menu.menuId);
                                 return (
                                   <button
                                     key={o.id}
                                     onClick={() => setSelectedOrder(o)}
-                                    className="w-full text-left px-5 py-3 hover:bg-gray-100 transition"
+                                    className="w-full text-left px-5 py-3 hover:bg-white/[0.04] transition"
                                   >
                                     <div className="flex items-center justify-between gap-2">
                                       <div className="min-w-0">
-                                        <p className="text-sm font-semibold text-gray-900 truncate">{o.name}</p>
-                                        <p className="text-xs text-gray-400 truncate mt-0.5">{o.alamat}</p>
+                                        <p className="text-sm font-semibold text-white truncate">{o.name}</p>
+                                        <p className="text-xs text-gray-500 truncate mt-0.5">{o.alamat}</p>
                                       </div>
                                       <div className="text-right shrink-0">
                                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg ${
-                                          o.jam_antar.includes("Siang") ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700"
+                                          o.jam_antar.includes("Siang") ? "bg-amber-500/20 text-amber-400" : "bg-indigo-500/20 text-indigo-400"
                                         }`}>{o.jam_antar.includes("Siang") ? "Siang" : "Malam"}</span>
-                                        <p className="text-xs font-bold text-gray-900 mt-1">{thisItem?.qty}×</p>
+                                        <p className="text-xs font-bold text-white mt-1">{thisItem?.qty}×</p>
                                       </div>
                                     </div>
                                   </button>
@@ -893,9 +893,9 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {loading && <p className="text-center text-gray-400 py-12 text-sm">Memuat...</p>}
+            {loading && <p className="text-center text-gray-500 py-12 text-sm">Memuat...</p>}
             {!loading && displayedOrders.length === 0 && (
-              <p className="text-center text-gray-400 py-12 text-sm">Tidak ada pesanan untuk filter ini.</p>
+              <p className="text-center text-gray-600 py-12 text-sm">Tidak ada pesanan untuk filter ini.</p>
             )}
 
             {displayedOrders.map((order, idx) => {
@@ -908,18 +908,18 @@ export default function DashboardPage() {
               // status dot colour
               const dotColor = isCancelled ? "bg-red-400" : isDelivered ? "bg-green-500" : isConfirmed ? "bg-blue-500" : "bg-amber-400";
               const statusLabel = isCancelled ? "Batal" : isDelivered ? "Selesai" : isConfirmed ? "Konfirmasi" : "Menunggu";
-              const statusColor = isCancelled ? "text-red-500" : isDelivered ? "text-green-600" : isConfirmed ? "text-blue-600" : "text-amber-600";
+              const statusColor = isCancelled ? "text-red-400" : isDelivered ? "text-emerald-400" : isConfirmed ? "text-sky-400" : "text-amber-400";
 
               return (
                 <div key={order.id}>
                   {showDate && (
-                    <p className="text-xs font-semibold text-gray-400 px-1 pt-4 pb-1.5">
+                    <p className="text-xs font-semibold text-gray-500 px-1 pt-4 pb-1.5">
                       {isToday(order.created_at) ? "Hari Ini" : new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long" }).format(new Date(order.created_at))}
                     </p>
                   )}
 
                   <button onClick={() => setSelectedOrder(order)}
-                    className={`w-full text-left bg-white rounded-2xl shadow-sm overflow-hidden transition-all active:scale-[0.99] ${
+                    className={`w-full text-left bg-[#1c1c1e] rounded-2xl border border-white/[0.08] overflow-hidden transition-all active:scale-[0.99] ${
                       isCancelled ? "opacity-50" : ""
                     }`}>
                     <div className="flex items-center gap-3 px-4 py-3.5">
@@ -931,11 +931,11 @@ export default function DashboardPage() {
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="font-semibold text-gray-900 text-sm truncate">{order.name}</p>
-                          <p className="text-xs font-bold text-gray-900 shrink-0">{formatRupiah(order.total)}</p>
+                          <p className="font-semibold text-white text-sm truncate">{order.name}</p>
+                          <p className="text-xs font-bold text-white shrink-0">{formatRupiah(order.total)}</p>
                         </div>
                         <div className="flex items-center justify-between gap-2 mt-0.5">
-                          <p className="text-xs text-gray-400 truncate">
+                          <p className="text-xs text-gray-500 truncate">
                             {order.items?.map((it) => `${it.qty}× ${it.menu_name.split(" ").slice(0,2).join(" ")}`).join(", ")}
                           </p>
                           <div className="flex items-center gap-1.5 shrink-0">
@@ -947,11 +947,11 @@ export default function DashboardPage() {
                           <p className="text-xs text-red-400 truncate mt-0.5">{order.cancel_reason}</p>
                         )}
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] text-gray-400">
+                          <span className="text-[10px] text-gray-500">
                             {order.jam_antar.includes("Siang") ? "Siang" : "Malam"}
                           </span>
-                          <span className="text-gray-200">·</span>
-                          <span className={`text-[10px] font-medium ${order.payment_method === "cash" ? "text-amber-600" : "text-green-600"}`}>
+                          <span className="text-gray-700">·</span>
+                          <span className={`text-[10px] font-medium ${order.payment_method === "cash" ? "text-amber-400" : "text-emerald-400"}`}>
                             {order.payment_method === "cash" ? "Tunai" : order.payment_method === "transfer_mandiri" ? "Mandiri" : "BCA"}
                           </span>
                         </div>
@@ -968,7 +968,7 @@ export default function DashboardPage() {
         {tab === "keuangan" && (
           <div className="space-y-4">
             {batchKeuangan.length === 0 && !loading && (
-              <p className="text-center text-gray-400 py-8 text-sm">Belum ada data keuangan per batch.</p>
+              <p className="text-center text-gray-600 py-8 text-sm">Belum ada data keuangan per batch.</p>
             )}
 
             {batchKeuangan.map(({ batch, revenue, expTotal, profit, portionCount, pendingPortions, expItems }) => {
@@ -978,46 +978,46 @@ export default function DashboardPage() {
               })).filter(x => x.total > 0);
 
               return (
-                <div key={batch.id} className={`bg-white rounded-xl border overflow-hidden shadow-sm ${isActiveBatch ? "border-[#7b1d1d]/30" : "border-gray-100"}`}>
+                <div key={batch.id} className={`bg-[#1c1c1e] rounded-2xl border overflow-hidden ${isActiveBatch ? "border-amber-500/20" : "border-white/[0.08]"}`}>
                   {/* Batch header */}
-                  <div className={`px-4 py-3 flex items-center justify-between border-b ${isActiveBatch ? "bg-[#7b1d1d] border-[#7b1d1d]" : "bg-gray-50 border-gray-100"}`}>
+                  <div className={`px-4 py-3 flex items-center justify-between border-b ${isActiveBatch ? "bg-amber-500/15 border-amber-500/20" : "bg-white/[0.03] border-white/[0.06]"}`}>
                     <div>
-                      <p className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-wider ${isActiveBatch ? "text-red-200" : "text-gray-400"}`}>
+                      <p className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-wider ${isActiveBatch ? "text-amber-400" : "text-gray-500"}`}>
                         {isActiveBatch && <CheckCircle2 size={11} />}{isActiveBatch ? "Aktif" : "Batch"}
                       </p>
-                      <p className={`font-semibold text-sm mt-0.5 ${isActiveBatch ? "text-white" : "text-gray-900"}`}>{batch.label}</p>
-                      <p className={`text-[11px] mt-0.5 ${isActiveBatch ? "text-red-200" : "text-gray-400"}`}>
+                      <p className={`font-semibold text-sm mt-0.5 text-white`}>{batch.label}</p>
+                      <p className={`text-[11px] mt-0.5 ${isActiveBatch ? "text-amber-300/70" : "text-gray-500"}`}>
                         Antar: {formatBatchDate(batch.delivery_date)}
                       </p>
                     </div>
                     <div className="text-right">
                       {pendingPortions > 0 && (
-                        <p className={`text-[10px] font-semibold mb-1 ${isActiveBatch ? "text-amber-200" : "text-amber-600"}`}>
+                        <p className="text-[10px] font-semibold mb-1 text-amber-400">
                           {pendingPortions} porsi menunggu
                         </p>
                       )}
-                      <p className={`text-xs ${isActiveBatch ? "text-red-200" : "text-gray-400"}`}>{portionCount} porsi konfirmasi</p>
+                      <p className="text-xs text-gray-500">{portionCount} porsi konfirmasi</p>
                     </div>
                   </div>
 
                   {/* P&L */}
-                  <div className="divide-y divide-gray-50">
+                  <div className="divide-y divide-white/[0.06]">
                     <div className="flex items-center justify-between px-4 py-2.5">
-                      <p className="text-xs text-gray-500">Pemasukan</p>
-                      <p className="text-sm font-semibold text-gray-900">{formatRupiah(revenue)}</p>
+                      <p className="text-xs text-gray-400">Pemasukan</p>
+                      <p className="text-sm font-semibold text-white">{formatRupiah(revenue)}</p>
                     </div>
                     <div className="flex items-center justify-between px-4 py-2.5">
-                      <p className="text-xs text-gray-500">Pengeluaran</p>
-                      <p className="text-sm font-semibold text-gray-900">{formatRupiah(expTotal)}</p>
+                      <p className="text-xs text-gray-400">Pengeluaran</p>
+                      <p className="text-sm font-semibold text-white">{formatRupiah(expTotal)}</p>
                     </div>
-                    <div className={`flex items-center justify-between px-4 py-2.5 ${profit >= 0 ? "bg-green-50" : "bg-red-50"}`}>
-                      <p className="text-xs font-semibold text-gray-700">Keuntungan</p>
+                    <div className={`flex items-center justify-between px-4 py-2.5 ${profit >= 0 ? "bg-emerald-500/[0.08]" : "bg-red-500/[0.08]"}`}>
+                      <p className="text-xs font-semibold text-gray-300">Keuntungan</p>
                       <div className="text-right">
-                        <p className={`text-sm font-bold ${profit >= 0 ? "text-green-700" : "text-red-600"}`}>
+                        <p className={`text-sm font-bold ${profit >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                           {profit >= 0 ? "+" : ""}{formatRupiah(profit)}
                         </p>
                         {revenue > 0 && (
-                          <p className="text-[10px] text-gray-400">{Math.round((profit / revenue) * 100)}%</p>
+                          <p className="text-[10px] text-gray-500">{Math.round((profit / revenue) * 100)}%</p>
                         )}
                       </div>
                     </div>
@@ -1025,15 +1025,15 @@ export default function DashboardPage() {
 
                   {/* Expense breakdown */}
                   {expByCategory.length > 0 && (
-                    <div className="px-4 py-3 border-t border-gray-50 space-y-1.5">
-                      <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-2">Pengeluaran</p>
+                    <div className="border-t border-white/[0.06] px-4 py-3 space-y-1.5">
+                      <p className="text-[10px] text-gray-600 uppercase tracking-wider font-semibold mb-2">Pengeluaran</p>
                       {expByCategory.map(({ cat, total }) => (
                         <div key={cat} className="flex items-center gap-2">
-                          <span className="text-xs text-gray-600 w-20 shrink-0">{cat}</span>
-                          <div className="flex-1 bg-gray-100 rounded-full h-1">
-                            <div className="bg-[#7b1d1d] h-1 rounded-full" style={{ width: `${expTotal > 0 ? (total / expTotal) * 100 : 0}%` }} />
+                          <span className="text-xs text-gray-400 w-20 shrink-0">{cat}</span>
+                          <div className="flex-1 bg-white/10 rounded-full h-1">
+                            <div className="bg-amber-500 h-1 rounded-full" style={{ width: `${expTotal > 0 ? (total / expTotal) * 100 : 0}%` }} />
                           </div>
-                          <span className="text-xs font-semibold text-gray-800 w-20 text-right shrink-0">{formatRupiah(total)}</span>
+                          <span className="text-xs font-semibold text-gray-200 w-20 text-right shrink-0">{formatRupiah(total)}</span>
                         </div>
                       ))}
                     </div>
@@ -1044,9 +1044,9 @@ export default function DashboardPage() {
 
             {/* Non-batch expenses */}
             {nonBatchExpTotal > 0 && (
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+              <div className="bg-[#1c1c1e] rounded-2xl border border-white/[0.08] p-4">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Pengeluaran Lainnya (Tanpa Batch)</p>
-                <p className="text-sm font-bold text-gray-900">{formatRupiah(nonBatchExpTotal)}</p>
+                <p className="text-sm font-bold text-white">{formatRupiah(nonBatchExpTotal)}</p>
               </div>
             )}
           </div>
@@ -1055,36 +1055,36 @@ export default function DashboardPage() {
         {/* ── TAB: PENGELUARAN ────────────────────────────────────────────── */}
         {tab === "pengeluaran" && (
           <div className="space-y-5">
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Tambah Pengeluaran</p>
+            <div className="bg-[#1c1c1e] rounded-2xl border border-white/[0.08] p-5">
+              <p className="text-base font-bold text-white mb-4">Tambah Pengeluaran</p>
               <form onSubmit={handleAddExpense} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Keterangan</label>
+                  <label className="block text-sm text-gray-400 mb-1.5">Keterangan</label>
                   <input value={expForm.description} onChange={(e) => setExpForm((p) => ({ ...p, description: e.target.value }))}
                     placeholder="e.g. Beli babi 5kg" required
-                    className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition" />
+                    className="w-full bg-[#2c2c2e] rounded-xl border border-white/10 px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition" />
                 </div>
                 <div className="grid grid-cols-2 gap-3 overflow-hidden">
                   <div className="min-w-0">
-                    <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Jumlah (Rp)</label>
+                    <label className="block text-sm text-gray-400 mb-1.5">Jumlah (Rp)</label>
                     <input value={expForm.amount}
                       onChange={(e) => { const raw = e.target.value.replace(/\D/g, ""); setExpForm((p) => ({ ...p, amount: raw ? parseInt(raw).toLocaleString("id-ID") : "" })); }}
                       placeholder="0" required inputMode="numeric"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition" />
+                      className="w-full bg-[#2c2c2e] rounded-xl border border-white/10 px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition" />
                   </div>
                   <div className="min-w-0">
-                    <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Tanggal</label>
+                    <label className="block text-sm text-gray-400 mb-1.5">Tanggal</label>
                     <input type="date" value={expForm.date} onChange={(e) => setExpForm((p) => ({ ...p, date: e.target.value }))} required
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition" />
+                      className="w-full bg-[#2c2c2e] rounded-xl border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Kategori</label>
+                  <label className="block text-sm text-gray-400 mb-1.5">Kategori</label>
                   <div className="flex flex-wrap gap-2">
                     {EXPENSE_CATEGORIES.map((cat) => (
                       <button key={cat} type="button" onClick={() => setExpForm((p) => ({ ...p, category: cat }))}
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
-                          expForm.category === cat ? "bg-[#7b1d1d] text-white border-[#7b1d1d]" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                          expForm.category === cat ? "bg-amber-500 border-amber-500 text-black" : "bg-white/5 border-white/10 text-gray-400 hover:border-white/20"
                         }`}>
                         {cat}
                       </button>
@@ -1093,36 +1093,36 @@ export default function DashboardPage() {
                 </div>
                 {batches.length > 0 && (
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Batch (opsional)</label>
+                    <label className="block text-sm text-gray-400 mb-1.5">Batch (opsional)</label>
                     <select value={expForm.batch_id} onChange={(e) => setExpForm((p) => ({ ...p, batch_id: e.target.value }))}
-                      className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] transition">
+                      className="w-full bg-[#2c2c2e] rounded-xl border border-white/10 px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition">
                       <option value="">— Tidak terikat batch —</option>
                       {batches.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
                     </select>
                   </div>
                 )}
                 <button type="submit" disabled={expLoading || !expForm.description.trim() || !expForm.amount}
-                  className="w-full bg-[#7b1d1d] text-white font-bold py-3 rounded-xl hover:bg-[#6a1717] transition disabled:opacity-40 text-sm">
+                  className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-3 rounded-2xl transition disabled:opacity-40 text-sm">
                   {expLoading ? "Menyimpan..." : "Tambah Pengeluaran"}
                 </button>
               </form>
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1">Riwayat Pengeluaran</p>
+              <p className="text-sm font-bold text-gray-500 px-1 mb-1">Riwayat Pengeluaran</p>
               {expenses.length === 0 && !loading && (
-                <p className="text-center text-gray-400 py-8 text-sm">Belum ada pengeluaran.</p>
+                <p className="text-center text-gray-600 py-8 text-sm">Belum ada pengeluaran.</p>
               )}
               {expenses.map((exp) => (
-                <div key={exp.id} className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3 flex items-center justify-between gap-3">
+                <div key={exp.id} className="bg-[#1c1c1e] rounded-2xl border border-white/[0.08] px-4 py-3.5 flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{exp.description}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">{exp.category} · {formatDateShort(exp.date)}</p>
+                    <p className="text-white font-semibold truncate">{exp.description}</p>
+                    <p className="text-[11px] text-gray-500 mt-0.5">{exp.category} · {formatDateShort(exp.date)}</p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-sm font-bold text-gray-900">{formatRupiah(exp.amount)}</span>
+                    <span className="text-sm font-bold text-white">{formatRupiah(exp.amount)}</span>
                     <button onClick={() => handleDeleteExpense(exp.id)}
-                      className="text-gray-300 hover:text-red-500 transition text-lg leading-none">×</button>
+                      className="text-gray-600 hover:text-red-400 transition text-lg leading-none">×</button>
                   </div>
                 </div>
               ))}
@@ -1134,14 +1134,14 @@ export default function DashboardPage() {
         {tab === "batch" && (
           <div className="space-y-5">
             {/* Create batch form */}
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Buka Batch Baru</p>
+            <div className="bg-[#1c1c1e] rounded-2xl border border-white/[0.08] p-5">
+              <p className="text-base font-bold text-white mb-4">Buka Batch Baru</p>
               <form onSubmit={handleAddBatch} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Nama Batch</label>
+                  <label className="block text-sm text-gray-400 mb-1">Nama Batch</label>
                   <input value={batchForm.label} onChange={(e) => setBatchForm((p) => ({ ...p, label: e.target.value }))}
                     placeholder="e.g. Batch #1 — April 2026" required
-                    className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] focus:ring-1 focus:ring-[#7b1d1d] transition" />
+                    className="w-full bg-[#2c2c2e] rounded-xl border border-white/10 px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition" />
                 </div>
                 {/* Dates: full-width on mobile to avoid cramping */}
                 <div className="grid grid-cols-2 gap-2 overflow-hidden">
@@ -1149,31 +1149,31 @@ export default function DashboardPage() {
                     <div key={field} className="min-w-0">
                       <label className="block text-[11px] text-gray-500 mb-1">{label}</label>
                       <input type="date" value={batchForm[field]} onChange={(e) => setBatchForm((p) => ({ ...p, [field]: e.target.value }))} required
-                        className="w-full border border-gray-200 rounded-lg px-2 py-2 text-gray-900 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] transition" />
+                        className="w-full bg-[#2c2c2e] rounded-xl border border-white/10 px-2 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition" />
                     </div>
                   ))}
                 </div>
                 <div>
                   <label className="block text-[11px] text-gray-500 mb-1">Tanggal Antar</label>
                   <input type="date" value={batchForm.delivery_date} onChange={(e) => setBatchForm((p) => ({ ...p, delivery_date: e.target.value }))} required
-                    className="w-full border border-gray-200 rounded-lg px-2 py-2 text-gray-900 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] transition" />
+                    className="w-full bg-[#2c2c2e] rounded-xl border border-white/10 px-2 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition" />
                 </div>
                 <div className="grid grid-cols-2 gap-2 overflow-hidden">
                   <div className="min-w-0">
                     <label className="block text-[11px] text-gray-500 mb-1">Maks. Porsi</label>
                     <input value={batchForm.max_orders} onChange={(e) => setBatchForm((p) => ({ ...p, max_orders: e.target.value.replace(/\D/g, "") }))}
                       placeholder="Tak terbatas" inputMode="numeric"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-900 placeholder-gray-400 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] transition" />
+                      className="w-full bg-[#2c2c2e] rounded-xl border border-white/10 px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition" />
                   </div>
                   <div className="min-w-0">
                     <label className="block text-[11px] text-gray-500 mb-1">Catatan</label>
                     <input value={batchForm.notes} onChange={(e) => setBatchForm((p) => ({ ...p, notes: e.target.value }))}
                       placeholder="opsional"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-900 placeholder-gray-400 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] transition" />
+                      className="w-full bg-[#2c2c2e] rounded-xl border border-white/10 px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition" />
                   </div>
                 </div>
                 <button type="submit" disabled={batchLoading || !batchForm.label.trim()}
-                  className="w-full bg-[#7b1d1d] text-white font-bold py-3 rounded-xl hover:bg-[#6a1717] transition disabled:opacity-40 text-sm">
+                  className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-3 rounded-2xl transition disabled:opacity-40 text-sm">
                   {batchLoading ? "Menyimpan..." : "Buat Batch"}
                 </button>
               </form>
@@ -1181,9 +1181,9 @@ export default function DashboardPage() {
 
             {/* Batch history */}
             <div className="space-y-3">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1">History Batch</p>
+              <p className="text-sm font-bold text-gray-500 uppercase tracking-wider px-1">History Batch</p>
               {batches.length === 0 && !loading && (
-                <p className="text-center text-gray-400 py-8 text-sm">Belum ada batch.</p>
+                <p className="text-center text-gray-600 py-8 text-sm">Belum ada batch.</p>
               )}
               {batches.map((batch) => {
                 const batchOrders = orders.filter((o) => o.batch_id === batch.id && o.status !== "cancelled");
@@ -1201,51 +1201,51 @@ export default function DashboardPage() {
                 const isUpcoming = isBatchUpcoming(batch);
 
                 return (
-                  <div key={batch.id} className={`bg-white rounded-xl border shadow-sm p-5 ${isActive ? "border-[#7b1d1d]/25" : "border-gray-100"}`}>
+                  <div key={batch.id} className={`bg-[#1c1c1e] rounded-2xl border p-5 ${isActive ? "border-amber-500/20" : "border-white/[0.08]"}`}>
 
                     {/* ── Edit form (inline, shown when editing) ── */}
                     {editingBatch === batch.id ? (
                       <form onSubmit={handleSaveBatch} className="space-y-3 mb-4">
                         <div className="flex items-center justify-between mb-1">
-                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Edit Batch</p>
+                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Edit Batch</p>
                           <button type="button" onClick={() => setEditingBatch(null)}
-                            className="text-xs text-gray-400 hover:text-gray-700 transition">Batal</button>
+                            className="text-xs text-gray-500 hover:text-gray-300 transition">Batal</button>
                         </div>
                         <div>
                           <label className="block text-[11px] text-gray-500 mb-1">Nama Batch</label>
                           <input value={editForm.label} onChange={(e) => setEditForm((p) => ({ ...p, label: e.target.value }))} required
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] transition" />
+                            className="w-full bg-[#2c2c2e] rounded-xl border border-white/10 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition" />
                         </div>
                         <div className="grid grid-cols-2 gap-2 overflow-hidden">
                           {([["open_date", "PO Buka"], ["close_date", "PO Tutup"]] as const).map(([field, label]) => (
                             <div key={field} className="min-w-0">
                               <label className="block text-[11px] text-gray-500 mb-1">{label}</label>
                               <input type="date" value={editForm[field]} onChange={(e) => setEditForm((p) => ({ ...p, [field]: e.target.value }))} required
-                                className="w-full border border-gray-200 rounded-lg px-2 py-2 text-gray-900 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] transition" />
+                                className="w-full bg-[#2c2c2e] rounded-xl border border-white/10 px-2 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition" />
                             </div>
                           ))}
                         </div>
                         <div>
                           <label className="block text-[11px] text-gray-500 mb-1">Tanggal Antar</label>
                           <input type="date" value={editForm.delivery_date} onChange={(e) => setEditForm((p) => ({ ...p, delivery_date: e.target.value }))} required
-                            className="w-full border border-gray-200 rounded-lg px-2 py-2 text-gray-900 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] transition" />
+                            className="w-full bg-[#2c2c2e] rounded-xl border border-white/10 px-2 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition" />
                         </div>
                         <div className="grid grid-cols-2 gap-2 overflow-hidden">
                           <div className="min-w-0">
                             <label className="block text-[11px] text-gray-500 mb-1">Maks. Porsi</label>
                             <input value={editForm.max_orders} onChange={(e) => setEditForm((p) => ({ ...p, max_orders: e.target.value.replace(/\D/g, "") }))}
                               placeholder="Tak terbatas" inputMode="numeric"
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-900 placeholder-gray-400 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] transition" />
+                              className="w-full bg-[#2c2c2e] rounded-xl border border-white/10 px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition" />
                           </div>
                           <div className="min-w-0">
                             <label className="block text-[11px] text-gray-500 mb-1">Catatan</label>
                             <input value={editForm.notes} onChange={(e) => setEditForm((p) => ({ ...p, notes: e.target.value }))}
                               placeholder="opsional"
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-900 placeholder-gray-400 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] transition" />
+                              className="w-full bg-[#2c2c2e] rounded-xl border border-white/10 px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition" />
                           </div>
                         </div>
                         <button type="submit" disabled={editLoading || !editForm.label.trim()}
-                          className="w-full bg-[#7b1d1d] text-white font-bold py-2.5 rounded-xl hover:bg-[#6a1717] transition disabled:opacity-40 text-sm">
+                          className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-2.5 rounded-2xl transition disabled:opacity-40 text-sm">
                           {editLoading ? "Menyimpan..." : "Simpan Perubahan"}
                         </button>
                       </form>
@@ -1255,52 +1255,52 @@ export default function DashboardPage() {
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center flex-wrap gap-2 mb-1">
-                              <p className="font-semibold text-gray-900">{batch.label}</p>
-                              {isActive && <span className="text-[10px] font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded-md">Aktif</span>}
-                              {isFull && <span className="text-[10px] font-semibold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-md">Penuh</span>}
-                              {batch.is_closed && !isUpcoming && <span className="text-[10px] font-semibold bg-red-100 text-red-600 px-2 py-0.5 rounded-md">Tutup Manual</span>}
-                              {isUpcoming && <span className="text-[10px] font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md">Akan Datang</span>}
+                              <p className="font-semibold text-white">{batch.label}</p>
+                              {isActive && <span className="text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-lg">Aktif</span>}
+                              {isFull && <span className="text-[10px] font-semibold bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-lg">Penuh</span>}
+                              {batch.is_closed && !isUpcoming && <span className="text-[10px] font-semibold bg-red-500/20 text-red-400 px-2 py-0.5 rounded-lg">Tutup Manual</span>}
+                              {isUpcoming && <span className="text-[10px] font-semibold bg-sky-500/20 text-sky-400 px-2 py-0.5 rounded-lg">Akan Datang</span>}
                             </div>
-                            <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-gray-400">
+                            <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-gray-500">
                               <span>PO: {formatBatchDate(batch.open_date)} – {formatBatchDate(batch.close_date)}</span>
                               <span>Antar: {formatBatchDate(batch.delivery_date)}</span>
                               {batch.max_orders != null && (
-                                <span className={`font-semibold ${isFull ? "text-orange-600" : "text-gray-400"}`}>
+                                <span className={`font-semibold ${isFull ? "text-orange-400" : "text-gray-500"}`}>
                                   Terisi: {portionCount}/{batch.max_orders} porsi
                                 </span>
                               )}
                             </div>
-                            {batch.notes && <p className="text-xs text-gray-400 italic mt-1">{batch.notes}</p>}
+                            {batch.notes && <p className="text-xs text-gray-500 italic mt-1">{batch.notes}</p>}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             {isBatchDateActive(batch) && (
                               <button onClick={() => handleToggleBatchClosed(batch)}
                                 className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg transition ${
                                   batch.is_closed
-                                    ? "bg-green-100 text-green-700 hover:bg-green-200"
-                                    : "bg-red-100 text-red-600 hover:bg-red-200"
+                                    ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+                                    : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
                                 }`}>
                                 {batch.is_closed ? "Buka PO" : "Tutup PO"}
                               </button>
                             )}
                             <button onClick={() => startEditBatch(batch)}
-                              className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
+                              className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-white/[0.06] text-gray-300 hover:bg-white/10 transition">
                               Edit
                             </button>
                             <button
                               onClick={() => canDelete && setDeletingBatch(deletingBatch === batch.id ? null : batch.id)}
                               disabled={!canDelete}
                               title={!canDelete ? `Tidak bisa dihapus — ada ${batchTotalOrders} pesanan` : "Hapus batch"}
-                              className={`text-lg leading-none transition ${canDelete ? "text-gray-300 hover:text-red-500 cursor-pointer" : "text-gray-200 cursor-not-allowed"}`}>×</button>
+                              className={`text-lg leading-none transition ${canDelete ? "text-gray-700 hover:text-red-400 cursor-pointer" : "text-gray-700 cursor-not-allowed"}`}>×</button>
                           </div>
                         </div>
 
                         {deletingBatch === batch.id && canDelete && (
-                          <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-3">
-                            <p className="text-xs text-red-600 flex-1">Hapus batch ini?</p>
+                          <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2 mb-3">
+                            <p className="text-xs text-red-400 flex-1">Hapus batch ini?</p>
                             <button onClick={() => handleDeleteBatch(batch.id)}
                               className="text-xs font-bold text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-lg">Hapus</button>
-                            <button onClick={() => setDeletingBatch(null)} className="text-xs text-gray-400">Batal</button>
+                            <button onClick={() => setDeletingBatch(null)} className="text-xs text-gray-500">Batal</button>
                           </div>
                         )}
                       </>
@@ -1314,20 +1314,20 @@ export default function DashboardPage() {
                         { label: "Batal", value: batchCancelled.length },
                         { label: "Pemasukan", value: formatRupiah(batchRevenue), small: true },
                       ].map((s) => (
-                        <div key={s.label} className="bg-gray-50 rounded-lg p-2.5 text-center">
-                          <p className="text-[9px] text-gray-400 uppercase tracking-wider font-semibold">{s.label}</p>
-                          <p className={`font-bold text-gray-900 mt-0.5 ${s.small ? "text-xs" : "text-lg"}`}>{s.value}</p>
+                        <div key={s.label} className="bg-white/[0.04] rounded-xl p-2.5 text-center">
+                          <p className="text-[9px] text-gray-600 uppercase tracking-wider font-semibold">{s.label}</p>
+                          <p className={`font-bold text-white mt-0.5 ${s.small ? "text-xs" : "text-lg"}`}>{s.value}</p>
                         </div>
                       ))}
                     </div>
 
                     {/* P&L */}
-                    <div className="flex items-center justify-between border-t border-gray-100 pt-3">
-                      <div className="text-xs text-gray-400">
-                        Pengeluaran: <span className="font-semibold text-gray-700">{formatRupiah(batchExpTotal)}</span>
+                    <div className="flex items-center justify-between border-t border-white/[0.06] pt-3">
+                      <div className="text-xs text-gray-500">
+                        Pengeluaran: <span className="font-semibold text-gray-300">{formatRupiah(batchExpTotal)}</span>
                         {batchExp.length > 0 && <span className="ml-1">({batchExp.length} item)</span>}
                       </div>
-                      <div className={`text-sm font-bold ${batchProfit >= 0 ? "text-green-700" : "text-red-600"}`}>
+                      <div className={`text-sm font-bold ${batchProfit >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                         {batchProfit >= 0 ? "+" : ""}{formatRupiah(batchProfit)}
                         {batchRevenue > 0 && (
                           <span className="text-xs font-normal ml-1 opacity-70">
@@ -1346,25 +1346,25 @@ export default function DashboardPage() {
                       const toDeliverPortions = totalPortions(toDeliver);
                       const isConfirming = deliverAllBatchId === batch.id;
                       return (
-                        <div className="border-t border-gray-100 pt-3 mt-1">
+                        <div className="border-t border-white/[0.06] pt-3 mt-1">
                           {isConfirming ? (
-                            <div className="flex items-center gap-3 bg-green-50 border border-green-100 rounded-xl px-3 py-2">
-                              <p className="text-xs text-green-700 flex-1">
+                            <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2">
+                              <p className="text-xs text-emerald-400 flex-1">
                                 Set {toDeliver.length} pesanan ({toDeliverPortions} porsi) jadi Selesai?
                               </p>
                               <button
                                 onClick={() => handleDeliverAll(batch.id)}
                                 disabled={deliverAllLoading}
-                                className="text-xs font-bold text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-lg disabled:opacity-50 transition">
+                                className="text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 px-3 py-1.5 rounded-lg disabled:opacity-50 transition">
                                 {deliverAllLoading ? "..." : "Ya, Selesai"}
                               </button>
                               <button onClick={() => setDeliverAllBatchId(null)}
-                                className="text-xs text-gray-400 hover:text-gray-700 transition">Batal</button>
+                                className="text-xs text-gray-500 hover:text-gray-300 transition">Batal</button>
                             </div>
                           ) : (
                             <button
                               onClick={() => setDeliverAllBatchId(batch.id)}
-                              className="w-full text-xs font-semibold text-green-700 bg-green-50 border border-green-200 hover:bg-green-100 rounded-xl py-2 transition">
+                              className="w-full text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 rounded-xl py-2 transition">
                               ✓ Selesai Semua ({toDeliverPortions} porsi)
                             </button>
                           )}
@@ -1385,31 +1385,31 @@ export default function DashboardPage() {
             {/* Overview stats — 2×2 */}
             <div className="grid grid-cols-2 gap-3">
               {([
-                { label: "Pemasukan",     value: formatRupiah(totalRevenue),  borderColor: "border-l-emerald-500", numColor: "text-emerald-700", small: true },
-                { label: "Keuntungan",    value: formatRupiah(totalProfit),   borderColor: totalProfit >= 0 ? "border-l-green-500" : "border-l-red-400", numColor: totalProfit >= 0 ? "text-green-700" : "text-red-600", small: true },
-                { label: "Total Pesanan", value: anActive.length,             borderColor: "border-l-blue-400",   numColor: "text-blue-700",    small: false },
-                { label: "Total Porsi",   value: totalPortions(anActive),     borderColor: "border-l-amber-400",  numColor: "text-amber-600",   small: false },
+                { label: "Pemasukan",     value: formatRupiah(totalRevenue),  numColor: "text-emerald-400", small: true },
+                { label: "Keuntungan",    value: formatRupiah(totalProfit),   numColor: totalProfit >= 0 ? "text-emerald-400" : "text-red-400", small: true },
+                { label: "Total Pesanan", value: anActive.length,             numColor: "text-sky-400",    small: false },
+                { label: "Total Porsi",   value: totalPortions(anActive),     numColor: "text-amber-400",   small: false },
               ] as const).map((s) => (
-                <div key={s.label} className={`bg-white rounded-xl border border-gray-100 border-l-4 ${s.borderColor} shadow-sm px-4 py-3.5`}>
+                <div key={s.label} className="bg-[#1c1c1e] rounded-2xl border border-white/[0.08] px-4 py-3.5">
                   <p className={`font-bold leading-none ${s.numColor} ${"small" in s ? "text-lg" : "text-3xl"}`}>{s.value}</p>
-                  <p className="text-xs text-gray-400 font-medium mt-1.5">{s.label}</p>
+                  <p className="text-xs text-gray-500 font-medium mt-1.5">{s.label}</p>
                 </div>
               ))}
             </div>
 
             {/* Status breakdown */}
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Status Pesanan</p>
+            <div className="bg-[#1c1c1e] rounded-2xl border border-white/[0.08] p-4">
+              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-3">Status Pesanan</p>
               <div className="grid grid-cols-4 gap-2">
                 {([
-                  { label: "Menunggu",   value: orders.filter(o => o.status === "pending" || o.status === "active").length, color: "text-amber-600", bg: "bg-amber-50" },
-                  { label: "Konfirmasi", value: orders.filter(o => o.status === "confirmed").length,                        color: "text-blue-600",  bg: "bg-blue-50" },
-                  { label: "Selesai",    value: anDelivered.length,                                                          color: "text-green-700", bg: "bg-green-50" },
-                  { label: "Batal",      value: anCancelled.length,                                                          color: "text-red-500",   bg: "bg-red-50" },
+                  { label: "Menunggu",   value: orders.filter(o => o.status === "pending" || o.status === "active").length, color: "text-amber-400", bg: "bg-amber-500/10" },
+                  { label: "Konfirmasi", value: orders.filter(o => o.status === "confirmed").length,                        color: "text-sky-400",   bg: "bg-sky-500/10" },
+                  { label: "Selesai",    value: anDelivered.length,                                                          color: "text-emerald-400", bg: "bg-emerald-500/10" },
+                  { label: "Batal",      value: anCancelled.length,                                                          color: "text-red-400",   bg: "bg-red-500/10" },
                 ] as const).map(s => (
-                  <div key={s.label} className={`${s.bg} rounded-lg p-2.5 text-center`}>
+                  <div key={s.label} className={`${s.bg} rounded-xl p-2.5 text-center`}>
                     <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
-                    <p className="text-[10px] text-gray-400 font-medium mt-0.5">{s.label}</p>
+                    <p className="text-[10px] text-gray-500 font-medium mt-0.5">{s.label}</p>
                   </div>
                 ))}
               </div>
@@ -1417,13 +1417,13 @@ export default function DashboardPage() {
               {/* Simple progress bar — delivered / total non-cancelled */}
               {anActive.length > 0 && (
                 <div className="mt-3">
-                  <div className="flex justify-between text-[10px] text-gray-400 mb-1">
+                  <div className="flex justify-between text-[10px] text-gray-500 mb-1">
                     <span>{anDelivered.length} selesai dari {anActive.length} pesanan valid</span>
-                    <span className="font-semibold text-green-600">{completionRate}%</span>
+                    <span className="font-semibold text-emerald-400">{completionRate}%</span>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-1.5">
+                  <div className="w-full bg-white/10 rounded-full h-1.5">
                     <div
-                      className="bg-green-500 h-1.5 rounded-full transition-all"
+                      className="bg-emerald-500 h-1.5 rounded-full transition-all"
                       style={{ width: `${completionRate}%` }}
                     />
                   </div>
@@ -1433,18 +1433,18 @@ export default function DashboardPage() {
 
             {/* Jam Antar split */}
             {(siangOrders.length > 0 || malamOrders.length > 0) && (
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Distribusi Jam Antar</p>
+              <div className="bg-[#1c1c1e] rounded-2xl border border-white/[0.08] p-4">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-3">Distribusi Jam Antar</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-amber-50 rounded-lg p-3 text-center">
+                  <div className="bg-amber-500/10 rounded-xl p-3 text-center">
                     <Sun size={16} className="text-amber-400 mx-auto mb-1" />
-                    <p className="text-2xl font-bold text-amber-600">{siangOrders.length}</p>
-                    <p className="text-[10px] text-amber-500 font-medium mt-0.5">Siang</p>
+                    <p className="text-2xl font-bold text-amber-400">{siangOrders.length}</p>
+                    <p className="text-[10px] text-amber-500/70 font-medium mt-0.5">Siang</p>
                   </div>
-                  <div className="bg-indigo-50 rounded-lg p-3 text-center">
+                  <div className="bg-indigo-500/10 rounded-xl p-3 text-center">
                     <Moon size={16} className="text-indigo-400 mx-auto mb-1" />
-                    <p className="text-2xl font-bold text-indigo-600">{malamOrders.length}</p>
-                    <p className="text-[10px] text-indigo-500 font-medium mt-0.5">Malam</p>
+                    <p className="text-2xl font-bold text-indigo-400">{malamOrders.length}</p>
+                    <p className="text-[10px] text-indigo-500/70 font-medium mt-0.5">Malam</p>
                   </div>
                 </div>
                 {siangOrders.length + malamOrders.length > 0 && (
@@ -1458,25 +1458,25 @@ export default function DashboardPage() {
 
             {/* Top menus */}
             {topMenus.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-50">
+              <div className="bg-[#1c1c1e] rounded-2xl border border-white/[0.08] overflow-hidden">
+                <div className="px-4 py-3 border-b border-white/[0.06]">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Menu Terlaris</p>
                 </div>
-                <div className="divide-y divide-gray-50 px-4">
+                <div className="divide-y divide-white/[0.05] px-4">
                   {topMenus.map((m, idx) => (
                     <div key={m.name} className="py-3">
                       <div className="flex items-center justify-between gap-3 mb-1.5">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className={`text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
-                            idx === 0 ? "bg-amber-400 text-white" : idx === 1 ? "bg-gray-400 text-white" : idx === 2 ? "bg-orange-400 text-white" : "bg-gray-100 text-gray-500"
+                            idx === 0 ? "bg-amber-500 text-black" : idx === 1 ? "bg-gray-600 text-white" : idx === 2 ? "bg-orange-500 text-black" : "bg-white/10 text-gray-500"
                           }`}>{idx + 1}</span>
-                          <p className="text-sm text-gray-800 truncate">{m.name}</p>
+                          <p className="text-sm text-gray-200 truncate">{m.name}</p>
                         </div>
-                        <span className="text-sm font-bold text-[#7b1d1d] shrink-0">{m.qty}×</span>
+                        <span className="text-sm font-bold text-amber-400 shrink-0">{m.qty}×</span>
                       </div>
-                      <div className="ml-7 w-full bg-gray-100 rounded-full h-1.5">
+                      <div className="ml-7 w-full bg-white/10 rounded-full h-1.5">
                         <div
-                          className="bg-[#7b1d1d] h-1.5 rounded-full transition-all"
+                          className="bg-amber-500 h-1.5 rounded-full transition-all"
                           style={{ width: `${Math.round((m.qty / topMenusMaxQty) * 100)}%` }}
                         />
                       </div>
@@ -1488,31 +1488,31 @@ export default function DashboardPage() {
 
             {/* Batch performance */}
             {batchPerf.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-50">
+              <div className="bg-[#1c1c1e] rounded-2xl border border-white/[0.08] overflow-hidden">
+                <div className="px-4 py-3 border-b border-white/[0.06]">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Performa per Batch</p>
                 </div>
-                <div className="divide-y divide-gray-50">
+                <div className="divide-y divide-white/[0.05]">
                   {batchPerf.map(b => (
                     <div key={b.id} className="px-4 py-3">
                       <div className="flex items-start justify-between gap-2 mb-2">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{b.label}</p>
+                        <p className="text-sm font-semibold text-white truncate">{b.label}</p>
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded shrink-0 ${
-                          b.deliveryRate >= 80 ? "bg-green-100 text-green-700" : b.deliveryRate >= 40 ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-500"
+                          b.deliveryRate >= 80 ? "bg-emerald-500/20 text-emerald-400" : b.deliveryRate >= 40 ? "bg-amber-500/20 text-amber-400" : "bg-white/10 text-gray-500"
                         }`}>{b.deliveryRate}% selesai</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="flex-1">
-                          <div className="w-full bg-gray-100 rounded-full h-1.5">
+                          <div className="w-full bg-white/10 rounded-full h-1.5">
                             <div
-                              className="bg-[#7b1d1d] h-1.5 rounded-full"
+                              className="bg-amber-500 h-1.5 rounded-full"
                               style={{ width: `${Math.round((b.revenue / batchPerfMaxRevenue) * 100)}%` }}
                             />
                           </div>
                         </div>
-                        <span className="text-xs font-bold text-gray-900 shrink-0">{formatRupiah(b.revenue)}</span>
+                        <span className="text-xs font-bold text-white shrink-0">{formatRupiah(b.revenue)}</span>
                       </div>
-                      <p className="text-[10px] text-gray-400 mt-1">{b.orderCount} pesanan · {b.portions} porsi</p>
+                      <p className="text-[10px] text-gray-600 mt-1">{b.orderCount} pesanan · {b.portions} porsi</p>
                     </div>
                   ))}
                 </div>
@@ -1521,23 +1521,23 @@ export default function DashboardPage() {
 
             {/* Payment method breakdown */}
             {paymentBreakdown.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Metode Pembayaran</p>
+              <div className="bg-[#1c1c1e] rounded-2xl border border-white/[0.08] p-4">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-3">Metode Pembayaran</p>
                 <div className="space-y-2.5">
                   {paymentBreakdown.map(p => (
                     <div key={p.method}>
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
                           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
-                            p.method === "cash" ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"
+                            p.method === "cash" ? "bg-amber-500/20 text-amber-400" : "bg-emerald-500/20 text-emerald-400"
                           }`}>{p.label}</span>
-                          <span className="text-xs text-gray-400">{p.count} pesanan</span>
+                          <span className="text-xs text-gray-500">{p.count} pesanan</span>
                         </div>
-                        <span className="text-xs font-bold text-gray-900">{formatRupiah(p.revenue)}</span>
+                        <span className="text-xs font-bold text-white">{formatRupiah(p.revenue)}</span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-1.5">
+                      <div className="w-full bg-white/10 rounded-full h-1.5">
                         <div
-                          className={`h-1.5 rounded-full ${p.method === "cash" ? "bg-amber-400" : "bg-green-500"}`}
+                          className={`h-1.5 rounded-full ${p.method === "cash" ? "bg-amber-400" : "bg-emerald-500"}`}
                           style={{ width: `${anConfirmedOrDelivered.length > 0 ? Math.round((p.count / anConfirmedOrDelivered.length) * 100) : 0}%` }}
                         />
                       </div>
@@ -1548,7 +1548,7 @@ export default function DashboardPage() {
             )}
 
             {orders.length === 0 && !loading && (
-              <p className="text-center text-gray-400 py-12 text-sm">Belum ada data untuk ditampilkan.</p>
+              <p className="text-center text-gray-600 py-12 text-sm">Belum ada data untuk ditampilkan.</p>
             )}
           </div>
         )}
@@ -1563,17 +1563,17 @@ export default function DashboardPage() {
         const isConfirmedOrder = o.status === "confirmed";
         const isModalPending = isPending(o.status);
         return (
-          <div className="fixed inset-0 z-[60] bg-gray-50 flex flex-col">
+          <div className="fixed inset-0 z-[60] bg-[#111111] flex flex-col">
             {/* Top bar */}
-            <div className="shrink-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
+            <div className="shrink-0 bg-[#1c1c1e] border-b border-white/[0.08] px-4 py-3.5 flex items-center gap-3">
               <button onClick={closeModal}
-                className="flex items-center gap-1.5 text-sm font-semibold text-[#7b1d1d] hover:text-[#5a1515] transition">
+                className="flex items-center gap-1.5 text-sm font-semibold text-amber-400 hover:text-amber-300 transition">
                 ← Kembali
               </button>
-              <span className="text-gray-200">|</span>
-              <p className="font-semibold text-gray-900 truncate">{o.name}</p>
+              <span className="text-gray-700">|</span>
+              <p className="font-semibold text-white truncate">{o.name}</p>
               <span className={`ml-auto shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded ${
-                o.jam_antar.includes("Siang") ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700"
+                o.jam_antar.includes("Siang") ? "bg-amber-500/20 text-amber-400" : "bg-indigo-500/20 text-indigo-400"
               }`}>{o.jam_antar.includes("Siang") ? "Siang" : "Malam"}</span>
             </div>
 
@@ -1583,28 +1583,28 @@ export default function DashboardPage() {
 
                 {/* Status banner */}
                 {isCancelled && (
-                  <div className="flex items-center justify-between bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                  <div className="flex items-center justify-between bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3.5">
                     <div>
-                      <p className="text-xs font-semibold text-red-500 uppercase tracking-wide mb-0.5">Pesanan Dibatalkan</p>
+                      <p className="text-xs font-semibold text-red-400 uppercase tracking-wide mb-0.5">Pesanan Dibatalkan</p>
                       {o.cancel_reason && <p className="text-sm text-red-400">{o.cancel_reason}</p>}
                     </div>
                     <button onClick={() => handleRestore(o.id)}
-                      className="shrink-0 text-sm font-bold text-white bg-green-500 hover:bg-green-600 px-4 py-2 rounded-lg transition ml-3">
+                      className="shrink-0 text-sm font-bold text-white bg-emerald-500 hover:bg-emerald-600 px-4 py-2 rounded-xl transition ml-3">
                       Pulihkan
                     </button>
                   </div>
                 )}
                 {isDelivered && (
-                  <div className="flex items-center justify-between bg-green-50 border border-green-100 rounded-xl px-4 py-3">
-                    <p className="text-sm font-semibold text-green-700">✓ Pesanan sudah diantar</p>
+                  <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-4 py-3.5">
+                    <p className="text-sm font-semibold text-emerald-400">✓ Pesanan sudah diantar</p>
                     <button onClick={() => handleRestore(o.id)}
-                      className="shrink-0 text-sm text-gray-400 hover:text-gray-700 transition ml-3">Pulihkan</button>
+                      className="shrink-0 text-sm text-gray-500 hover:text-gray-300 transition ml-3">Pulihkan</button>
                   </div>
                 )}
                 {isConfirmedOrder && (
-                  <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
-                    <p className="text-sm font-semibold text-blue-700">✓ Pesanan dikonfirmasi</p>
-                    <p className="text-xs text-blue-400 mt-0.5">
+                  <div className="bg-sky-500/10 border border-sky-500/20 rounded-2xl px-4 py-3.5">
+                    <p className="text-sm font-semibold text-sky-400">✓ Pesanan dikonfirmasi</p>
+                    <p className="text-xs text-sky-500/70 mt-0.5">
                       {o.payment_method === "cash" ? "Bayar tunai saat pengiriman" : "Transfer sudah dikonfirmasi"}
                     </p>
                   </div>
@@ -1617,14 +1617,14 @@ export default function DashboardPage() {
                   if (cashDue <= 0) return null;
                   return (
                     <div className={`flex items-center gap-3 rounded-xl px-4 py-3 border ${
-                      pending ? "bg-amber-50 border-amber-200" : "bg-green-50 border-green-200"
+                      pending ? "bg-amber-500/10 border-amber-500/20" : "bg-emerald-500/10 border-emerald-500/20"
                     }`}>
-                      <Banknote size={18} className={pending ? "text-amber-500 shrink-0" : "text-green-500 shrink-0"} />
+                      <Banknote size={18} className={pending ? "text-amber-400 shrink-0" : "text-emerald-400 shrink-0"} />
                       <div>
-                        <p className={`text-sm font-semibold ${pending ? "text-amber-700" : "text-green-700"}`}>
+                        <p className={`text-sm font-semibold ${pending ? "text-amber-400" : "text-emerald-400"}`}>
                           {pending ? `Kekurangan tunai: ${formatRupiah(cashDue)}` : `Tunai ${formatRupiah(cashDue)} ✓ sudah diterima`}
                         </p>
-                        <p className={`text-xs mt-0.5 ${pending ? "text-amber-600" : "text-green-600"}`}>
+                        <p className={`text-xs mt-0.5 ${pending ? "text-amber-400" : "text-emerald-400"}`}>
                           {pending ? "Belum dikonfirmasi — konfirmasi dulu sebelum selesaikan" : "Dari penambahan item"}
                         </p>
                       </div>
@@ -1633,56 +1633,56 @@ export default function DashboardPage() {
                 })()}
 
                 {/* Customer info */}
-                <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50">
+                <div className="bg-[#1c1c1e] rounded-2xl border border-white/[0.08] divide-y divide-white/[0.06]">
                   <div className="px-4 py-3">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-0.5">Pelanggan</p>
-                    <p className="font-semibold text-gray-900">{o.name}</p>
+                    <p className="text-[10px] text-gray-600 uppercase tracking-wider font-semibold mb-0.5">Pelanggan</p>
+                    <p className="font-semibold text-white">{o.name}</p>
                     <a href={`https://wa.me/${o.nomor_wa.replace(/\D/g,"")}`} target="_blank" rel="noopener noreferrer"
-                      className="text-sm text-[#7b1d1d] hover:underline">{o.nomor_wa}</a>
+                      className="text-sm text-amber-400 hover:underline">{o.nomor_wa}</a>
                   </div>
                   <div className="px-4 py-3">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-0.5">Alamat</p>
-                    <p className="text-sm text-gray-800">{o.alamat}</p>
+                    <p className="text-[10px] text-gray-600 uppercase tracking-wider font-semibold mb-0.5">Alamat</p>
+                    <p className="text-sm text-gray-300">{o.alamat}</p>
                   </div>
                   <div className="px-4 py-3">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-0.5">Waktu Antar</p>
-                    <p className="text-sm text-gray-800">{o.jam_antar} · {formatDate(o.created_at)}</p>
+                    <p className="text-[10px] text-gray-600 uppercase tracking-wider font-semibold mb-0.5">Waktu Antar</p>
+                    <p className="text-sm text-gray-300">{o.jam_antar} · {formatDate(o.created_at)}</p>
                   </div>
                 </div>
 
                 {/* Items */}
-                <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold px-4 pt-3 pb-2">Detail Pesanan</p>
-                  <div className="divide-y divide-gray-50">
+                <div className="bg-[#1c1c1e] rounded-2xl border border-white/[0.08] overflow-hidden">
+                  <p className="text-[10px] text-gray-600 uppercase tracking-wider font-semibold px-4 pt-3 pb-2">Detail Pesanan</p>
+                  <div className="divide-y divide-white/[0.06]">
                     {o.items?.map((item, i) => (
                       <div key={i} className="px-4 py-3">
                         <div className="flex justify-between items-baseline gap-2 mb-1">
-                          <p className="text-sm font-semibold text-gray-900">{item.qty}× {item.menu_name}</p>
-                          <span className="text-sm font-semibold text-gray-600 shrink-0">{formatRupiah(item.subtotal)}</span>
+                          <p className="text-sm font-semibold text-white">{item.qty}× {item.menu_name}</p>
+                          <span className="text-sm font-semibold text-gray-400 shrink-0">{formatRupiah(item.subtotal)}</span>
                         </div>
                         {item.portions?.map((p, pi) => (
-                          <p key={pi} className="text-xs text-gray-400 mt-0.5">
+                          <p key={pi} className="text-xs text-gray-600 mt-0.5">
                             {item.qty > 1 && <span className="font-semibold text-gray-500">P{pi+1} </span>}
                             {Object.values(p.options).filter(Boolean).join(" · ")}
-                            {p.notes?.trim() && <span className="text-gray-400 italic"> · {p.notes}</span>}
+                            {p.notes?.trim() && <span className="text-gray-600 italic"> · {p.notes}</span>}
                           </p>
                         ))}
                       </div>
                     ))}
                   </div>
                   {o.notes?.trim() && (
-                    <div className="px-4 py-3 bg-amber-50 border-t border-amber-100">
-                      <p className="text-xs text-amber-700 italic flex items-center gap-1.5"><FileText size={12} /> {o.notes}</p>
+                    <div className="px-4 py-3 bg-amber-500/10 border-t border-amber-500/20">
+                      <p className="text-xs text-amber-400 italic flex items-center gap-1.5"><FileText size={12} /> {o.notes}</p>
                     </div>
                   )}
-                  <div className="flex justify-between items-center px-4 py-3 bg-gray-50 border-t border-gray-100">
-                    <p className="text-sm font-semibold text-gray-600">Total</p>
-                    <p className="text-xl font-bold text-[#7b1d1d]">{formatRupiah(o.total)}</p>
+                  <div className="bg-white/[0.04] border-t border-white/[0.06] flex justify-between items-center px-4 py-3.5">
+                    <p className="text-sm font-semibold text-gray-400">Total</p>
+                    <p className="text-xl font-bold text-amber-400">{formatRupiah(o.total)}</p>
                   </div>
                   {/* Payment */}
-                  <div className="px-4 py-3 border-t border-gray-100">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-2">Pembayaran</p>
-                    <span className={`inline-flex items-center gap-1.5 text-sm font-semibold ${o.payment_method === "cash" ? "text-amber-700" : "text-green-700"}`}>
+                  <div className="px-4 py-3 border-t border-white/[0.06]">
+                    <p className="text-[10px] text-gray-600 uppercase tracking-wider font-semibold mb-2">Pembayaran</p>
+                    <span className={`inline-flex items-center gap-1.5 text-sm font-semibold ${o.payment_method === "cash" ? "text-amber-400" : "text-emerald-400"}`}>
                       {o.payment_method === "cash"
                         ? <><Banknote size={15} /> Tunai</>
                         : o.payment_method === "transfer_mandiri"
@@ -1695,21 +1695,21 @@ export default function DashboardPage() {
                       <button type="button" onClick={() => setProofLightbox(o.payment_proof_url!)} className="block w-full mt-2">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={o.payment_proof_url} alt="Bukti transfer"
-                          className="w-full max-h-56 object-cover rounded-xl border border-gray-100 cursor-zoom-in" />
-                        <p className="text-[10px] text-gray-400 mt-1 text-center">Tap untuk perbesar</p>
+                          className="w-full max-h-56 object-cover rounded-xl border border-white/10 cursor-zoom-in" />
+                        <p className="text-[10px] text-gray-600 mt-1 text-center">Tap untuk perbesar</p>
                       </button>
                     )}
                     {o.payment_method !== "cash" && !o.payment_proof_url && (
-                      <p className="text-xs text-amber-600 mt-1">⚠ Bukti transfer belum diupload</p>
+                      <p className="text-xs text-amber-500 mt-1">⚠ Bukti transfer belum diupload</p>
                     )}
                   </div>
                 </div>
 
                 {/* ── Order log ── */}
                 {o.logs?.length > 0 && (
-                  <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold px-4 pt-3 pb-2">Riwayat</p>
-                    <div className="divide-y divide-gray-50">
+                  <div className="bg-[#1c1c1e] rounded-2xl border border-white/[0.08] overflow-hidden">
+                    <p className="text-[10px] text-gray-600 uppercase tracking-wider font-semibold px-4 pt-3 pb-2">Riwayat</p>
+                    <div className="divide-y divide-white/[0.06]">
                       {[...o.logs].reverse().map((log, i) => (
                         <div key={i} className="px-4 py-2.5 flex items-start gap-3">
                           <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${
@@ -1721,8 +1721,8 @@ export default function DashboardPage() {
                             "bg-gray-300"
                           }`} />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm text-gray-800">{log.detail}</p>
-                            <p className="text-[10px] text-gray-400 mt-0.5">{formatDate(log.at)}</p>
+                            <p className="text-sm text-gray-300">{log.detail}</p>
+                            <p className="text-[10px] text-gray-600 mt-0.5">{formatDate(log.at)}</p>
                           </div>
                         </div>
                       ))}
@@ -1732,34 +1732,34 @@ export default function DashboardPage() {
 
                 {/* ── Edit order items ── */}
                 {editingOrderItems ? (
-                  <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Edit Pesanan</p>
+                  <div className="bg-[#1c1c1e] rounded-2xl border border-white/[0.08] overflow-hidden">
+                    <div className="bg-white/[0.04] border-b border-white/[0.06] px-4 py-3 flex items-center justify-between">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Edit Pesanan</p>
                       <button onClick={() => { setEditingOrderItems(false); setEditOrderQty({}); }}
-                        className="text-xs text-gray-400 hover:text-gray-700 transition">Batal</button>
+                        className="text-xs text-gray-500 hover:text-gray-300 transition">Batal</button>
                     </div>
 
                     {/* Paket */}
                     <div className="px-4 pt-3 pb-1">
-                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Menu Paket</p>
+                      <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-2">Menu Paket</p>
                       <div className="space-y-2">
                         {MENUS.map(m => {
                           const qty = editOrderQty[m.id] ?? 0;
                           return (
                             <div key={m.id} className="flex items-center justify-between gap-3">
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm text-gray-800 truncate">{m.name}</p>
-                                <p className="text-[10px] text-gray-400">{formatRupiah(m.price)}</p>
+                                <p className="text-sm text-gray-200 truncate">{m.name}</p>
+                                <p className="text-[10px] text-gray-600">{formatRupiah(m.price)}</p>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
                                 <button onClick={() => setEditOrderQty(p => ({ ...p, [m.id]: Math.max(0, (p[m.id] ?? 0) - 1) }))}
-                                  className="w-7 h-7 rounded-full bg-gray-100 text-gray-600 font-bold flex items-center justify-center hover:bg-gray-200 transition disabled:opacity-30"
+                                  className="w-7 h-7 rounded-full bg-white/[0.06] text-gray-300 font-bold flex items-center justify-center hover:bg-white/10 transition disabled:opacity-30"
                                   disabled={qty === 0}>
                                   <Minus size={12} />
                                 </button>
-                                <span className={`w-5 text-center text-sm font-bold ${qty > 0 ? "text-[#7b1d1d]" : "text-gray-300"}`}>{qty}</span>
+                                <span className={`w-5 text-center text-sm font-bold ${qty > 0 ? "text-amber-400" : "text-gray-700"}`}>{qty}</span>
                                 <button onClick={() => setEditOrderQty(p => ({ ...p, [m.id]: (p[m.id] ?? 0) + 1 }))}
-                                  className="w-7 h-7 rounded-full bg-[#7b1d1d] text-white font-bold flex items-center justify-center hover:bg-[#6a1717] transition">
+                                  className="w-7 h-7 rounded-full bg-amber-500 text-black font-bold flex items-center justify-center hover:bg-amber-400 transition">
                                   <Plus size={12} />
                                 </button>
                               </div>
@@ -1770,26 +1770,26 @@ export default function DashboardPage() {
                     </div>
 
                     {/* À La Carte */}
-                    <div className="px-4 pt-3 pb-3 border-t border-gray-100">
-                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">À La Carte</p>
+                    <div className="px-4 pt-3 pb-3 border-t border-white/[0.06]">
+                      <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-2">À La Carte</p>
                       <div className="space-y-2">
                         {ALA_CARTE.map(m => {
                           const qty = editOrderQty[m.id] ?? 0;
                           return (
                             <div key={m.id} className="flex items-center justify-between gap-3">
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm text-gray-800 truncate">{m.name}</p>
-                                <p className="text-[10px] text-gray-400">{formatRupiah(m.price)}</p>
+                                <p className="text-sm text-gray-200 truncate">{m.name}</p>
+                                <p className="text-[10px] text-gray-600">{formatRupiah(m.price)}</p>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
                                 <button onClick={() => setEditOrderQty(p => ({ ...p, [m.id]: Math.max(0, (p[m.id] ?? 0) - 1) }))}
-                                  className="w-7 h-7 rounded-full bg-gray-100 text-gray-600 font-bold flex items-center justify-center hover:bg-gray-200 transition disabled:opacity-30"
+                                  className="w-7 h-7 rounded-full bg-white/[0.06] text-gray-300 font-bold flex items-center justify-center hover:bg-white/10 transition disabled:opacity-30"
                                   disabled={qty === 0}>
                                   <Minus size={12} />
                                 </button>
-                                <span className={`w-5 text-center text-sm font-bold ${qty > 0 ? "text-[#7b1d1d]" : "text-gray-300"}`}>{qty}</span>
+                                <span className={`w-5 text-center text-sm font-bold ${qty > 0 ? "text-amber-400" : "text-gray-700"}`}>{qty}</span>
                                 <button onClick={() => setEditOrderQty(p => ({ ...p, [m.id]: (p[m.id] ?? 0) + 1 }))}
-                                  className="w-7 h-7 rounded-full bg-[#7b1d1d] text-white font-bold flex items-center justify-center hover:bg-[#6a1717] transition">
+                                  className="w-7 h-7 rounded-full bg-amber-500 text-black font-bold flex items-center justify-center hover:bg-amber-400 transition">
                                   <Plus size={12} />
                                 </button>
                               </div>
@@ -1809,45 +1809,45 @@ export default function DashboardPage() {
                       const totalChanged = diff !== 0;
                       const isTransfer = o.payment_method !== "cash";
                       return (
-                        <div className="border-t border-gray-100">
+                        <div className="border-t border-white/[0.06]">
                           {/* Payment note */}
                           {diff !== 0 && (
-                            <div className={`px-4 py-2.5 flex items-start gap-2.5 ${diff > 0 ? "bg-amber-50" : "bg-blue-50"}`}>
+                            <div className={`px-4 py-2.5 flex items-start gap-2.5 ${diff > 0 ? "bg-amber-500/10" : "bg-sky-500/10"}`}>
                               <div className="text-xs leading-relaxed">
                                 {diff > 0 ? (
-                                  <p className="font-semibold text-amber-700">
+                                  <p className="font-semibold text-amber-400">
                                     +{formatRupiah(diff)} — bayar tunai saat antar
                                   </p>
                                 ) : (
                                   <>
-                                    <p className="font-semibold text-blue-700">
+                                    <p className="font-semibold text-sky-400">
                                       Total turun {formatRupiah(Math.abs(diff))}
                                     </p>
                                     {isTransfer && o.status === "confirmed" && (
-                                      <p className="text-blue-600 mt-0.5">Status akan kembali ke "Menunggu"</p>
+                                      <p className="text-sky-500/80 mt-0.5">Status akan kembali ke "Menunggu"</p>
                                     )}
                                   </>
                                 )}
                               </div>
                             </div>
                           )}
-                          <div className="px-4 py-3 bg-gray-50 flex items-center justify-between gap-3">
+                          <div className="bg-white/[0.04] px-4 py-3 flex items-center justify-between gap-3">
                             <div className="text-xs text-gray-500">
                               {hasItems ? (
                                 <div>
-                                  <span className="font-bold text-gray-900">{formatRupiah(newTotal)}</span>
+                                  <span className="font-bold text-white">{formatRupiah(newTotal)}</span>
                                   {totalChanged && (
-                                    <span className={`ml-1.5 font-semibold ${diff > 0 ? "text-amber-600" : "text-blue-600"}`}>
+                                    <span className={`ml-1.5 font-semibold ${diff > 0 ? "text-amber-400" : "text-sky-400"}`}>
                                       ({diff > 0 ? "+" : ""}{formatRupiah(diff)})
                                     </span>
                                   )}
                                 </div>
-                              ) : <span className="text-amber-600">Belum ada item dipilih</span>}
+                              ) : <span className="text-amber-500">Belum ada item dipilih</span>}
                             </div>
                             <button
                               onClick={() => handleSaveOrderItems(o)}
                               disabled={editOrderLoading || !hasItems}
-                              className="px-4 py-2 bg-[#7b1d1d] text-white text-xs font-bold rounded-lg hover:bg-[#6a1717] transition disabled:opacity-40">
+                              className="bg-amber-500 text-black text-xs font-bold px-4 py-2 rounded-xl hover:bg-amber-400 disabled:opacity-40 transition">
                               {editOrderLoading ? "Menyimpan..." : "Simpan"}
                             </button>
                           </div>
@@ -1863,7 +1863,7 @@ export default function DashboardPage() {
                     onChange={(e) => setCancelReason(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") handleCancel(o.id); if (e.key === "Escape") { setCancelling(null); setCancelReason(""); } }}
                     placeholder="Tulis alasan pembatalan..."
-                    className="w-full border border-red-200 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:border-red-400 bg-white"
+                    className="w-full bg-[#2c2c2e] border border-red-500/30 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-red-400/50 placeholder-gray-600"
                   />
                 )}
 
@@ -1872,16 +1872,16 @@ export default function DashboardPage() {
 
             {/* Sticky bottom action bar */}
             {!isCancelled && (
-              <div className="shrink-0 bg-white border-t border-gray-100 px-4 py-4 safe-area-pb">
+              <div className="shrink-0 bg-[#1c1c1e] border-t border-white/[0.08] px-4 py-4 safe-area-pb">
                 <div className="max-w-2xl mx-auto space-y-2">
                   {/* Edit Pesanan */}
                   {!editingOrderItems ? (
                     <button onClick={() => startEditOrder(o)}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-gray-300 text-gray-600 text-sm font-semibold transition">
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/[0.06] border border-white/10 hover:bg-white/10 text-gray-300 text-sm font-semibold transition">
                       ✎ Edit Pesanan
                     </button>
                   ) : (
-                    <div className="text-center text-xs text-gray-400 py-1">Scroll ke atas untuk edit item</div>
+                    <div className="text-center text-xs text-gray-600 py-1">Scroll ke atas untuk edit item</div>
                   )}
 
                   {/* Kirim WA — always visible */}
@@ -1898,16 +1898,16 @@ export default function DashboardPage() {
                         {cancelLoading ? "Menyimpan..." : "Konfirmasi Batalkan"}
                       </button>
                       <button onClick={() => { setCancelling(null); setCancelReason(""); }}
-                        className="px-5 py-3.5 text-sm font-semibold text-gray-500 bg-gray-100 rounded-xl">Batal</button>
+                        className="px-5 py-3.5 text-sm font-semibold text-gray-400 bg-white/[0.06] rounded-xl">Batal</button>
                     </div>
                   ) : (
                     <>
                       <button onClick={() => handleConfirm(o.id)}
-                        className="w-full flex items-center justify-center gap-2.5 py-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] transition font-bold text-white text-base">
+                        className="w-full flex items-center justify-center gap-2.5 py-4 rounded-xl bg-sky-600 hover:bg-sky-500 active:scale-[0.99] transition font-bold text-white text-base">
                         <span className="text-xl leading-none">✓</span> Konfirmasi Pesanan
                       </button>
                       <button onClick={() => setCancelling(o.id)}
-                        className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl bg-white border border-red-200 hover:border-red-300 hover:bg-red-50 active:scale-[0.99] transition font-semibold text-red-500 text-sm">
+                        className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl bg-white/[0.03] border border-red-500/20 hover:border-red-500/40 hover:bg-red-500/[0.06] active:scale-[0.99] transition font-semibold text-red-400 text-sm">
                         ✕ Batalkan
                       </button>
                     </>
@@ -1921,24 +1921,24 @@ export default function DashboardPage() {
                         {cancelLoading ? "Menyimpan..." : "Konfirmasi Batalkan"}
                       </button>
                       <button onClick={() => { setCancelling(null); setCancelReason(""); }}
-                        className="px-5 py-3.5 text-sm font-semibold text-gray-500 bg-gray-100 rounded-xl">Batal</button>
+                        className="px-5 py-3.5 text-sm font-semibold text-gray-400 bg-white/[0.06] rounded-xl">Batal</button>
                     </div>
                   ) : (
                     <>
                       {/* Gate: must confirm cash before delivering */}
                       {hasPendingCash(o) ? (
                         <button onClick={() => handleConfirmCash(o)}
-                          className="w-full flex items-center justify-center gap-2.5 py-4 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-[0.99] transition font-bold text-white text-base">
+                          className="w-full flex items-center justify-center gap-2.5 py-4 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] transition font-bold text-black text-base">
                           <Banknote size={20} /> Konfirmasi Kekurangan Bayar ({formatRupiah(getCashDue(o))})
                         </button>
                       ) : (
                         <button onClick={() => handleDeliver(o.id)}
-                          className="w-full flex items-center justify-center gap-2.5 py-4 rounded-xl bg-green-500 hover:bg-green-600 active:scale-[0.99] transition font-bold text-white text-base">
+                          className="w-full flex items-center justify-center gap-2.5 py-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-[0.99] transition font-bold text-white text-base">
                           <CheckCheck size={20} /> Selesaikan Pesanan
                         </button>
                       )}
                       <button onClick={() => setCancelling(o.id)}
-                        className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl bg-white border border-red-200 hover:border-red-300 hover:bg-red-50 active:scale-[0.99] transition font-semibold text-red-500 text-sm">
+                        className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl bg-white/[0.03] border border-red-500/20 hover:border-red-500/40 hover:bg-red-500/[0.06] active:scale-[0.99] transition font-semibold text-red-400 text-sm">
                         ✕ Batalkan
                       </button>
                     </>
@@ -1946,7 +1946,7 @@ export default function DashboardPage() {
 
                   {/* DELIVERED → no primary action, just info */}
                   {isDelivered && (
-                    <p className="text-center text-xs text-gray-400">Pesanan sudah selesai diantar</p>
+                    <p className="text-center text-xs text-gray-600">Pesanan sudah selesai diantar</p>
                   )}
                 </div>
               </div>
@@ -1959,21 +1959,21 @@ export default function DashboardPage() {
       {filterModalOpen && (
         <div className="fixed inset-0 z-[65] flex flex-col justify-end">
           {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/40" onClick={() => setFilterModalOpen(false)} />
+          <div className="absolute inset-0 bg-black/60" onClick={() => setFilterModalOpen(false)} />
           {/* Sheet */}
-          <div className="relative bg-white rounded-t-2xl px-4 pt-4 pb-8 space-y-4 max-h-[85vh] overflow-y-auto">
+          <div className="relative bg-[#1c1c1e] rounded-t-2xl border-t border-white/10 px-4 pt-4 pb-8 space-y-4 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-gray-900">Filter Pesanan</p>
-              <button onClick={() => setFilterModalOpen(false)} className="text-gray-400 text-xl leading-none">×</button>
+              <p className="font-bold text-white">Filter Pesanan</p>
+              <button onClick={() => setFilterModalOpen(false)} className="text-gray-500 text-xl leading-none hover:text-gray-300">×</button>
             </div>
 
             {/* Batch */}
             <div>
-              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Batch</label>
+              <label className="block text-sm font-medium text-gray-400 mb-1.5">Batch</label>
               <select
                 value={tmpBatch}
                 onChange={e => setTmpBatch(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] transition"
+                className="w-full bg-[#2c2c2e] rounded-xl border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition"
               >
                 <option value="auto">
                   {currentBatch ? `● ${currentBatch.label} (aktif)` : "Batch Aktif (tidak ada)"}
@@ -1987,11 +1987,11 @@ export default function DashboardPage() {
 
             {/* Status */}
             <div>
-              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Status</label>
+              <label className="block text-sm font-medium text-gray-400 mb-1.5">Status</label>
               <select
                 value={tmpStatus}
                 onChange={e => setTmpStatus(e.target.value as typeof tmpStatus)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] transition"
+                className="w-full bg-[#2c2c2e] rounded-xl border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition"
               >
                 <option value="all">Semua Status</option>
                 <option value="pending">Menunggu</option>
@@ -2003,11 +2003,11 @@ export default function DashboardPage() {
 
             {/* Jam Antar */}
             <div>
-              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Jam Antar</label>
+              <label className="block text-sm font-medium text-gray-400 mb-1.5">Jam Antar</label>
               <select
                 value={tmpJam}
                 onChange={e => setTmpJam(e.target.value as typeof tmpJam)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] transition"
+                className="w-full bg-[#2c2c2e] rounded-xl border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition"
               >
                 <option value="all">Semua Waktu</option>
                 <option value="siang">Siang (11.00–13.00)</option>
@@ -2017,11 +2017,11 @@ export default function DashboardPage() {
 
             {/* Menu */}
             <div>
-              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Menu</label>
+              <label className="block text-sm font-medium text-gray-400 mb-1.5">Menu</label>
               <select
                 value={tmpMenu}
                 onChange={e => setTmpMenu(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 bg-gray-50 focus:outline-none focus:border-[#7b1d1d] transition"
+                className="w-full bg-[#2c2c2e] rounded-xl border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition"
               >
                 <option value="all">Semua Menu</option>
                 <optgroup label="Paket">
@@ -2037,7 +2037,7 @@ export default function DashboardPage() {
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => { setTmpBatch("auto"); setTmpStatus("all"); setTmpJam("all"); setTmpMenu("all"); }}
-                className="px-4 py-3 rounded-xl border border-gray-200 text-sm text-gray-500 hover:border-gray-300 transition"
+                className="px-4 py-3 rounded-xl border border-white/10 text-sm text-gray-400 hover:border-white/20 transition bg-transparent"
               >Reset</button>
               <button
                 onClick={() => {
@@ -2047,7 +2047,7 @@ export default function DashboardPage() {
                   setFilterMenu(tmpMenu);
                   setFilterModalOpen(false);
                 }}
-                className="flex-1 py-3 rounded-xl bg-[#7b1d1d] text-white font-bold text-sm hover:bg-[#6a1717] transition"
+                className="flex-1 py-3 rounded-xl bg-amber-500 text-black font-bold text-sm hover:bg-amber-400 transition"
               >Terapkan Filter</button>
             </div>
           </div>
@@ -2068,20 +2068,20 @@ export default function DashboardPage() {
       )}
 
       {/* ── Bottom Nav Dock ─────────────────────────────────────────────── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 safe-area-pb">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#1c1c1e] border-t border-white/[0.08] safe-area-pb">
         <div className="max-w-2xl mx-auto flex items-stretch px-1 h-16">
           {NAV.map(({ key, label, Icon }) => {
             const isActive = tab === key;
             return (
               <button key={key} onClick={() => { setTab(key as typeof tab); closeModal(); }}
                 className="relative flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors">
-                {isActive && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-gray-900 rounded-full" />}
+                {isActive && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-amber-500 rounded-full" />}
                 <Icon
                   size={20}
                   strokeWidth={isActive ? 2.2 : 1.5}
-                  className={`transition-colors ${isActive ? "text-gray-900" : "text-gray-300"}`}
+                  className={`transition-colors ${isActive ? "text-amber-400" : "text-gray-600"}`}
                 />
-                <span className={`text-[10px] font-semibold tracking-wide transition-colors ${isActive ? "text-gray-900" : "text-gray-400"}`}>
+                <span className={`text-[10px] font-semibold tracking-wide transition-colors ${isActive ? "text-amber-400" : "text-gray-600"}`}>
                   {label}
                 </span>
               </button>
