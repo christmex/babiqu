@@ -738,54 +738,52 @@ export default function DashboardPage() {
   ] as const;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-[#f2f2f7] pb-24">
       <div className="max-w-2xl mx-auto px-4 pt-5 pb-4">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-6 pt-1">
+        <div className="flex items-center justify-between mb-5 pt-1">
           <div>
-            <p className="text-[10px] tracking-[0.3em] uppercase text-[#7b1d1d] font-bold mb-0.5">Babiqu</p>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-bold text-gray-900 leading-tight">Dapur</h1>
-              {currentBatch && (
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
-                  isBatchActive(currentBatch, totalPortions(orders.filter(o => o.batch_id === currentBatch.id && o.status !== "cancelled")))
-                    ? "bg-green-50 text-green-700 border-green-200"
-                    : "bg-gray-100 text-gray-500 border-gray-200"
-                }`}>
+            <h1 className="text-2xl font-bold text-gray-900 leading-tight">Dapur</h1>
+            <div className="flex items-center gap-2 mt-0.5">
+              {currentBatch ? (
+                <span className="flex items-center gap-1.5 text-xs font-medium text-green-600">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                   {currentBatch.label.split(/[—–-]/)[0].trim()}
                 </span>
+              ) : (
+                <span className="text-xs text-gray-400">Tidak ada batch aktif</span>
+              )}
+              {lastUpdated && (
+                <span className="text-[10px] text-gray-300">· {lastUpdated.toLocaleTimeString("id-ID")}</span>
               )}
             </div>
-            {lastUpdated && (
-              <p className="text-[10px] text-gray-400 mt-0.5">Diperbarui {lastUpdated.toLocaleTimeString("id-ID")}</p>
-            )}
           </div>
           <div className="flex items-center gap-2">
             <a href="/" target="_blank" rel="noopener noreferrer"
-              className="flex items-center justify-center w-8 h-8 bg-white border border-gray-200 text-gray-500 rounded-lg hover:border-gray-300 hover:text-gray-700 transition"
+              className="flex items-center justify-center w-9 h-9 bg-white rounded-xl shadow-sm text-gray-500 hover:text-gray-800 transition"
               title="Buka Form">
-              <ExternalLink size={14} />
+              <ExternalLink size={15} />
             </a>
             <button onClick={fetchAll} disabled={loading}
-              className="flex items-center justify-center w-8 h-8 bg-[#7b1d1d] text-white rounded-lg hover:bg-[#6a1717] transition disabled:opacity-50"
+              className="flex items-center justify-center w-9 h-9 bg-gray-900 text-white rounded-xl shadow-sm hover:bg-black transition disabled:opacity-40"
               title="Refresh">
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
             </button>
           </div>
         </div>
 
         {/* Quick stats — 2×2 grid */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          {([
-            { label: "Menunggu",    value: todayPending.length,   borderColor: "border-l-amber-400",   numColor: "text-amber-600" },
-            { label: "Konfirmasi",  value: todayConfirmed.length, borderColor: "border-l-blue-400",    numColor: "text-blue-600" },
-            { label: "Selesai",     value: todayDelivered.length, borderColor: "border-l-green-500",   numColor: "text-green-700" },
-            { label: "Omzet Batch", value: formatRupiah(currentBatchRevenue), borderColor: "border-l-[#7b1d1d]", numColor: "text-[#7b1d1d]", small: true },
-          ] as const).map((s) => (
-            <div key={s.label} className={`bg-white rounded-xl border border-gray-100 border-l-4 ${s.borderColor} shadow-sm px-4 py-3.5`}>
-              <p className={`font-bold leading-none ${s.numColor} ${"small" in s ? "text-lg" : "text-3xl"}`}>{s.value}</p>
-              <p className="text-xs text-gray-400 font-medium mt-1.5">{s.label}</p>
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          {[
+            { label: "Menunggu",    value: todayPending.length,   big: true,  color: "text-gray-900" },
+            { label: "Konfirmasi",  value: todayConfirmed.length, big: true,  color: "text-gray-900" },
+            { label: "Selesai",     value: todayDelivered.length, big: true,  color: "text-green-600" },
+            { label: "Omzet Batch", value: formatRupiah(currentBatchRevenue), big: false, color: "text-gray-900" },
+          ].map((s) => (
+            <div key={s.label} className="bg-white rounded-2xl shadow-sm px-4 py-4">
+              <p className={`font-bold leading-none ${s.color} ${s.big ? "text-3xl" : "text-lg"}`}>{s.value}</p>
+              <p className="text-xs text-gray-400 font-medium mt-2">{s.label}</p>
             </div>
           ))}
         </div>
@@ -796,9 +794,9 @@ export default function DashboardPage() {
 
             {/* Filter row */}
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm font-medium text-gray-500">
                 <span className="font-bold text-gray-900">{displayedOrders.length}</span>
-                <span className="ml-1">
+                <span className="ml-1.5">
                   {resolvedFilterBatchId !== "all" && currentBatch && filterBatchId === "auto"
                     ? currentBatch.label.split(/[—–-]/)[0].trim()
                     : resolvedFilterBatchId !== "all"
@@ -813,15 +811,15 @@ export default function DashboardPage() {
                   setTmpJam(filterJam);
                   setFilterModalOpen(true);
                 }}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
                   activeFilterCount > 0
-                    ? "bg-[#7b1d1d] text-white"
-                    : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
+                    ? "bg-gray-900 text-white"
+                    : "bg-white text-gray-600 shadow-sm hover:bg-gray-50"
                 }`}
               >
                 <span>Filter</span>
                 {activeFilterCount > 0 && (
-                  <span className="bg-white/25 rounded px-1 text-[10px] font-bold">
+                  <span className="bg-white/25 rounded-md px-1.5 text-[10px] font-bold">
                     {activeFilterCount}
                   </span>
                 )}
@@ -830,41 +828,36 @@ export default function DashboardPage() {
 
             {/* Ringkasan Produksi */}
             {productionSummary.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 <button onClick={() => { setShowSummary(v => !v); setSelectedProdMenuId(null); }}
-                  className="w-full flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Ringkasan Produksi
-                  </p>
+                  className="w-full flex items-center justify-between px-4 py-3.5 border-b border-gray-100">
+                  <p className="text-sm font-bold text-gray-900">Ringkasan Produksi</p>
                   {showSummary ? <ChevronUp size={15} className="text-gray-400" /> : <ChevronDown size={15} className="text-gray-400" />}
                 </button>
                 {showSummary && (
                   <div>
                     {productionSummary.map((menu) => {
                       const isSelected = selectedProdMenuId === menu.menuId;
-                      // Orders that contain this menu item
                       const ordersWithMenu = displayedOrders.filter(
                         o => o.status !== "cancelled" && o.items?.some(it => it.menu_id === menu.menuId)
                       );
                       return (
                         <div key={menu.menuId} className="border-b border-gray-50 last:border-b-0">
-                          {/* Menu row — tap to toggle drill-down */}
                           <button
                             onClick={() => setSelectedProdMenuId(isSelected ? null : menu.menuId)}
-                            className={`w-full px-4 py-2.5 flex items-center justify-between transition ${
+                            className={`w-full px-4 py-3 flex items-center justify-between transition ${
                               isSelected ? "bg-gray-50" : "hover:bg-gray-50"
                             }`}
                           >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <ChevronDown size={12} className={`text-gray-400 transition-transform shrink-0 ${isSelected ? "rotate-180" : ""}`} />
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <ChevronDown size={13} className={`text-gray-300 transition-transform shrink-0 ${isSelected ? "rotate-180" : ""}`} />
                               <p className="text-sm text-gray-800 truncate">{menu.name}</p>
                             </div>
-                            <span className="text-xs font-bold text-[#7b1d1d] bg-red-50 px-2 py-0.5 rounded-md shrink-0 ml-2">
+                            <span className="text-xs font-bold text-gray-900 bg-gray-100 px-2.5 py-0.5 rounded-lg shrink-0 ml-2">
                               {menu.qty}×
                             </span>
                           </button>
 
-                          {/* Drill-down: list of who ordered this */}
                           {isSelected && (
                             <div className="bg-gray-50 border-t border-gray-100 divide-y divide-gray-100">
                               {ordersWithMenu.map(o => {
@@ -873,18 +866,18 @@ export default function DashboardPage() {
                                   <button
                                     key={o.id}
                                     onClick={() => setSelectedOrder(o)}
-                                    className="w-full text-left px-5 py-2.5 hover:bg-gray-100 transition"
+                                    className="w-full text-left px-5 py-3 hover:bg-gray-100 transition"
                                   >
                                     <div className="flex items-center justify-between gap-2">
                                       <div className="min-w-0">
                                         <p className="text-sm font-semibold text-gray-900 truncate">{o.name}</p>
-                                        <p className="text-xs text-gray-400 truncate">{o.alamat}</p>
+                                        <p className="text-xs text-gray-400 truncate mt-0.5">{o.alamat}</p>
                                       </div>
                                       <div className="text-right shrink-0">
-                                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg ${
                                           o.jam_antar.includes("Siang") ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700"
                                         }`}>{o.jam_antar.includes("Siang") ? "Siang" : "Malam"}</span>
-                                        <p className="text-xs font-bold text-[#7b1d1d] mt-0.5">{thisItem?.qty}×</p>
+                                        <p className="text-xs font-bold text-gray-900 mt-1">{thisItem?.qty}×</p>
                                       </div>
                                     </div>
                                   </button>
@@ -902,9 +895,7 @@ export default function DashboardPage() {
 
             {loading && <p className="text-center text-gray-400 py-12 text-sm">Memuat...</p>}
             {!loading && displayedOrders.length === 0 && (
-              <p className="text-center text-gray-400 py-12 text-sm">
-                Tidak ada pesanan untuk filter ini.
-              </p>
+              <p className="text-center text-gray-400 py-12 text-sm">Tidak ada pesanan untuk filter ini.</p>
             )}
 
             {displayedOrders.map((order, idx) => {
@@ -913,74 +904,56 @@ export default function DashboardPage() {
               const isCancelled = order.status === "cancelled";
               const isDelivered = order.status === "delivered";
               const isConfirmed = order.status === "confirmed";
-              const isOrderPending = isPending(order.status);
+
+              // status dot colour
+              const dotColor = isCancelled ? "bg-red-400" : isDelivered ? "bg-green-500" : isConfirmed ? "bg-blue-500" : "bg-amber-400";
+              const statusLabel = isCancelled ? "Batal" : isDelivered ? "Selesai" : isConfirmed ? "Konfirmasi" : "Menunggu";
+              const statusColor = isCancelled ? "text-red-500" : isDelivered ? "text-green-600" : isConfirmed ? "text-blue-600" : "text-amber-600";
 
               return (
                 <div key={order.id}>
                   {showDate && (
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 pt-4 pb-1.5">
+                    <p className="text-xs font-semibold text-gray-400 px-1 pt-4 pb-1.5">
                       {isToday(order.created_at) ? "Hari Ini" : new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long" }).format(new Date(order.created_at))}
                     </p>
                   )}
 
                   <button onClick={() => setSelectedOrder(order)}
-                    className={`w-full text-left bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden transition-all active:scale-[0.99] ${
-                      isCancelled ? "opacity-55" : ""
+                    className={`w-full text-left bg-white rounded-2xl shadow-sm overflow-hidden transition-all active:scale-[0.99] ${
+                      isCancelled ? "opacity-50" : ""
                     }`}>
-                    <div className={`flex items-stretch border-l-4 ${
-                      isCancelled    ? "border-l-red-300" :
-                      isDelivered    ? "border-l-green-500" :
-                      isConfirmed    ? "border-l-blue-500" :
-                                       "border-l-amber-400"
-                    }`}>
+                    <div className="flex items-center gap-3 px-4 py-3.5">
                       {/* Avatar */}
-                      <div className="flex items-center justify-center pl-3 pr-2 py-3">
-                        <span className={`flex items-center justify-center w-8 h-8 rounded-full text-white text-xs font-bold shrink-0 ${avatarColor(order.name)}`}>
-                          {nameInitials(order.name)}
-                        </span>
-                      </div>
+                      <span className={`flex items-center justify-center w-10 h-10 rounded-full text-white text-xs font-bold shrink-0 ${avatarColor(order.name)}`}>
+                        {nameInitials(order.name)}
+                      </span>
 
-                      {/* Main content */}
-                      <div className="flex-1 min-w-0 py-3 pr-4">
-                        {/* Name row */}
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <p className="font-semibold text-gray-900 text-sm truncate">{order.name}</p>
-                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${
-                              order.jam_antar.includes("Siang") ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700"
-                            }`}>{order.jam_antar.includes("Siang") ? "Siang" : "Malam"}</span>
-                          </div>
-                          <p className="text-[10px] text-gray-400 shrink-0">{formatDate(order.created_at)}</p>
+                          <p className="font-semibold text-gray-900 text-sm truncate">{order.name}</p>
+                          <p className="text-xs font-bold text-gray-900 shrink-0">{formatRupiah(order.total)}</p>
                         </div>
-
-                        {/* Items + status badge row */}
-                        <div className="flex items-center justify-between mt-1 gap-2">
-                          <p className="text-xs text-gray-500 truncate">
+                        <div className="flex items-center justify-between gap-2 mt-0.5">
+                          <p className="text-xs text-gray-400 truncate">
                             {order.items?.map((it) => `${it.qty}× ${it.menu_name.split(" ").slice(0,2).join(" ")}`).join(", ")}
                           </p>
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded shrink-0 ${
-                            isCancelled    ? "bg-red-100 text-red-500" :
-                            isDelivered    ? "bg-green-100 text-green-700" :
-                            isConfirmed    ? "bg-blue-100 text-blue-700" :
-                                             "bg-amber-100 text-amber-600"
-                          }`}>
-                            {isCancelled ? "Batal" : isDelivered ? "Selesai" : isConfirmed ? "Konfirmasi" : "Menunggu"}
-                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                            <span className={`text-[11px] font-semibold ${statusColor}`}>{statusLabel}</span>
+                          </div>
                         </div>
-
-                        {/* Cancel reason */}
                         {isCancelled && order.cancel_reason && (
                           <p className="text-xs text-red-400 truncate mt-0.5">{order.cancel_reason}</p>
                         )}
-
-                        {/* Price row */}
-                        <div className="flex items-center justify-between mt-1.5">
-                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-                            order.payment_method === "cash" ? "bg-amber-50 text-amber-600" : "bg-green-50 text-green-700"
-                          }`}>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] text-gray-400">
+                            {order.jam_antar.includes("Siang") ? "Siang" : "Malam"}
+                          </span>
+                          <span className="text-gray-200">·</span>
+                          <span className={`text-[10px] font-medium ${order.payment_method === "cash" ? "text-amber-600" : "text-green-600"}`}>
                             {order.payment_method === "cash" ? "Tunai" : order.payment_method === "transfer_mandiri" ? "Mandiri" : "BCA"}
                           </span>
-                          <span className="font-bold text-[#7b1d1d] text-sm">{formatRupiah(order.total)}</span>
                         </div>
                       </div>
                     </div>
@@ -2102,13 +2075,13 @@ export default function DashboardPage() {
             return (
               <button key={key} onClick={() => { setTab(key as typeof tab); closeModal(); }}
                 className="relative flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors">
-                {isActive && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#7b1d1d] rounded-full" />}
+                {isActive && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-gray-900 rounded-full" />}
                 <Icon
                   size={20}
-                  strokeWidth={isActive ? 2.2 : 1.6}
-                  className={`transition-colors ${isActive ? "text-[#7b1d1d]" : "text-gray-300"}`}
+                  strokeWidth={isActive ? 2.2 : 1.5}
+                  className={`transition-colors ${isActive ? "text-gray-900" : "text-gray-300"}`}
                 />
-                <span className={`text-[10px] font-semibold tracking-wide transition-colors ${isActive ? "text-[#7b1d1d]" : "text-gray-400"}`}>
+                <span className={`text-[10px] font-semibold tracking-wide transition-colors ${isActive ? "text-gray-900" : "text-gray-400"}`}>
                   {label}
                 </span>
               </button>
