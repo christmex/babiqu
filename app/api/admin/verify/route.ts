@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { loginLimiter, checkLimit, getClientIp } from "@/lib/ratelimit";
+import { LOGIN_LIMIT, checkLimit, getClientIp } from "@/lib/ratelimit";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  const limit = await checkLimit(loginLimiter, ip);
+  const limit = await checkLimit(LOGIN_LIMIT, ip);
 
   if (!limit.success) {
-    const retryAfter = Math.max(0, Math.ceil((limit.reset - Date.now()) / 1000));
     return NextResponse.json(
-      { ok: false, locked: true, retryAfter },
-      { status: 429, headers: { "Retry-After": String(retryAfter) } }
+      { ok: false, locked: true, retryAfter: limit.retryAfter },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
     );
   }
 

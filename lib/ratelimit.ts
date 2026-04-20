@@ -1,32 +1,26 @@
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
 import type { NextRequest } from "next/server";
+import { supabase } from "@/lib/supabase";
 
-const hasUpstash = Boolean(
-  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-);
+export type LimitConfig = {
+  /** Max allowed hits within `windowSeconds`. */
+  limit: number;
+  /** Sliding window in seconds. */
+  windowSeconds: number;
+  /** Namespace prefix so different limiters don't collide. */
+  prefix: string;
+};
 
-const redis = hasUpstash ? Redis.fromEnv() : null;
+export const ORDER_LIMIT: LimitConfig = {
+  prefix: "order",
+  limit: 3,
+  windowSeconds: 60,
+};
 
-/** 3 orders per minute per IP. */
-export const orderLimiter = redis
-  ? new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(3, "60 s"),
-      analytics: false,
-      prefix: "rl:order",
-    })
-  : null;
-
-/** 5 login attempts per 15 minutes per IP. */
-export const loginLimiter = redis
-  ? new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(5, "900 s"),
-      analytics: false,
-      prefix: "rl:login",
-    })
-  : null;
+export const LOGIN_LIMIT: LimitConfig = {
+  prefix: "login",
+  limit: 5,
+  windowSeconds: 15 * 60,
+};
 
 export function getClientIp(req: NextRequest): string {
   const fwd = req.headers.get("x-forwarded-for");
@@ -38,27 +32,44 @@ export function getClientIp(req: NextRequest): string {
 
 export type LimitResult = {
   success: boolean;
+  /** Approximate remaining hits — based on config limit if allowed. */
   remaining: number;
-  reset: number;
+  /** Seconds until the window resets. */
+  retryAfter: number;
   limit: number;
 };
 
 /**
- * Check a rate limit. Returns `{ success: true }` if limiter not configured
- * (fail-open) so the app still works without Upstash env vars.
+ * Atomically check + record a rate limit hit for `key` under `cfg`.
+ * Calls Supabase `check_rate_limit` Postgres function.
+ * On DB failure, fails OPEN (allow) to avoid locking out legit users.
  */
 export async function checkLimit(
-  limiter: Ratelimit | null,
+  cfg: LimitConfig,
   key: string
 ): Promise<LimitResult> {
-  if (!limiter) {
-    return { success: true, remaining: 999, reset: 0, limit: 999 };
+  const fullKey = `${cfg.prefix}:${key}`;
+  const { data, error } = await supabase.rpc("check_rate_limit", {
+    p_key: fullKey,
+    p_limit: cfg.limit,
+    p_window_seconds: cfg.windowSeconds,
+  });
+
+  if (error) {
+    console.error("[ratelimit] rpc error, failing open:", error.message);
+    return {
+      success: true,
+      remaining: cfg.limit,
+      retryAfter: 0,
+      limit: cfg.limit,
+    };
   }
-  const res = await limiter.limit(key);
+
+  const allowed = Boolean(data);
   return {
-    success: res.success,
-    remaining: res.remaining,
-    reset: res.reset,
-    limit: res.limit,
+    success: allowed,
+    remaining: allowed ? Math.max(0, cfg.limit - 1) : 0,
+    retryAfter: allowed ? 0 : cfg.windowSeconds,
+    limit: cfg.limit,
   };
 }

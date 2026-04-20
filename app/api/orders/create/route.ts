@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { orderLimiter, checkLimit, getClientIp } from "@/lib/ratelimit";
+import { ORDER_LIMIT, checkLimit, getClientIp } from "@/lib/ratelimit";
 import { supabase } from "@/lib/supabase";
 
 type Body = {
@@ -37,16 +37,15 @@ function isValidBody(b: unknown): b is Body {
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  const limit = await checkLimit(orderLimiter, ip);
+  const limit = await checkLimit(ORDER_LIMIT, ip);
   if (!limit.success) {
-    const retryAfter = Math.max(0, Math.ceil((limit.reset - Date.now()) / 1000));
     return NextResponse.json(
       {
-        error: `Terlalu banyak percobaan. Coba lagi dalam ${retryAfter} detik.`,
+        error: `Terlalu banyak percobaan. Coba lagi dalam ${limit.retryAfter} detik.`,
         rateLimited: true,
-        retryAfter,
+        retryAfter: limit.retryAfter,
       },
-      { status: 429, headers: { "Retry-After": String(retryAfter) } }
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
     );
   }
 
