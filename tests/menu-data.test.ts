@@ -63,8 +63,8 @@ describe("MENUS", () => {
 // ─── ALA_CARTE integrity ──────────────────────────────────────────────────────
 
 describe("ALA_CARTE", () => {
-  it("has 6 items", () => {
-    expect(ALA_CARTE).toHaveLength(6);
+  it("has 7 items", () => {
+    expect(ALA_CARTE).toHaveLength(7);
   });
 
   it("each item has required fields", () => {

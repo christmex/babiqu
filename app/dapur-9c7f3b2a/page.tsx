@@ -115,61 +115,62 @@ function avatarColor(name: string) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const ADMIN_PASSWORD = "M@ntapjiwa00";
-const MAX_ATTEMPTS = 5;
-const LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
-
 export default function DashboardPage() {
   // ── Auth gate ─────────────────────────────────────────────────────────────
   const [isAuthed, setIsAuthed] = useState(false);
   const [pwInput, setPwInput] = useState("");
   const [pwError, setPwError] = useState("");
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
-  const [attempts, setAttempts] = useState(0);
   const [showPw, setShowPw] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
-    // Check session auth
     if (sessionStorage.getItem("dapur_auth") === "1") { setIsAuthed(true); return; }
-    // Restore lockout state
-    const lu = Number(sessionStorage.getItem("dapur_locked_until") || 0);
-    const att = Number(sessionStorage.getItem("dapur_attempts") || 0);
-    if (lu > Date.now()) setLockedUntil(lu);
-    setAttempts(att);
   }, []);
 
-  // Countdown ticker
+  // Countdown ticker while locked
   const [, setTick] = useState(0);
   useEffect(() => {
     if (!lockedUntil) return;
     const id = setInterval(() => {
       setTick((t) => t + 1);
-      if (Date.now() >= lockedUntil) { setLockedUntil(null); setAttempts(0); clearInterval(id); }
+      if (Date.now() >= lockedUntil) { setLockedUntil(null); clearInterval(id); }
     }, 1000);
     return () => clearInterval(id);
   }, [lockedUntil]);
 
-  function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     if (lockedUntil && Date.now() < lockedUntil) return;
-    if (pwInput === ADMIN_PASSWORD) {
-      sessionStorage.setItem("dapur_auth", "1");
-      sessionStorage.removeItem("dapur_attempts");
-      sessionStorage.removeItem("dapur_locked_until");
-      setIsAuthed(true);
-    } else {
-      const newAtt = attempts + 1;
-      setAttempts(newAtt);
-      sessionStorage.setItem("dapur_attempts", String(newAtt));
-      if (newAtt >= MAX_ATTEMPTS) {
-        const until = Date.now() + LOCKOUT_MS;
+    if (verifying) return;
+    setVerifying(true);
+    setPwError("");
+    try {
+      const res = await fetch("/api/admin/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pwInput }),
+      });
+      const data = await res.json() as { ok?: boolean; locked?: boolean; retryAfter?: number; remaining?: number };
+      if (res.status === 429 || data.locked) {
+        const retryAfter = data.retryAfter ?? 900;
+        const until = Date.now() + retryAfter * 1000;
         setLockedUntil(until);
-        sessionStorage.setItem("dapur_locked_until", String(until));
-        setPwError(`Terlalu banyak percobaan. Coba lagi dalam 15 menit.`);
+        setPwError(`Terlalu banyak percobaan. Coba lagi dalam ${Math.ceil(retryAfter / 60)} menit.`);
+      } else if (data.ok) {
+        sessionStorage.setItem("dapur_auth", "1");
+        setIsAuthed(true);
       } else {
-        setPwError(`Password salah. ${MAX_ATTEMPTS - newAtt} percobaan tersisa.`);
+        const remaining = data.remaining ?? 0;
+        setPwError(remaining > 0
+          ? `Password salah. ${remaining} percobaan tersisa.`
+          : `Password salah.`);
       }
       setPwInput("");
+    } catch {
+      setPwError("Gagal menghubungi server. Coba lagi.");
+    } finally {
+      setVerifying(false);
     }
   }
 
@@ -316,9 +317,9 @@ export default function DashboardPage() {
               </div>
             )}
 
-            <button type="submit" disabled={isLocked || !pwInput}
+            <button type="submit" disabled={isLocked || !pwInput || verifying}
               className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-3.5 rounded-2xl transition disabled:opacity-30 text-sm">
-              {isLocked ? `Terkunci (${mins}:${String(secs).padStart(2,"0")})` : "Masuk"}
+              {isLocked ? `Terkunci (${mins}:${String(secs).padStart(2,"0")})` : verifying ? "Memeriksa..." : "Masuk"}
             </button>
           </form>
 

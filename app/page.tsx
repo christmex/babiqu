@@ -308,44 +308,35 @@ export default function OrderPage() {
 
     const items = buildOrderItems(orders, alcOrders);
 
-    const { data: inserted, error: dbError } = await supabase.from("orders").insert({
-      name: form.name,
-      nomor_wa: form.nomor_wa,
-      alamat: form.alamat,
-      jam_antar: form.jam_antar,
-      items,
-      notes: form.notes,
-      total,
-      batch_id: activeBatch?.id ?? null,
-      payment_method: paymentMethod,
-      payment_proof_url: proofUrl,
-    }).select("id").single();
+    const res = await fetch("/api/orders/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: form.name,
+        nomor_wa: form.nomor_wa,
+        alamat: form.alamat,
+        jam_antar: form.jam_antar,
+        items,
+        notes: form.notes,
+        total,
+        batch_id: activeBatch?.id ?? null,
+        payment_method: paymentMethod,
+        payment_proof_url: proofUrl,
+      }),
+    });
 
-    if (dbError) {
-      setError("Gagal menyimpan pesanan. Coba lagi.");
+    if (res.status === 429) {
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      setError(data.error ?? "Terlalu banyak percobaan. Tunggu sebentar.");
       setLoading(false);
       return;
     }
 
-    // Fire push notification to admin(s) — keepalive survives navigation
-    const itemsSummary = items
-      .map((it) => `${it.qty}× ${it.menu_name.split(" ").slice(0, 2).join(" ")}`)
-      .join(", ");
-    try {
-      await fetch("/api/push/notify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId: inserted?.id ?? "",
-          name: form.name,
-          total,
-          itemsSummary,
-          jam: form.jam_antar.includes("Siang") ? "Siang" : "Malam",
-        }),
-        keepalive: true,
-      });
-    } catch {
-      // non-fatal — order already saved
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      setError(data.error ?? "Gagal menyimpan pesanan. Coba lagi.");
+      setLoading(false);
+      return;
     }
 
     const successItems = [
