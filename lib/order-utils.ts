@@ -30,6 +30,7 @@ export type MenuDef = {
   price: number;
   includes: string[];
   options: { key: string; label: string; choices: string[] }[];
+  isNew?: boolean;
 };
 
 // ─── Menu data ────────────────────────────────────────────────────────────────
@@ -91,6 +92,38 @@ export const MENUS: MenuDef[] = [
     includes: ["Sop Tulang", "Nasi Kecombrang", "Sambel Bawang Cuka"],
     options: [],
   },
+  {
+    id: "pork-satay-putih-bawang-cuka",
+    name: "Pork Satay Set (Nasi Putih + Sambel Bawang Cuka)",
+    price: 40000,
+    includes: ["Sate Babi", "Nasi Putih", "Sambel Bawang Cuka"],
+    options: [],
+    isNew: true,
+  },
+  {
+    id: "pork-satay-kecombrang-bawang-cuka",
+    name: "Pork Satay Set (Nasi Kecombrang + Sambel Bawang Cuka)",
+    price: 40000,
+    includes: ["Sate Babi", "Nasi Kecombrang", "Sambel Bawang Cuka"],
+    options: [],
+    isNew: true,
+  },
+  {
+    id: "pork-satay-putih-andaliman",
+    name: "Pork Satay Set (Nasi Putih + Sambel Andaliman)",
+    price: 40000,
+    includes: ["Sate Babi", "Nasi Putih", "Sambel Andaliman"],
+    options: [],
+    isNew: true,
+  },
+  {
+    id: "pork-satay-kecombrang-andaliman",
+    name: "Pork Satay Set (Nasi Kecombrang + Sambel Andaliman)",
+    price: 40000,
+    includes: ["Sate Babi", "Nasi Kecombrang", "Sambel Andaliman"],
+    options: [],
+    isNew: true,
+  },
 ];
 
 export const ALA_CARTE: MenuDef[] = [
@@ -142,6 +175,14 @@ export const ALA_CARTE: MenuDef[] = [
     price: 3000,
     includes: ["Sambel Bawang Cuka"],
     options: [],
+  },
+  {
+    id: "alc-sate-pork",
+    name: "Sate Babi (1 tusuk)",
+    price: 8000,
+    includes: ["Sate Babi"],
+    options: [],
+    isNew: true,
   },
 ];
 

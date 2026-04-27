@@ -635,7 +635,14 @@ export default function OrderPage() {
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-snug">{menu.name}</h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-snug">{menu.name}</h3>
+                        {menu.isNew && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#7b1d1d] text-white leading-none shrink-0">
+                            New
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 leading-relaxed">{menu.includes.join(" · ")}</p>
                       <p className="text-base font-bold text-gray-900 dark:text-white mt-2">{formatRupiah(menu.price)}</p>
                     </div>
@@ -717,7 +724,14 @@ export default function OrderPage() {
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-snug">{menu.name}</h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-snug">{menu.name}</h3>
+                        {menu.isNew && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#7b1d1d] text-white leading-none shrink-0">
+                            New
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 leading-relaxed">{menu.includes.join(" · ")}</p>
                       <p className="text-base font-bold text-gray-900 dark:text-white mt-2">{formatRupiah(menu.price)}</p>
                     </div>

@@ -4,8 +4,8 @@ import { MENUS, ALA_CARTE } from "@/lib/order-utils";
 // ─── MENUS integrity ──────────────────────────────────────────────────────────
 
 describe("MENUS", () => {
-  it("has 8 items", () => {
-    expect(MENUS).toHaveLength(8);
+  it("has 12 items", () => {
+    expect(MENUS).toHaveLength(12);
   });
 
   it("each menu has required fields", () => {
@@ -29,7 +29,7 @@ describe("MENUS", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("contains all 8 fixed menu variants", () => {
+  it("contains all original 8 menu variants", () => {
     const ids = MENUS.map((m) => m.id);
     expect(ids).toContain("signature-putih");
     expect(ids).toContain("signature-kecombrang");
@@ -41,16 +41,28 @@ describe("MENUS", () => {
     expect(ids).toContain("sop-tulang-kecombrang-bawang-cuka");
   });
 
+  it("contains all 4 Pork Satay Set variants", () => {
+    const ids = MENUS.map((m) => m.id);
+    expect(ids).toContain("pork-satay-putih-bawang-cuka");
+    expect(ids).toContain("pork-satay-kecombrang-bawang-cuka");
+    expect(ids).toContain("pork-satay-putih-andaliman");
+    expect(ids).toContain("pork-satay-kecombrang-andaliman");
+  });
+
   it("paket prices match spec", () => {
     const prices: Record<string, number> = {
-      "signature-putih":                   40000,
-      "signature-kecombrang":              40000,
-      "classic-putih":                     40000,
-      "classic-kecombrang":                40000,
-      "sop-tulang-putih-andaliman":        25000,
-      "sop-tulang-kecombrang-andaliman":   25000,
-      "sop-tulang-putih-bawang-cuka":      25000,
-      "sop-tulang-kecombrang-bawang-cuka": 25000,
+      "signature-putih":                    40000,
+      "signature-kecombrang":               40000,
+      "classic-putih":                      40000,
+      "classic-kecombrang":                 40000,
+      "sop-tulang-putih-andaliman":         25000,
+      "sop-tulang-kecombrang-andaliman":    25000,
+      "sop-tulang-putih-bawang-cuka":       25000,
+      "sop-tulang-kecombrang-bawang-cuka":  25000,
+      "pork-satay-putih-bawang-cuka":       40000,
+      "pork-satay-kecombrang-bawang-cuka":  40000,
+      "pork-satay-putih-andaliman":         40000,
+      "pork-satay-kecombrang-andaliman":    40000,
     };
     for (const [id, price] of Object.entries(prices)) {
       const item = MENUS.find((m) => m.id === id);
@@ -58,13 +70,26 @@ describe("MENUS", () => {
       expect(item!.price, `${id} wrong price`).toBe(price);
     }
   });
+
+  it("Pork Satay Set items are marked isNew", () => {
+    const satayIds = [
+      "pork-satay-putih-bawang-cuka",
+      "pork-satay-kecombrang-bawang-cuka",
+      "pork-satay-putih-andaliman",
+      "pork-satay-kecombrang-andaliman",
+    ];
+    for (const id of satayIds) {
+      const item = MENUS.find((m) => m.id === id);
+      expect(item?.isNew, `${id} should be isNew`).toBe(true);
+    }
+  });
 });
 
 // ─── ALA_CARTE integrity ──────────────────────────────────────────────────────
 
 describe("ALA_CARTE", () => {
-  it("has 7 items", () => {
-    expect(ALA_CARTE).toHaveLength(7);
+  it("has 8 items", () => {
+    expect(ALA_CARTE).toHaveLength(8);
   });
 
   it("each item has required fields", () => {
@@ -96,11 +121,17 @@ describe("ALA_CARTE", () => {
       "alc-nasi-kecombrang":    8000,
       "alc-sambel-andaliman":   3000,
       "alc-sambel-bawang-cuka": 3000,
+      "alc-sate-pork":          8000,
     };
     for (const [id, price] of Object.entries(prices)) {
       const item = ALA_CARTE.find((m) => m.id === id);
       expect(item, `${id} not found`).toBeDefined();
       expect(item!.price, `${id} wrong price`).toBe(price);
     }
+  });
+
+  it("alc-sate-pork is marked isNew", () => {
+    const item = ALA_CARTE.find((m) => m.id === "alc-sate-pork");
+    expect(item?.isNew).toBe(true);
   });
 });
